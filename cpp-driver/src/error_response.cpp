@@ -60,8 +60,8 @@ CassWriteType cass_error_result_write_type(const CassErrorResult* error_result) 
 
 CassError cass_error_result_keyspace(const CassErrorResult* error_result, const char** keyspace,
                                      size_t* keyspace_length) {
-  if (error_result->code() != CASS_ERROR_SERVER_ALREADY_EXISTS ||
-      error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
+  if (error_result->code() != CQL_ERROR_ALREADY_EXISTS &&
+      error_result->code() != CQL_ERROR_FUNCTION_FAILURE) {
     return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
   }
   *keyspace = error_result->keyspace().data();
@@ -71,7 +71,7 @@ CassError cass_error_result_keyspace(const CassErrorResult* error_result, const 
 
 CassError cass_error_result_table(const CassErrorResult* error_result, const char** table,
                                   size_t* table_length) {
-  if (error_result->code() != CASS_ERROR_SERVER_ALREADY_EXISTS) {
+  if (error_result->code() != CQL_ERROR_ALREADY_EXISTS) {
     return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
   }
   *table = error_result->table().data();
@@ -81,7 +81,7 @@ CassError cass_error_result_table(const CassErrorResult* error_result, const cha
 
 CassError cass_error_result_function(const CassErrorResult* error_result, const char** function,
                                      size_t* function_length) {
-  if (error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
+  if (error_result->code() != CQL_ERROR_FUNCTION_FAILURE) {
     return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
   }
   *function = error_result->function().data();
@@ -95,7 +95,7 @@ size_t cass_error_num_arg_types(const CassErrorResult* error_result) {
 
 CassError cass_error_result_arg_type(const CassErrorResult* error_result, size_t index,
                                      const char** arg_type, size_t* arg_type_length) {
-  if (error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
+  if (error_result->code() != CQL_ERROR_FUNCTION_FAILURE) {
     return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
   }
   if (index > error_result->arg_types().size()) {
