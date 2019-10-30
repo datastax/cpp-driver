@@ -15,6 +15,9 @@
 */
 
 #include "integration.hpp"
+#include "testing.hpp"
+
+using namespace datastax::internal::testing;
 
 /**
  * Prepared integration tests; common operations
@@ -107,4 +110,90 @@ CASSANDRA_INTEGRATION_TEST_F(PreparedTests, PreparedIDUnchangedDuringReprepare) 
   Result result = session_.execute(insert_statement, false);
   EXPECT_EQ(CASS_OK, result.error_code());
   EXPECT_EQ(1u, logger_.count());
+}
+
+/**
+ * Verify that a statement is correctly prepared from an existing simple
+ * statement. The settings from the original statement should be inherited.
+ *
+ * @since 2.8
+ */
+CASSANDRA_INTEGRATION_TEST_F(PreparedTests, PrepareFromExistingSimpleStatement) {
+  CHECK_FAILURE;
+
+  use_keyspace(keyspace_name_);
+
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "1", "99"));
+
+  DowngradingConsistencyRetryPolicy retry_policy;
+  Statement statement(format_string(CASSANDRA_SELECT_VALUE_FORMAT, table_name_.c_str(), "?"), 1);
+
+  // Set unique settings to validate later
+  statement.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
+  statement.set_serial_consistency(CASS_CONSISTENCY_SERIAL);
+  statement.set_request_timeout(99999u);
+  statement.set_retry_policy(retry_policy);
+
+  // Prepare from the existing bound statement
+  Statement bound_statement = session_.prepare_from_existing(statement).bind();
+
+  // Validate that the bound statement inherited the settings from the original statement
+  EXPECT_EQ(get_consistency(bound_statement.get()), CASS_CONSISTENCY_LOCAL_QUORUM);
+  EXPECT_EQ(get_serial_consistency(bound_statement.get()), CASS_CONSISTENCY_SERIAL);
+  EXPECT_EQ(get_request_timeout_ms(bound_statement.get()), 99999u);
+  EXPECT_EQ(get_retry_policy(bound_statement.get()), retry_policy.get());
+
+  bound_statement.bind<Integer>(0, Integer(1));
+
+  Result result = session_.execute(bound_statement);
+  ASSERT_EQ(result.row_count(), 1);
+  EXPECT_EQ(result.first_row().column_by_name<Integer>("value").value(), 99);
+}
+
+/**
+ * Verify that a statement is correctly prepared from an existing bound
+ * statement. The settings from the original bound statement should be
+ * inherited.
+ *
+ * @since 2.8
+ */
+CASSANDRA_INTEGRATION_TEST_F(PreparedTests, PrepareFromExistingBoundStatement) {
+  CHECK_FAILURE;
+
+  use_keyspace(keyspace_name_);
+
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "1", "99"));
+
+  Statement bound_statement1 =
+      session_.prepare(format_string(CASSANDRA_SELECT_VALUE_FORMAT, table_name_.c_str(), "?"))
+          .bind();
+
+  DowngradingConsistencyRetryPolicy retry_policy;
+
+  // Set unique settings to validate later
+  bound_statement1.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
+  bound_statement1.set_serial_consistency(CASS_CONSISTENCY_SERIAL);
+  bound_statement1.set_request_timeout(99999u);
+  bound_statement1.set_retry_policy(retry_policy);
+
+  // Prepare from the existing bound statement
+  Statement bound_statement2 = session_.prepare_from_existing(bound_statement1).bind();
+
+  // Validate that the bound statement inherited the settings from the original statement
+  EXPECT_EQ(get_consistency(bound_statement2.get()), CASS_CONSISTENCY_LOCAL_QUORUM);
+  EXPECT_EQ(get_serial_consistency(bound_statement2.get()), CASS_CONSISTENCY_SERIAL);
+  EXPECT_EQ(get_request_timeout_ms(bound_statement2.get()), 99999u);
+  EXPECT_EQ(get_retry_policy(bound_statement2.get()), retry_policy.get());
+
+  bound_statement2.bind<Integer>(0, Integer(1));
+
+  Result result = session_.execute(bound_statement2);
+  ASSERT_EQ(result.row_count(), 1);
+  EXPECT_EQ(result.first_row().column_by_name<Integer>("value").value(), 99);
 }

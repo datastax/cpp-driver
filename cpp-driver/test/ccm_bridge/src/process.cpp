@@ -127,4 +127,4 @@ void Process::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
   delete[] buf->base;
 }
 
-}; // namespace utils
+} // namespace utils

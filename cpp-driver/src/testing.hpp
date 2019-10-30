@@ -39,6 +39,14 @@ CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
 
 CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, String ip_address, int port);
 
+CASS_EXPORT CassConsistency get_consistency(const CassStatement* statement);
+
+CASS_EXPORT CassConsistency get_serial_consistency(const CassStatement* statement);
+
+CASS_EXPORT uint64_t get_request_timeout_ms(const CassStatement* statement);
+
+CASS_EXPORT const CassRetryPolicy* get_retry_policy(const CassStatement* statement);
+
 }}} // namespace datastax::internal::testing
 
 #endif

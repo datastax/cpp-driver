@@ -27,6 +27,7 @@
 #include "request_handler.hpp"
 #include "result_response.hpp"
 #include "session.hpp"
+#include "statement.hpp"
 
 namespace datastax { namespace internal { namespace testing {
 
@@ -75,6 +76,22 @@ uint64_t get_host_latency_average(CassSession* session, String ip_address, int p
     return host ? host->get_current_average().average : 0;
   }
   return 0;
+}
+
+CassConsistency get_consistency(const CassStatement* statement) {
+  return statement->from()->consistency();
+}
+
+CassConsistency get_serial_consistency(const CassStatement* statement) {
+  return statement->from()->serial_consistency();
+}
+
+uint64_t get_request_timeout_ms(const CassStatement* statement) {
+  return statement->from()->request_timeout_ms();
+}
+
+const CassRetryPolicy* get_retry_policy(const CassStatement* statement) {
+  return CassRetryPolicy::to(statement->from()->retry_policy().get());
 }
 
 }}} // namespace datastax::internal::testing
