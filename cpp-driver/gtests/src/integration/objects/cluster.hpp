@@ -364,6 +364,42 @@ public:
   }
 
   /**
+   * Enable whitelist filtering.
+   *
+   * @param hosts A comma delimited list of hosts (addresses or
+   *              names)
+   * @return Cluster object
+   */
+  Cluster& with_whitelist_filtering(const std::string& hosts) {
+    cass_cluster_set_whitelist_filtering(get(), hosts.c_str());
+    return *this;
+  }
+
+  /**
+   * Enable/Disable preparing all hosts when preparing a new statement.
+   *
+   * @param enable
+   * @return Cluster object
+   */
+  Cluster& with_prepare_on_all_hosts(bool enable) {
+    EXPECT_EQ(CASS_OK,
+              cass_cluster_set_prepare_on_all_hosts(get(), enable ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
+   * Enable/Disable preparing existing statements on new or down hosts.
+   *
+   * @param enable
+   * @return Cluster object
+   */
+  Cluster& with_prepare_on_up_or_add_host(bool enable) {
+    EXPECT_EQ(CASS_OK,
+              cass_cluster_set_prepare_on_up_or_add_host(get(), enable ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
    * Create a new session and establish a connection to the server;
    * synchronously
    *
