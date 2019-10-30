@@ -187,15 +187,22 @@ void Integration::SetUp() {
 }
 
 void Integration::TearDown() {
-  // Restart all stopped nodes
+  // Restart and resume all stopped and paused nodes
   if (!is_test_chaotic_) { // No need to restart as cluster will be destroyed
-    for (std::vector<unsigned int>::iterator iterator = stopped_nodes_.begin();
-         iterator != stopped_nodes_.end(); ++iterator) {
-      TEST_LOG("Restarting Node Stopped in " << test_name_ << ": " << *iterator);
-      ccm_->start_node(*iterator);
+    for (std::vector<unsigned int>::iterator it = stopped_nodes_.begin(),
+                                             end = stopped_nodes_.end();
+         it != end; ++it) {
+      TEST_LOG("Restarting Node Stopped in " << test_name_ << ": " << *it);
+      ccm_->start_node(*it);
+    }
+    for (std::vector<unsigned int>::iterator it = paused_nodes_.begin(), end = paused_nodes_.end();
+         it != end; ++it) {
+      TEST_LOG("Resuming Node Paused in " << test_name_ << ": " << *it);
+      ccm_->resume_node(*it);
     }
   }
   stopped_nodes_.clear();
+  paused_nodes_.clear();
 
   // Drop keyspace for integration test (may or may have not been created)
   if (!is_test_chaotic_) { // No need to drop keyspace as cluster will be destroyed
@@ -400,11 +407,11 @@ bool Integration::force_decommission_node(unsigned int node) {
 }
 
 bool Integration::start_node(unsigned int node) {
-  // Stop the requested node
-  if (ccm_->is_node_down(node, true)) {
+  // Start the requested node and ensure paused nodes are ignored
+  std::vector<unsigned>::iterator it = std::find(paused_nodes_.begin(), paused_nodes_.end(), node);
+  if (it == paused_nodes_.end() && ccm_->is_node_down(node, true)) {
     bool status = ccm_->start_node(node);
-    std::vector<unsigned int>::iterator it =
-        std::find(stopped_nodes_.begin(), stopped_nodes_.end(), node);
+    it = std::find(stopped_nodes_.begin(), stopped_nodes_.end(), node);
     if (it != stopped_nodes_.end()) {
       stopped_nodes_.erase(it);
     }
@@ -414,13 +421,32 @@ bool Integration::start_node(unsigned int node) {
 }
 
 bool Integration::stop_node(unsigned int node, bool is_kill /*= false*/) {
-  // Stop the requested node
   if (ccm_->is_node_up(node, true)) {
     bool status = ccm_->stop_node(node, is_kill);
     if (status) {
       stopped_nodes_.push_back(node);
     }
     return status;
+  }
+  return false;
+}
+
+bool Integration::pause_node(unsigned int node) {
+  std::vector<unsigned>::iterator it = std::find(paused_nodes_.begin(), paused_nodes_.end(), node);
+  if (it == paused_nodes_.end() && ccm_->is_node_up(node, true)) {
+    ccm_->pause_node(node);
+    paused_nodes_.push_back(node);
+    return true;
+  }
+  return false;
+}
+
+bool Integration::resume_node(unsigned int node) {
+  std::vector<unsigned>::iterator it = std::find(paused_nodes_.begin(), paused_nodes_.end(), node);
+  if (it != paused_nodes_.end()) {
+    ccm_->resume_node(node);
+    paused_nodes_.erase(it);
+    return true;
   }
   return false;
 }

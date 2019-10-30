@@ -106,6 +106,17 @@ public:
   const std::string connect_error_message() { return connect_future_.error_message(); }
 
   /**
+   *  Get the current driver metrics
+   *
+   * @return Driver metrics
+   */
+  CassMetrics metrics() const {
+    CassMetrics metrics;
+    cass_session_get_metrics(get(), &metrics);
+    return metrics;
+  }
+
+  /**
    * Execute a batch statement synchronously
    *
    * @param batch Batch statement to execute

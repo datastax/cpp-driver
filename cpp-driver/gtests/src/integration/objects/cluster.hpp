@@ -118,6 +118,18 @@ public:
   }
 
   /**
+   * Sets the amount of time a connection is allowed to be without a successful
+   * heartbeat response before being terminated and scheduled for reconnection.
+   *
+   * @param interval_s Idle timeout (in seconds); 0 to disable heartbeat messages (default: 60s)
+   * @return Cluster object
+   */
+  Cluster& with_connection_idle_timeout(unsigned int interval_s = 60u) {
+    cass_cluster_set_connection_idle_timeout(get(), interval_s);
+    return *this;
+  }
+
+  /**
    * Assign/Append the contact points; passing an empty string will clear
    * the contact points
    *

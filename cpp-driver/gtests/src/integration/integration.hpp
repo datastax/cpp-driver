@@ -333,6 +333,10 @@ protected:
    * Vector of nodes that have been stopped
    */
   std::vector<unsigned int> stopped_nodes_;
+  /**
+   * Vector of nodes that have been paused
+   */
+  std::vector<unsigned int> paused_nodes_;
 
   /**
    * Get the default keyspace name (based on the current test case and test
@@ -457,12 +461,12 @@ protected:
   virtual bool force_decommission_node(unsigned int node);
 
   /**
-   * Start a node that was previously stopped to ensure that it is not restarted
-   * after test is completed
+   * Start a node that was previously stopped to ensure that it is not restarted after test is
+   * completed; paused nodes are ignored
    *
    * @param node Node that should be started
-   * @return True if node was started; false otherwise (the node is invalid or
-   *         was already started)
+   * @return True if node was started; false otherwise (the node is invalid or was already
+   *         started or is paused)
    */
   virtual bool start_node(unsigned int node);
 
@@ -476,6 +480,24 @@ protected:
    *         was already stopped)
    */
   virtual bool stop_node(unsigned int node, bool is_kill = false);
+
+  /**
+   * Pause a node that should be resumed after test is completed
+   *
+   * @param node Node that should be paused
+   * @return True if node was paused; false otherwise (the node is invalid or
+   *         was already paused)
+   */
+  virtual bool pause_node(unsigned int node);
+
+  /**
+   * Resume a node that was previously paused to ensure that it is not resumed after test is
+   * completed
+   *
+   * @param node Node that should be resumed
+   * @return True if node was resumed; false otherwise
+   */
+  virtual bool resume_node(unsigned int node);
 
   /**
    * Generate the contact points for the cluster
