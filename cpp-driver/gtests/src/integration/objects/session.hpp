@@ -117,6 +117,17 @@ public:
   }
 
   /**
+   *  Get the current driver speculative execution metrics
+   *
+   * @return Driver speculative execution metrics
+   */
+  CassSpeculativeExecutionMetrics speculative_execution_metrics() const {
+    CassSpeculativeExecutionMetrics speculative_execution_metrics;
+    cass_session_get_speculative_execution_metrics(get(), &speculative_execution_metrics);
+    return speculative_execution_metrics;
+  }
+
+  /**
    * Execute a batch statement synchronously
    *
    * @param batch Batch statement to execute
