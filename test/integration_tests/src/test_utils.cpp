@@ -538,11 +538,10 @@ void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> no
 std::string& trim(std::string& str) {
   // Trim front
   str.erase(str.begin(),
-            std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun<int, int>(::isspace))));
+            std::find_if(str.begin(), str.end(), [](unsigned char c) { return !::isspace(c); }));
   // Trim back
-  str.erase(
-      std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(::isspace))).base(),
-      str.end());
+  str.erase(std::find_if(str.rbegin(), str.rend(), [](unsigned char c) { return !::isspace(c); }).base(),
+            str.end());
   return str;
 }
 
