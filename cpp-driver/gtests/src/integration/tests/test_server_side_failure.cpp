@@ -19,11 +19,53 @@
 /**
  * Server-side warnings and errors integration tests
  */
-class ServerSideFailureTests : public Integration {
+class ServerSideFailureTests : public Integration {};
+
+/**
+ * Server-side errors integration tests that require three nodes.
+ */
+class ServerSideFailureThreeNodeTests : public Integration {
 public:
-  ServerSideFailureTests() {
+  ServerSideFailureThreeNodeTests() {
     number_dc1_nodes_ = 3;
     replication_factor_ = 3;
+  }
+
+  void SetUp() {
+    Integration::SetUp();
+    session_.execute(
+        format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "double"));
+  }
+
+  void validate_write_response(Session session, CassError expected_error_code) {
+    Statement insert_statement(
+        format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "2", "2.71"));
+    insert_statement.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
+    insert_statement.set_host("127.0.0.1", 9042);
+    Result result = session.execute(insert_statement, false);
+    validate_response(result, expected_error_code);
+  }
+
+  void validate_read_response(Session session, CassError expected_error_code) {
+    Statement select_statement(default_select_all());
+    select_statement.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
+    select_statement.set_host("127.0.0.1", 9042);
+    Result result = session.execute(select_statement, false);
+    validate_response(result, expected_error_code);
+  }
+
+private:
+  void validate_response(Result result, CassError expected_error_code) {
+    EXPECT_EQ(expected_error_code, result.error_code());
+
+    ErrorResult error_result = result.error_result();
+    ASSERT_TRUE(error_result);
+    EXPECT_EQ(expected_error_code, error_result.error_code());
+    EXPECT_EQ(CASS_CONSISTENCY_LOCAL_QUORUM, error_result.consistency());
+    EXPECT_EQ(1, error_result.responses_received());
+    EXPECT_EQ(2, error_result.responses_required());
+    EXPECT_TRUE(expected_error_code != CASS_ERROR_SERVER_READ_TIMEOUT ||
+                error_result.data_present());
   }
 };
 
@@ -40,7 +82,7 @@ CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureTests, Warning) {
 
   logger_.add_critera("Server-side warning: Aggregation query used without partition key");
   session_.execute("SELECT sum(gossip_generation) FROM system.local");
-  EXPECT_EQ(logger_.count(), 1);
+  EXPECT_EQ(logger_.count(), 1u);
 }
 
 /**
@@ -64,16 +106,12 @@ CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureTests, ErrorFunctionFailure) {
                    "AS 'throw new RuntimeException(\"failure\");'");
 
   // Bind and insert values into Cassandra
-  Statement insert_statement("INSERT INTO server_function_failures(id, value) VALUES (?, ?)", 2);
-  insert_statement.bind<Integer>("id", Integer(1));
-  insert_statement.bind<Double>("value", Double(3.14));
-  session_.execute(insert_statement);
+  session_.execute("INSERT INTO server_function_failures(id, value) VALUES (1, 3.14)");
 
   // Execute the failing function
-  Statement select_statement(
-      "SELECT function_failure(value) FROM server_function_failures WHERE id = ?", 1);
-  select_statement.bind<Integer>("id", Integer(1));
-  Result result = session_.execute(select_statement, false);
+  Result result = session_.execute(
+      Statement("SELECT function_failure(value) FROM server_function_failures WHERE id = 1"),
+      false);
   EXPECT_EQ(CASS_ERROR_SERVER_FUNCTION_FAILURE, result.error_code());
 
   ErrorResult error_result = result.error_result();
@@ -86,7 +124,7 @@ CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureTests, ErrorFunctionFailure) {
 }
 
 /**
- * Validate Already_exists failures are returned when creating the same table twice.
+ * Validate already exists failures are returned when creating the same table twice.
  */
 CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureTests, ErrorTableAlreadyExists) {
   CHECK_FAILURE;
@@ -131,92 +169,27 @@ CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureTests, ErrorFunctionAlreadyExists)
 /**
  * Validate read/write timeout server-side failures and error result data.
  */
-CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureTests, ErrorReadWriteTimeout) {
+CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureThreeNodeTests, ErrorReadWriteTimeout) {
   Session session =
       default_cluster().with_retry_policy(FallthroughRetryPolicy()).connect(keyspace_name_);
-
-  session.execute("CREATE TABLE read_write_timeout (id int PRIMARY KEY, value double)");
 
   pause_node(2);
   pause_node(3);
 
-  {
-    Statement insert_statement("INSERT INTO read_write_timeout(id, value) VALUES (?, ?)", 2);
-    insert_statement.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
-    insert_statement.bind<Integer>("id", Integer(2));
-    insert_statement.bind<Double>("value", Double(2.71));
-    insert_statement.set_host("127.0.0.1", 9042);
-    Result result = session.execute(insert_statement, false);
-
-    EXPECT_EQ(CASS_ERROR_SERVER_WRITE_TIMEOUT, result.error_code());
-
-    ErrorResult error_result = result.error_result();
-    ASSERT_TRUE(error_result);
-    EXPECT_EQ(CASS_ERROR_SERVER_WRITE_TIMEOUT, error_result.error_code());
-    EXPECT_EQ(CASS_CONSISTENCY_LOCAL_QUORUM, error_result.consistency());
-    EXPECT_EQ(1, error_result.responses_received());
-    EXPECT_EQ(2, error_result.responses_required());
-  }
-
-  {
-    Statement select_statement("SELECT * FROM read_write_timeout");
-    select_statement.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
-    select_statement.set_host("127.0.0.1", 9042);
-    Result result = session.execute(select_statement, false);
-    EXPECT_EQ(CASS_ERROR_SERVER_READ_TIMEOUT, result.error_code());
-
-    ErrorResult error_result = result.error_result();
-    ASSERT_TRUE(error_result);
-    EXPECT_EQ(CASS_ERROR_SERVER_READ_TIMEOUT, error_result.error_code());
-    EXPECT_EQ(CASS_CONSISTENCY_LOCAL_QUORUM, error_result.consistency());
-    EXPECT_EQ(1, error_result.responses_received());
-    EXPECT_EQ(2, error_result.responses_required());
-    EXPECT_TRUE(error_result.data_present());
-  }
+  validate_write_response(session, CASS_ERROR_SERVER_WRITE_TIMEOUT);
+  validate_read_response(session, CASS_ERROR_SERVER_READ_TIMEOUT);
 }
 
 /**
  * Validate read/write unavailable server-side failures and error result data.
  */
-CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureTests, ErrorUnavailable) {
+CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureThreeNodeTests, ErrorUnavailable) {
   Session session =
       default_cluster().with_retry_policy(FallthroughRetryPolicy()).connect(keyspace_name_);
-
-  session.execute("CREATE TABLE unavailable (id int PRIMARY KEY, value double)");
 
   stop_node(2);
   stop_node(3);
 
-  {
-    Statement insert_statement("INSERT INTO unavailable(id, value) VALUES (?, ?)", 2);
-    insert_statement.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
-    insert_statement.bind<Integer>("id", Integer(2));
-    insert_statement.bind<Double>("value", Double(2.71));
-    insert_statement.set_host("127.0.0.1", 9042);
-    Result result = session.execute(insert_statement, false);
-
-    EXPECT_EQ(CASS_ERROR_SERVER_UNAVAILABLE, result.error_code());
-
-    ErrorResult error_result = result.error_result();
-    ASSERT_TRUE(error_result);
-    EXPECT_EQ(CASS_ERROR_SERVER_UNAVAILABLE, error_result.error_code());
-    EXPECT_EQ(CASS_CONSISTENCY_LOCAL_QUORUM, error_result.consistency());
-    EXPECT_EQ(1, error_result.responses_received());
-    EXPECT_EQ(2, error_result.responses_required());
-  }
-
-  {
-    Statement select_statement("SELECT * FROM unavailable");
-    select_statement.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
-    select_statement.set_host("127.0.0.1", 9042);
-    Result result = session.execute(select_statement, false);
-    EXPECT_EQ(CASS_ERROR_SERVER_UNAVAILABLE, result.error_code());
-
-    ErrorResult error_result = result.error_result();
-    ASSERT_TRUE(error_result);
-    EXPECT_EQ(CASS_ERROR_SERVER_UNAVAILABLE, error_result.error_code());
-    EXPECT_EQ(CASS_CONSISTENCY_LOCAL_QUORUM, error_result.consistency());
-    EXPECT_EQ(1, error_result.responses_received());
-    EXPECT_EQ(2, error_result.responses_required());
-  }
+  validate_write_response(session, CASS_ERROR_SERVER_UNAVAILABLE);
+  validate_read_response(session, CASS_ERROR_SERVER_UNAVAILABLE);
 }
