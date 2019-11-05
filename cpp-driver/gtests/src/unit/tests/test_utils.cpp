@@ -87,3 +87,19 @@ TEST(UtilsUnitTest, NextPow2) {
   EXPECT_EQ(STATIC_NEXT_POW_2(31u), 32u);
   EXPECT_EQ(STATIC_NEXT_POW_2(32u), 32u);
 }
+
+TEST(UtilsUnitTest, Trim) {
+  String s;
+
+  s = " abc";
+  EXPECT_EQ(trim(s), String("abc"));
+
+  s = "abc ";
+  EXPECT_EQ(trim(s), String("abc"));
+
+  s = "  abc  ";
+  EXPECT_EQ(trim(s), String("abc"));
+
+  s = "  a bc ";
+  EXPECT_EQ(trim(s), String("a bc"));
+}
