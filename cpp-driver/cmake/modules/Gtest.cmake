@@ -6,8 +6,7 @@ cmake_minimum_required(VERSION 2.6.4)
 # Initialize the Google Test framework
 #
 # Input: VENDOR_DIR
-# Output: GOOGLE_TEST_DIR, GOOGLE_TEST_HEADER_FILES, GOOGLE_TEST_SOURCE_FILES,
-#         GOOGLE_TEST_LIBRARIES
+# Output: GOOGLE_TEST_DIR, GOOGLE_TEST_HEADER_FILES, GOOGLE_TEST_SOURCE_FILES
 #------------------------
 macro(GtestFramework)
   #------------------------------
@@ -26,9 +25,6 @@ macro(GtestFramework)
     # VS 2012     11           1700            std::tr1::tuple + _VARIADIC_MAX=10
     # VS 2013     12           1800            std::tr1::tuple
     add_definitions(-D_VARIADIC_MAX=10)
-  else()
-    find_package(Threads REQUIRED)
-    set(GOOGLE_TEST_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
   endif()
 endmacro()
 
@@ -229,7 +225,6 @@ macro(GtestUnitTests project_name extra_files extra_includes excluded_test_files
                                       ${CCM_BRIDGE_SOURCE_DIR})
   endif()
   target_link_libraries(${UNIT_TESTS_NAME}
-                        ${GOOGLE_TEST_LIBRARIES}
                         ${DSE_LIBS}
                         ${PROJECT_LIB_NAME_TARGET})
   set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY PROJECT_LABEL ${UNIT_TESTS_DISPLAY_NAME})

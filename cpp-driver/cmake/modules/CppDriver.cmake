@@ -441,6 +441,12 @@ macro(CassUseLibuv)
   # Assign libuv include and libraries
   set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIRS})
   set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARIES})
+
+  # libuv and gtests require thread library
+  set (THREADS_PREFER_PTHREAD_FLAG 1)
+  find_package(Threads REQUIRED)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
 endmacro()
 
 #------------------------
