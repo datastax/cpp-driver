@@ -20,14 +20,14 @@
  * Cassandra type integration tests
  */
 template <class C>
-class CassandraTypesTest : public Integration {
+class CassandraTypesTests : public Integration {
 public:
   /**
    * Cassandra type values
    */
   static const std::vector<C> values_;
 
-  CassandraTypesTest()
+  CassandraTypesTests()
       : is_key_allowed_(true) {}
 
   void SetUp() {
@@ -64,9 +64,9 @@ protected:
   /**
    * Default setup for most of the tests
    */
-  void default_setup() {
+  void default_setup(bool is_named = false) {
     // Create the table, insert, and select queries
-    initialize(values_[0].cql_type());
+    initialize(values_[0].cql_type(), is_named);
   }
 
   /**
@@ -74,7 +74,7 @@ protected:
    *
    * @param cql_type CQL value type to use for the tables
    */
-  void initialize(const std::string& cql_type) {
+  void initialize(const std::string& cql_type, bool is_named = false) {
     if (is_key_allowed_) {
       session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(),
                                      cql_type.c_str(), cql_type.c_str()));
@@ -82,17 +82,20 @@ protected:
       session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int",
                                      cql_type.c_str()));
     }
-    insert_query_ = format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "?", "?");
-    select_query_ = format_string(CASSANDRA_SELECT_VALUE_FORMAT, table_name_.c_str(), "?");
+    insert_query_ =
+        format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(),
+                      (is_named ? ":named_key" : "?"), (is_named ? ":named_value" : "?"));
+    select_query_ = format_string(CASSANDRA_SELECT_VALUE_FORMAT, table_name_.c_str(),
+                                  (is_named ? ":named_key" : "?"));
     prepared_statement_ = session_.prepare(insert_query_);
   }
 };
-TYPED_TEST_CASE_P(CassandraTypesTest);
+TYPED_TEST_CASE_P(CassandraTypesTests);
 
 /**
  * Specialized duration integration test extension
  */
-class CassandraTypesDurationTest : public CassandraTypesTest<Duration> {};
+class CassandraTypesDurationTests : public CassandraTypesTests<Duration> {};
 
 /**
  * Perform insert using a simple and prepared statement operation
@@ -107,11 +110,11 @@ class CassandraTypesDurationTest : public CassandraTypesTest<Duration> {};
  * @since core:1.0.0
  * @expected_result Cassandra values are inserted and validated
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Basic) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, Basic) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   this->default_setup();
-  const std::vector<TypeParam>& values = CassandraTypesTest<TypeParam>::values_;
+  const std::vector<TypeParam>& values = CassandraTypesTests<TypeParam>::values_;
 
   // Iterate over all the Cassandra type values
   for (typename std::vector<TypeParam>::const_iterator it = values.begin(); it != values.end();
@@ -156,7 +159,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Basic) {
  *
  * This test will perform multiple inserts by name using a simple/prepared
  * statement with the parameterized type values statically assigned against a
- *  single node cluster.
+ * single node cluster.
  *
  * @test_category queries:basic
  * @test_category prepared_statements
@@ -164,11 +167,11 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Basic) {
  * @since core:1.0.0
  * @expected_result Cassandra values are inserted and validated
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicByName) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, ByName) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   this->default_setup();
-  const std::vector<TypeParam>& values = CassandraTypesTest<TypeParam>::values_;
+  const std::vector<TypeParam>& values = CassandraTypesTests<TypeParam>::values_;
 
   // Iterate over all the Cassandra type values
   for (typename std::vector<TypeParam>::const_iterator it = values.begin(); it != values.end();
@@ -208,6 +211,64 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicByName) {
 }
 
 /**
+ * Perform insert by named parameter using a simple and prepared statement operation
+ *
+ * This test will perform multiple inserts with named parameter using a simple/prepared
+ * statement with the parameterized type values statically assigned against a single node cluster.
+ *
+ * @test_category queries:basic
+ * @test_category prepared_statements
+ * @test_category data_types:primitive
+ * @test_category queries:named_parameters
+ * @since core:2.10.0-beta
+ * @jira_ticket CPP-263
+ * @expected_result Cassandra values are inserted and validated
+ */
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, NamedParameters) {
+  CHECK_VERSION(2.1.0);
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
+
+  this->default_setup(true);
+  const std::vector<TypeParam>& values = CassandraTypesTests<TypeParam>::values_;
+
+  // Iterate over all the Cassandra type values
+  for (typename std::vector<TypeParam>::const_iterator it = values.begin(); it != values.end();
+       ++it) {
+    // Get the current value
+    const TypeParam& value = *it;
+
+    // Create both simple and prepared statements
+    Statement statements[] = { Statement(this->insert_query_, 2),
+                               this->prepared_statement_.bind() };
+
+    // Iterate over all the statements
+    for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
+      Statement& statement = statements[i];
+
+      // Bind both the primary key and the value with the Cassandra type and insert
+      if (this->is_key_allowed_) {
+        statement.bind<TypeParam>("named_key", value);
+      } else {
+        statement.bind<Integer>("named_key", Integer(i));
+      }
+      statement.bind<TypeParam>("named_value", value);
+      this->session_.execute(statement);
+
+      // Validate the insert and result
+      Statement select_statement(this->select_query_, 1);
+      if (this->is_key_allowed_) {
+        select_statement.bind<TypeParam>("named_key", value);
+      } else {
+        select_statement.bind<Integer>("named_key", Integer(i));
+      }
+      Result result = this->session_.execute(select_statement);
+      ASSERT_EQ(1u, result.row_count());
+      ASSERT_EQ(value, result.first_row().next().as<TypeParam>());
+    }
+  }
+}
+
+/**
  * Perform NULL value inserts using a simple and prepared statement operation
  *
  * This test will perform multiple NULL inserts using a simple/prepared
@@ -219,7 +280,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicByName) {
  * @since core:1.0.0
  * @expected_result Cassandra NULL values are inserted and validated
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullValues) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, NullValues) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   this->is_key_allowed_ = false; // Ensure the TypeParam is not allowed as a key
@@ -262,7 +323,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullValues) {
  * @since core:1.0.0
  * @expected_result Cassandra NULL values are inserted and validated
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullList) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, NullList) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   this->is_key_allowed_ = false; // Ensure the TypeParam is not allowed as a key
@@ -306,7 +367,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullList) {
  * @since core:1.0.0
  * @expected_result Cassandra NULL values are inserted and validated
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullMap) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, NullMap) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   this->is_key_allowed_ = false; // Ensure the TypeParam is not allowed as a key
@@ -350,7 +411,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullMap) {
  * @since core:1.0.0
  * @expected_result Cassandra NULL values are inserted and validated
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullSet) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, NullSet) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   this->is_key_allowed_ = false; // Ensure the TypeParam is not allowed as a key
@@ -395,11 +456,11 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullSet) {
  * @expected_result Cassandra values are inserted using a list and then
  *                  validated via simple and prepared statement operations
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, List) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, List) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // Initialize the table and assign the values for the list
-  List<TypeParam> list(CassandraTypesTest<TypeParam>::values_);
+  List<TypeParam> list(CassandraTypesTests<TypeParam>::values_);
   this->initialize("frozen<" + list.cql_type() + ">");
 
   // Create both simple and prepared statements
@@ -446,14 +507,14 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, List) {
  * @expected_result Cassandra values are inserted using a set and then validated
  *                  via simple and prepared statement operations
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Set) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, Set) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
-  if (CassandraTypesTest<TypeParam>::values_[0].cql_type().compare("duration") == 0) {
+  if (CassandraTypesTests<TypeParam>::values_[0].cql_type().compare("duration") == 0) {
     SKIP_TEST("Unsupported CQL Type Duration: Set does not support duration");
   }
 
   // Initialize the table and assign the values for the set
-  Set<TypeParam> set(CassandraTypesTest<TypeParam>::values_);
+  Set<TypeParam> set(CassandraTypesTests<TypeParam>::values_);
   this->initialize("frozen<" + set.cql_type() + ">");
 
   // Create both simple and prepared statements
@@ -500,14 +561,14 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Set) {
  * @expected_result Cassandra values are inserted using a map and then validated
  *                  via simple and prepared statement operations
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Map) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, Map) {
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // TODO(fero): Move this into its own parameterized method or keep this branching?
   if (this->is_key_allowed_) {
     // Initialize the table and assign the values for the map
     std::map<TypeParam, TypeParam> map_values;
-    const std::vector<TypeParam>& values = CassandraTypesTest<TypeParam>::values_;
+    const std::vector<TypeParam>& values = CassandraTypesTests<TypeParam>::values_;
     for (typename std::vector<TypeParam>::const_iterator it = values.begin(); it != values.end();
          ++it) {
       map_values[*it] = *it;
@@ -540,7 +601,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Map) {
   } else {
     // Initialize the table and assign the values for the map
     std::map<Integer, TypeParam> map_values;
-    const std::vector<TypeParam>& values = CassandraTypesTest<TypeParam>::values_;
+    const std::vector<TypeParam>& values = CassandraTypesTests<TypeParam>::values_;
     cass_int32_t count = 1;
     for (typename std::vector<TypeParam>::const_iterator it = values.begin(); it != values.end();
          ++it) {
@@ -589,12 +650,12 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Map) {
  * @expected_result Cassandra values are inserted using a tuple and then
  *                  validated via simple and prepared statement operations
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Tuple) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, Tuple) {
   CHECK_VERSION(2.1.0);
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // Initialize the table and assign the values for the tuple
-  const std::vector<TypeParam>& values = CassandraTypesTest<TypeParam>::values_;
+  const std::vector<TypeParam>& values = CassandraTypesTests<TypeParam>::values_;
   Tuple tuple(values.size());
   std::string cql_type("tuple<");
   for (size_t i = 0; i < values.size(); ++i) {
@@ -650,12 +711,12 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Tuple) {
  * @expected_result Cassandra values are inserted using a user data type and
  *                  then validated via simple and prepared statement operations
  */
-CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, UDT) {
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTests, UDT) {
   CHECK_VERSION(2.2.0);
   CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // Build the UDT type name e.g. udt_pointtype, udt_line_string, etc.
-  const std::vector<TypeParam>& values = CassandraTypesTest<TypeParam>::values_;
+  const std::vector<TypeParam>& values = CassandraTypesTests<TypeParam>::values_;
   std::string cql_type("udt_" + Utils::to_lower(Utils::replace_all(values[0].cql_type(), "'", "")));
 
   // Create the UDT type
@@ -722,12 +783,13 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, UDT) {
 }
 
 // Register all parameterized test cases for primitives (excludes duration)
-REGISTER_TYPED_TEST_CASE_P(CassandraTypesTest, Integration_Cassandra_Basic,
-                           Integration_Cassandra_BasicByName, Integration_Cassandra_BasicNullValues,
-                           Integration_Cassandra_BasicNullList, Integration_Cassandra_BasicNullMap,
-                           Integration_Cassandra_BasicNullSet, Integration_Cassandra_List,
-                           Integration_Cassandra_Set, Integration_Cassandra_Map,
-                           Integration_Cassandra_Tuple, Integration_Cassandra_UDT);
+REGISTER_TYPED_TEST_CASE_P(CassandraTypesTests, Integration_Cassandra_Basic,
+                           Integration_Cassandra_ByName, Integration_Cassandra_NamedParameters,
+                           Integration_Cassandra_NullValues, Integration_Cassandra_NullList,
+                           Integration_Cassandra_NullMap, Integration_Cassandra_NullSet,
+                           Integration_Cassandra_List, Integration_Cassandra_Set,
+                           Integration_Cassandra_Map, Integration_Cassandra_Tuple,
+                           Integration_Cassandra_UDT);
 
 /**
  * Attempt to utilize an invalid duration value on a statement
@@ -742,7 +804,7 @@ REGISTER_TYPED_TEST_CASE_P(CassandraTypesTest, Integration_Cassandra_Basic,
  * @expected_result Statement request will execute and a server error will
  *                  occur.
  */
-CASSANDRA_INTEGRATION_TEST_F(CassandraTypesDurationTest, MixedValues) {
+CASSANDRA_INTEGRATION_TEST_F(CassandraTypesDurationTests, MixedValues) {
   CHECK_FAILURE;
   CHECK_VALUE_TYPE_VERSION(Duration);
 
@@ -766,7 +828,7 @@ typedef testing::Types<Ascii, BigInteger, Blob, Boolean, Date, Decimal, Double, 
                        Inet, Integer, SmallInteger, Text, Time, Timestamp, TimeUuid, TinyInteger,
                        Uuid, Varchar, Varint>
     CassandraTypes;
-INSTANTIATE_TYPED_TEST_CASE_P(CassandraTypes, CassandraTypesTest, CassandraTypes);
+INSTANTIATE_TYPED_TEST_CASE_P(CassandraTypes, CassandraTypesTests, CassandraTypes);
 
 /**
  * Values for ASCII tests
@@ -774,8 +836,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(CassandraTypes, CassandraTypesTest, CassandraTypes
 const Ascii ASCII_VALUES[] = { Ascii("DataStax"), Ascii("C/C++"), Ascii("Driver"),
                                Ascii("Cassandra") };
 template <>
-const std::vector<Ascii> CassandraTypesTest<Ascii>::values_(ASCII_VALUES,
-                                                            ASCII_VALUES + ARRAY_LEN(ASCII_VALUES));
+const std::vector<Ascii>
+    CassandraTypesTests<Ascii>::values_(ASCII_VALUES, ASCII_VALUES + ARRAY_LEN(ASCII_VALUES));
 
 /**
  * Values for bigint tests
@@ -783,9 +845,9 @@ const std::vector<Ascii> CassandraTypesTest<Ascii>::values_(ASCII_VALUES,
 const BigInteger BIGINT_VALUES[] = { BigInteger::max(), BigInteger::min(),
                                      BigInteger(static_cast<cass_int64_t>(0)), BigInteger(37) };
 template <>
-const std::vector<BigInteger> CassandraTypesTest<BigInteger>::values_(BIGINT_VALUES,
-                                                                      BIGINT_VALUES +
-                                                                          ARRAY_LEN(BIGINT_VALUES));
+const std::vector<BigInteger>
+    CassandraTypesTests<BigInteger>::values_(BIGINT_VALUES,
+                                             BIGINT_VALUES + ARRAY_LEN(BIGINT_VALUES));
 
 /**
  * Values for blob tests
@@ -793,17 +855,17 @@ const std::vector<BigInteger> CassandraTypesTest<BigInteger>::values_(BIGINT_VAL
 const Blob BLOB_VALUES[] = { Blob("DataStax C/C++ Driver"), Blob("Cassandra"),
                              Blob("DataStax Enterprise") };
 template <>
-const std::vector<Blob> CassandraTypesTest<Blob>::values_(BLOB_VALUES,
-                                                          BLOB_VALUES + ARRAY_LEN(BLOB_VALUES));
+const std::vector<Blob> CassandraTypesTests<Blob>::values_(BLOB_VALUES,
+                                                           BLOB_VALUES + ARRAY_LEN(BLOB_VALUES));
 
 /**
  * Values for boolean tests
  */
 const Boolean BOOLEAN_VALUES[] = { Boolean(true), Boolean(false) };
 template <>
-const std::vector<Boolean> CassandraTypesTest<Boolean>::values_(BOOLEAN_VALUES,
-                                                                BOOLEAN_VALUES +
-                                                                    ARRAY_LEN(BOOLEAN_VALUES));
+const std::vector<Boolean> CassandraTypesTests<Boolean>::values_(BOOLEAN_VALUES,
+                                                                 BOOLEAN_VALUES +
+                                                                     ARRAY_LEN(BOOLEAN_VALUES));
 
 /**
  * Values for date tests
@@ -812,8 +874,8 @@ const Date DATE_VALUES[] = { Date::max(), // maximum for strftime
                              Date::min(), // minimum for strftime
                              Date(static_cast<cass_uint32_t>(0)), Date(12345u) };
 template <>
-const std::vector<Date> CassandraTypesTest<Date>::values_(DATE_VALUES,
-                                                          DATE_VALUES + ARRAY_LEN(DATE_VALUES));
+const std::vector<Date> CassandraTypesTests<Date>::values_(DATE_VALUES,
+                                                           DATE_VALUES + ARRAY_LEN(DATE_VALUES));
 
 /**
  * Values for decimal tests
@@ -828,9 +890,9 @@ const Decimal DECIMAL_VALUES[] = { Decimal("3."
                                            "6180339887498948482045868343656381177203091798057628621"
                                            "354486227052604628189024497072072041893911374") };
 template <>
-const std::vector<Decimal> CassandraTypesTest<Decimal>::values_(DECIMAL_VALUES,
-                                                                DECIMAL_VALUES +
-                                                                    ARRAY_LEN(DECIMAL_VALUES));
+const std::vector<Decimal> CassandraTypesTests<Decimal>::values_(DECIMAL_VALUES,
+                                                                 DECIMAL_VALUES +
+                                                                     ARRAY_LEN(DECIMAL_VALUES));
 
 /**
  * Values for double tests
@@ -839,7 +901,7 @@ const Double DOUBLE_VALUES[] = { Double::max(), Double::min(), Double(3.14159265
                                  Double(2.7182818284), Double(1.6180339887) };
 template <>
 const std::vector<Double>
-    CassandraTypesTest<Double>::values_(DOUBLE_VALUES, DOUBLE_VALUES + ARRAY_LEN(DOUBLE_VALUES));
+    CassandraTypesTests<Double>::values_(DOUBLE_VALUES, DOUBLE_VALUES + ARRAY_LEN(DOUBLE_VALUES));
 
 /**
  * Values for duration tests
@@ -854,9 +916,9 @@ const Duration DURATION_VALUES[] = {
   Duration(CassDuration(0, std::numeric_limits<cass_int32_t>::min(), -1))
 };
 template <>
-const std::vector<Duration> CassandraTypesTest<Duration>::values_(DURATION_VALUES,
-                                                                  DURATION_VALUES +
-                                                                      ARRAY_LEN(DURATION_VALUES));
+const std::vector<Duration> CassandraTypesTests<Duration>::values_(DURATION_VALUES,
+                                                                   DURATION_VALUES +
+                                                                       ARRAY_LEN(DURATION_VALUES));
 
 /**
  * Values for float tests
@@ -864,8 +926,8 @@ const std::vector<Duration> CassandraTypesTest<Duration>::values_(DURATION_VALUE
 const Float FLOAT_VALUES[] = { Float::max(), Float::min(), Float(3.14159f), Float(2.71828f),
                                Float(1.61803f) };
 template <>
-const std::vector<Float> CassandraTypesTest<Float>::values_(FLOAT_VALUES,
-                                                            FLOAT_VALUES + ARRAY_LEN(FLOAT_VALUES));
+const std::vector<Float>
+    CassandraTypesTests<Float>::values_(FLOAT_VALUES, FLOAT_VALUES + ARRAY_LEN(FLOAT_VALUES));
 
 /**
  * Values for inet tests
@@ -873,16 +935,16 @@ const std::vector<Float> CassandraTypesTest<Float>::values_(FLOAT_VALUES,
 const Inet INET_VALUES[] = { Inet::max(), Inet::min(), Inet("127.0.0.1"), Inet("0:0:0:0:0:0:0:1"),
                              Inet("2001:db8:85a3:0:0:8a2e:370:7334") };
 template <>
-const std::vector<Inet> CassandraTypesTest<Inet>::values_(INET_VALUES,
-                                                          INET_VALUES + ARRAY_LEN(INET_VALUES));
+const std::vector<Inet> CassandraTypesTests<Inet>::values_(INET_VALUES,
+                                                           INET_VALUES + ARRAY_LEN(INET_VALUES));
 
 /**
  * Values for int tests
  */
 const Integer INT_VALUES[] = { Integer::max(), Integer::min(), Integer(0), Integer(148) };
 template <>
-const std::vector<Integer> CassandraTypesTest<Integer>::values_(INT_VALUES,
-                                                                INT_VALUES + ARRAY_LEN(INT_VALUES));
+const std::vector<Integer>
+    CassandraTypesTests<Integer>::values_(INT_VALUES, INT_VALUES + ARRAY_LEN(INT_VALUES));
 
 /**
  * Values for smallint tests
@@ -891,8 +953,8 @@ const SmallInteger SMALLINT_VALUES[] = { SmallInteger::max(), SmallInteger::min(
                                          SmallInteger(static_cast<int16_t>(0)), SmallInteger(148) };
 template <>
 const std::vector<SmallInteger>
-    CassandraTypesTest<SmallInteger>::values_(SMALLINT_VALUES,
-                                              SMALLINT_VALUES + ARRAY_LEN(SMALLINT_VALUES));
+    CassandraTypesTests<SmallInteger>::values_(SMALLINT_VALUES,
+                                               SMALLINT_VALUES + ARRAY_LEN(SMALLINT_VALUES));
 
 /**
  * Values for text tests
@@ -900,8 +962,8 @@ const std::vector<SmallInteger>
 const Text TEXT_VALUES[] = { Text("The quick brown fox jumps over the lazy dog"),
                              Text("Hello World"), Text("DataStax C/C++ Driver") };
 template <>
-const std::vector<Text> CassandraTypesTest<Text>::values_(TEXT_VALUES,
-                                                          TEXT_VALUES + ARRAY_LEN(TEXT_VALUES));
+const std::vector<Text> CassandraTypesTests<Text>::values_(TEXT_VALUES,
+                                                           TEXT_VALUES + ARRAY_LEN(TEXT_VALUES));
 
 /**
  * Values for time tests
@@ -909,8 +971,8 @@ const std::vector<Text> CassandraTypesTest<Text>::values_(TEXT_VALUES,
 const Time TIME_VALUES[] = { Time::max(), Time::min(), Time(static_cast<cass_int64_t>(0)),
                              Time(9876543210) };
 template <>
-const std::vector<Time> CassandraTypesTest<Time>::values_(TIME_VALUES,
-                                                          TIME_VALUES + ARRAY_LEN(TIME_VALUES));
+const std::vector<Time> CassandraTypesTests<Time>::values_(TIME_VALUES,
+                                                           TIME_VALUES + ARRAY_LEN(TIME_VALUES));
 
 /**
  * Values for timestamp tests
@@ -919,8 +981,8 @@ const Timestamp TIMESTAMP_VALUES[] = { Timestamp::max(), Timestamp::min(), Times
                                        Timestamp(456), Timestamp(789) };
 template <>
 const std::vector<Timestamp>
-    CassandraTypesTest<Timestamp>::values_(TIMESTAMP_VALUES,
-                                           TIMESTAMP_VALUES + ARRAY_LEN(TIMESTAMP_VALUES));
+    CassandraTypesTests<Timestamp>::values_(TIMESTAMP_VALUES,
+                                            TIMESTAMP_VALUES + ARRAY_LEN(TIMESTAMP_VALUES));
 
 /**
  * Values for timeuuid tests
@@ -934,9 +996,9 @@ const TimeUuid TIMEUUID_VALUES[] = { TimeUuid::min(),
                                      TimeUuid(values::TimeUuid::min(uv_hrtime())),
                                      TimeUuid(values::TimeUuid::max(uv_hrtime())) };
 template <>
-const std::vector<TimeUuid> CassandraTypesTest<TimeUuid>::values_(TIMEUUID_VALUES,
-                                                                  TIMEUUID_VALUES +
-                                                                      ARRAY_LEN(TIMEUUID_VALUES));
+const std::vector<TimeUuid> CassandraTypesTests<TimeUuid>::values_(TIMEUUID_VALUES,
+                                                                   TIMEUUID_VALUES +
+                                                                       ARRAY_LEN(TIMEUUID_VALUES));
 
 /**
  * Values for tinyint tests
@@ -945,8 +1007,8 @@ const TinyInteger TINYINT_VALUES[] = { TinyInteger::max(), TinyInteger::min(),
                                        TinyInteger(static_cast<int8_t>(0)), TinyInteger(37) };
 template <>
 const std::vector<TinyInteger>
-    CassandraTypesTest<TinyInteger>::values_(TINYINT_VALUES,
-                                             TINYINT_VALUES + ARRAY_LEN(TINYINT_VALUES));
+    CassandraTypesTests<TinyInteger>::values_(TINYINT_VALUES,
+                                              TINYINT_VALUES + ARRAY_LEN(TINYINT_VALUES));
 
 /**
  * Values for uuid tests
@@ -955,8 +1017,8 @@ const Uuid UUID_VALUES[] = { Uuid::max(), Uuid::min(), Uuid("03398c99-c635-4fad-
                              Uuid("03398c99-c635-4fad-b30a-3b2c49f785c3"),
                              Uuid("03398c99-c635-4fad-b30a-3b2c49f785c4") };
 template <>
-const std::vector<Uuid> CassandraTypesTest<Uuid>::values_(UUID_VALUES,
-                                                          UUID_VALUES + ARRAY_LEN(UUID_VALUES));
+const std::vector<Uuid> CassandraTypesTests<Uuid>::values_(UUID_VALUES,
+                                                           UUID_VALUES + ARRAY_LEN(UUID_VALUES));
 
 /**
  * Values for varchar tests
@@ -964,9 +1026,9 @@ const std::vector<Uuid> CassandraTypesTest<Uuid>::values_(UUID_VALUES,
 const Varchar VARCHAR_VALUES[] = { Varchar("The quick brown fox jumps over the lazy dog"),
                                    Varchar("Hello World"), Varchar("DataStax C/C++ Driver") };
 template <>
-const std::vector<Varchar> CassandraTypesTest<Varchar>::values_(VARCHAR_VALUES,
-                                                                VARCHAR_VALUES +
-                                                                    ARRAY_LEN(VARCHAR_VALUES));
+const std::vector<Varchar> CassandraTypesTests<Varchar>::values_(VARCHAR_VALUES,
+                                                                 VARCHAR_VALUES +
+                                                                     ARRAY_LEN(VARCHAR_VALUES));
 
 /**
  * Values for varint tests
@@ -976,4 +1038,4 @@ const Varint VARINT_VALUES[] = { Varint("123456789012345678901234567890"),
                                  Varint("0"), Varint("-296") };
 template <>
 const std::vector<Varint>
-    CassandraTypesTest<Varint>::values_(VARINT_VALUES, VARINT_VALUES + ARRAY_LEN(VARINT_VALUES));
+    CassandraTypesTests<Varint>::values_(VARINT_VALUES, VARINT_VALUES + ARRAY_LEN(VARINT_VALUES));
