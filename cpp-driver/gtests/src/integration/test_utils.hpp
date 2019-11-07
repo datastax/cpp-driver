@@ -192,6 +192,13 @@ public:
    * @return Home directory
    */
   static std::string home_directory();
+
+  /**
+   * Get the temporary directory for the current operating system (not thread safe)
+   *
+   * return Temporary directory
+   */
+  static std::string temp_directory();
 };
 
 } // namespace test

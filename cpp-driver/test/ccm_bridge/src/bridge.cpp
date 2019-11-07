@@ -609,7 +609,19 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
       create_command.push_back("--pwd-auth");
     }
     if (is_ssl) {
-      create_command.push_back("--ssl=ssl");
+      // TODO: Use test::Utils::temp_directory() after boost tests are removed and bridge is merged
+      // into testing framework
+#ifdef _WIN32
+      char* temp = getenv("TEMP");
+      std::string ssl_command = "--ssl=";
+      ssl_command.append(temp);
+      ssl_command.append("\\");
+      ssl_command.append("ssl");
+#else
+      std::string ssl_command = "--ssl=/tmp/ssl";
+#endif
+
+      create_command.push_back(ssl_command);
       if (is_client_authentication) {
         create_command.push_back("--require_client_auth");
       }

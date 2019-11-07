@@ -281,3 +281,10 @@ std::string test::Utils::home_directory() {
   uv_os_homedir(home, &home_length);
   return std::string(home, home_length);
 }
+
+std::string test::Utils::temp_directory() {
+  char tmp[260] = { 0 }; // Note: 260 is the maximum path on Windows
+  size_t tmp_length = 260;
+  uv_os_tmpdir(tmp, &tmp_length);
+  return std::string(tmp, tmp_length);
+}

@@ -219,6 +219,9 @@ void Integration::TearDown() {
     // Destroy the current cluster and reset the chaos flag for the next test
     if (!Options::keep_clusters()) {
       ccm_->remove_cluster();
+    } else {
+      TEST_LOG_ERROR("Chaotic test detected and keep clusters requested. Cluster will not be "
+                     "removed and may result in later failures.");
     }
     is_test_chaotic_ = false;
   }

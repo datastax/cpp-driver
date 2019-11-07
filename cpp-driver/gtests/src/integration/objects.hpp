@@ -27,6 +27,7 @@
 #include "objects/result.hpp"
 #include "objects/retry_policy.hpp"
 #include "objects/session.hpp"
+#include "objects/ssl.hpp"
 #include "objects/statement.hpp"
 #include "objects/tuple.hpp"
 #include "objects/user_type.hpp"

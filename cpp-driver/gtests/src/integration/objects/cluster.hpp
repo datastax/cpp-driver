@@ -21,6 +21,7 @@
 #include "object_base.hpp"
 
 #include "session.hpp"
+#include "ssl.hpp"
 
 #include <string>
 
@@ -399,7 +400,7 @@ public:
     return *this;
   }
 
-  /*
+  /**
    * Enable constant speculative execution
    *
    *
@@ -411,6 +412,17 @@ public:
                                                       int max_speculative_executions) {
     EXPECT_EQ(CASS_OK, cass_cluster_set_constant_speculative_execution_policy(
                            get(), constant_delay_ms, max_speculative_executions));
+    return *this;
+  }
+
+  /**
+   * Sets the SSL context and enables SSL
+   *
+   * @param ssl Ssl object
+   * @return Cluster object
+   */
+  Cluster& with_ssl(Ssl ssl) {
+    cass_cluster_set_ssl(get(), ssl.get());
     return *this;
   }
 
