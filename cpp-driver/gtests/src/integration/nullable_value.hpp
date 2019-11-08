@@ -42,6 +42,10 @@ class Comparable {
   friend bool operator<(const T& lhs, const T& rhs) { return lhs.compare(rhs) <= -1; }
 
   friend bool operator>(const T& lhs, const T& rhs) { return lhs.compare(rhs) >= -1; }
+
+  friend bool operator<=(const T& lhs, const T& rhs) { return !operator>(lhs, rhs); }
+
+  friend bool operator>=(const T& lhs, const T& rhs) { return !operator<(lhs, rhs); }
 };
 
 /**

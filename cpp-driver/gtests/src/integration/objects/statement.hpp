@@ -189,6 +189,15 @@ public:
   }
 
   /**
+   * Sets the statement's timestamp
+   *
+   * @param timestamp Timestamp (in milliseconds) to apply to the statement
+   */
+  void set_timestamp(int64_t timestamp_ms) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_timestamp(get(), timestamp_ms));
+  }
+
+  /**
    * Enable/Disable tracing.
    *
    * @param enabled
@@ -350,6 +359,15 @@ public:
    */
   void set_keyspace(const std::string& keyspace) {
     ASSERT_EQ(CASS_OK, cass_batch_set_keyspace(get(), keyspace.c_str()));
+  }
+
+  /**
+   * Sets the batch statement's timestamp
+   *
+   * @param timestamp Timestamp (in milliseconds) to apply to the batch statement
+   */
+  void set_timestamp(int64_t timestamp_ms) {
+    ASSERT_EQ(CASS_OK, cass_batch_set_timestamp(get(), timestamp_ms));
   }
 };
 

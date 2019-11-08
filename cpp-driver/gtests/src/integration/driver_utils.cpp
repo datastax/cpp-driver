@@ -20,6 +20,7 @@
 #include "cluster_config.hpp"
 #include "driver_info.hpp"
 #include "future.hpp"
+#include "get_time.hpp"
 #include "murmur3.hpp"
 #include "request_handler.hpp"
 #include "statement.hpp"
@@ -101,3 +102,5 @@ void test::driver::internals::Utils::set_record_attempted_hosts(CassStatement* s
     static_cast<Statement*>(statement)->set_record_attempted_addresses(enable);
   }
 }
+
+uint64_t test::driver::internals::Utils::time_since_epoch_us() { return get_time_since_epoch_us(); }

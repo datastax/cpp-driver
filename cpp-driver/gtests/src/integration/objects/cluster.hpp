@@ -22,6 +22,7 @@
 
 #include "session.hpp"
 #include "ssl.hpp"
+#include "timestamp_generator.hpp"
 
 #include <string>
 
@@ -423,6 +424,17 @@ public:
    */
   Cluster& with_ssl(Ssl ssl) {
     cass_cluster_set_ssl(get(), ssl.get());
+    return *this;
+  }
+
+  /**
+   * Set the timestamp generator
+   *
+   * @param timestamp_generator Timestamp generator
+   * @return Cluster object
+   */
+  Cluster& with_timestamp_generator(TimestampGenerator timestamp_generator) {
+    cass_cluster_set_timestamp_gen(get(), timestamp_generator.get());
     return *this;
   }
 

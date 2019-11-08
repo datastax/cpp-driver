@@ -63,6 +63,9 @@ if(DSE_BUILD_INTEGRATION_TESTS)
 
   GtestCommonIntegrationTestSourceFiles()
   add_executable(${INTEGRATION_TESTS_NAME}
+                 ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES}
+                 ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES}
+                 ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES}
                  ${DSE_API_HEADER_FILES}
                  ${RAPIDJSON_HEADER_FILES}
                  ${COMMON_INTEGRATION_TEST_SOURCE_FILES}

@@ -29,6 +29,7 @@
 #include "objects/session.hpp"
 #include "objects/ssl.hpp"
 #include "objects/statement.hpp"
+#include "objects/timestamp_generator.hpp"
 #include "objects/tuple.hpp"
 #include "objects/user_type.hpp"
 #include "objects/uuid_gen.hpp"

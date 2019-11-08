@@ -105,6 +105,13 @@ public:
    * @param enable True if attempted host should be recorded; false otherwise
    */
   static void set_record_attempted_hosts(CassStatement* statement, bool enable);
+
+  /**
+   * Get the time since epoch in microseconds
+   *
+   * @return Time since epoch in microseconds
+   */
+  static uint64_t time_since_epoch_us();
 };
 
 }}} // namespace test::driver::internals
