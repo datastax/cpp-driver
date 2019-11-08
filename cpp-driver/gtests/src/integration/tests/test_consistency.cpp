@@ -61,6 +61,35 @@ public:
 };
 
 /**
+ * Serial consistency integration tests; one node cluster
+ */
+class SerialConsistencyTests : public Integration {
+public:
+  SerialConsistencyTests() { number_dc1_nodes_ = 1; }
+
+  virtual void SetUp() {
+    // Call the parent setup function
+    Integration::SetUp();
+
+    session_.execute(
+        format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
+  }
+
+  /**
+   * Insert a row using "IF NOT EXISTS" with a provided serial consistency.
+   *
+   * @param serial_conistency The serial consistency to use for the LWT.
+   * @return The result of the insert
+   */
+  Result insert_if_not_exists(CassConsistency serial_conistency) {
+    Statement statement(format_string("INSERT INTO %s (key, value) VALUES (1, 99) IF NOT EXISTS",
+                                      table_name_.c_str()));
+    statement.set_serial_consistency(serial_conistency);
+    return session_.execute(statement, false);
+  }
+};
+
+/**
  * Perform consistency inserts and selects using consistency `ONE`
  *
  * This test will perform insert and select operations using a simple statement
@@ -372,4 +401,27 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests, DowngradingRetryP
   select_.set_consistency(CASS_CONSISTENCY_TWO);
   session.execute(insert_);
   session.execute(select_);
+}
+
+/**
+ * Verify that the serial consistency flag is passed properly when using a LWT.
+ */
+CASSANDRA_INTEGRATION_TEST_F(SerialConsistencyTests, Simple) {
+  CHECK_FAILURE;
+
+  Result result = insert_if_not_exists(CASS_CONSISTENCY_SERIAL);
+  ASSERT_GT(result.row_count(), 0u);
+  ASSERT_GT(result.column_count(), 0u);
+  EXPECT_TRUE(result.first_row().column_by_name<Boolean>("[applied]").value());
+}
+
+/**
+ * Verify that the serial consistency flag is passed properly when using a LWT and causes an error
+ * when invalid.
+ */
+CASSANDRA_INTEGRATION_TEST_F(SerialConsistencyTests, Invalid) {
+  CHECK_FAILURE;
+
+  Result result = insert_if_not_exists(CASS_CONSISTENCY_ONE); // Invalid serial consistency
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result.error_code());
 }
