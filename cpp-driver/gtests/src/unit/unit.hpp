@@ -209,17 +209,23 @@ public:
                                                        const datastax::String& cn = "");
 
   /**
-   * Add criteria to the search criteria for incoming log messages
+   * Add criteria to the search criteria for incoming log messages.
    *
-   * @param criteria Criteria to add
+   * @param criteria Criteria to add.
+   * @param severity Severity level to match (Optional: defaults to any severity).
    */
-  void add_logging_critera(const datastax::String& criteria);
+  void add_logging_critera(const String& criteria, CassLogLevel severity = CASS_LOG_LAST_ENTRY);
   /**
-   * Get the number of log messages that matched the search criteria
+   * Get the number of log messages that matched the search criteria.
    *
-   * @return Number of matched log messages
+   * @return Number of matched log messages.
    */
   int logging_criteria_count();
+
+  /**
+   * Reset the logging criteria; clears all criteria and resets count.
+   */
+  void reset_logging_criteria();
 
 private:
   /**
@@ -232,8 +238,11 @@ private:
 
 private:
   CassLogLevel output_log_level_;
-  datastax::internal::Vector<datastax::String> logging_criteria_;
-  datastax::internal::Atomic<int> logging_criteria_count_;
+  datastax::internal::Map<CassLogLevel, datastax::internal::Vector<datastax::String> >
+      logging_criteria_;
+  int logging_criteria_count_;
+  uv_mutex_t mutex_;
+  uint64_t start_time_;
 };
 
 #endif // UNIT_TEST_HPP

@@ -15,6 +15,8 @@
 */
 #include "unit.hpp"
 
+#include "scoped_lock.hpp"
+
 using namespace datastax;
 using namespace datastax::internal;
 using namespace datastax::internal::core;
@@ -99,11 +101,13 @@ Unit::Unit()
     , logging_criteria_count_(0) {
   Logger::set_log_level(CASS_LOG_TRACE);
   Logger::set_callback(on_log, this);
+  uv_mutex_init(&mutex_);
 }
 
 Unit::~Unit() {
   Logger::set_log_level(CASS_LOG_DISABLED);
   Logger::set_callback(NULL, NULL);
+  uv_mutex_destroy(&mutex_);
 }
 
 void Unit::set_output_log_level(CassLogLevel output_log_level) {
@@ -132,9 +136,22 @@ ConnectionSettings Unit::use_ssl(mockssandra::Cluster* cluster, const String& cn
   return settings;
 }
 
-void Unit::add_logging_critera(const String& criteria) { logging_criteria_.push_back(criteria); }
+void Unit::add_logging_critera(const String& criteria,
+                               CassLogLevel severity /*= CASS_LOG_LAST_ENTRY*/) {
+  ScopedMutex l(&mutex_);
+  logging_criteria_[severity].push_back(criteria);
+}
 
-int Unit::logging_criteria_count() { return logging_criteria_count_.load(); }
+int Unit::logging_criteria_count() {
+  ScopedMutex l(&mutex_);
+  return logging_criteria_count_;
+}
+
+void Unit::reset_logging_criteria() {
+  ScopedMutex l(&mutex_);
+  logging_criteria_.clear();
+  logging_criteria_count_ = 0;
+}
 
 void Unit::on_log(const CassLogMessage* message, void* data) {
   Unit* instance = static_cast<Unit*>(data);
@@ -148,11 +165,18 @@ void Unit::on_log(const CassLogMessage* message, void* data) {
   }
 
   // Determine if the log message matches any of the criteria
-  for (Vector<String>::const_iterator it = instance->logging_criteria_.begin(),
-                                      end = instance->logging_criteria_.end();
-       it != end; ++it) {
-    if (strstr(message->message, it->c_str()) != NULL) {
-      instance->logging_criteria_count_.fetch_add(1);
+  ScopedMutex l(&instance->mutex_);
+  for (Map<CassLogLevel, Vector<String> >::iterator level_it = instance->logging_criteria_.begin(),
+                                                    level_end = instance->logging_criteria_.end();
+       level_it != level_end; ++level_it) {
+    CassLogLevel level = level_it->first;
+    Vector<String> criteria = level_it->second;
+    for (Vector<String>::const_iterator it = criteria.begin(), end = criteria.end(); it != end;
+         ++it) {
+      if ((level == CASS_LOG_LAST_ENTRY || level == message->severity) &&
+          strstr(message->message, it->c_str()) != NULL) {
+        ++instance->logging_criteria_count_;
+      }
     }
   }
 }
