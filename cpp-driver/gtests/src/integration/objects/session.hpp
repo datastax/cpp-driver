@@ -225,7 +225,7 @@ public:
   Prepared prepare(const std::string& query, bool assert_ok = true) {
     Future prepare_future = cass_session_prepare(get(), query.c_str());
     prepare_future.wait(assert_ok);
-    return Prepared(cass_future_get_prepared(prepare_future.get()));
+    return Prepared(prepare_future);
   }
 
   /**
@@ -240,7 +240,7 @@ public:
   Prepared prepare_from_existing(Statement statement, bool assert_ok = true) {
     Future prepare_future = cass_session_prepare_from_existing(get(), statement.get());
     prepare_future.wait(assert_ok);
-    return Prepared(cass_future_get_prepared(prepare_future.get()));
+    return Prepared(prepare_future);
   }
 
   /**

@@ -300,6 +300,17 @@ public:
   }
 
   /**
+   * Get the value as a specific type for the given column index
+   *
+   * @param index Index of the column to retrieve
+   * @return The value as a value type
+   */
+  template <typename T>
+  T column(size_t index) {
+    return T(cass_row_get_column(row_, index));
+  }
+
+  /**
    * Get the total number of columns in a row
    *
    * @return The total number of columns in a row
@@ -397,7 +408,6 @@ inline Row Result::first_row() {
 }
 
 inline Rows Result::rows() { return Rows(cass_iterator_from_result(get()), *this); }
-
 }} // namespace test::driver
 
 #endif // __TEST_RESULT_HPP__

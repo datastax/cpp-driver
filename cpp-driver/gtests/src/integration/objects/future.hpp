@@ -119,6 +119,13 @@ public:
   const CassErrorResult* error_result() { return cass_future_get_error_result(get()); }
 
   /**
+   * Get the prepared from the future
+   *
+   * @return A prepared statement
+   */
+  const CassPrepared* prepared() { return cass_future_get_prepared(get()); }
+
+  /**
    * Wait for the future to resolve itself
    *
    * @param assert_ok True if error code for future should be asserted

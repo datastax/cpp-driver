@@ -20,6 +20,7 @@
 
 #include "objects/object_base.hpp"
 
+#include "objects/future.hpp"
 #include "objects/statement.hpp"
 
 namespace test { namespace driver {
@@ -36,20 +37,13 @@ public:
       : Object<const CassPrepared, cass_prepared_free>() {}
 
   /**
-   * Create the prepared object from the native driver object
+   * Create the prepared object from a future object
    *
-   * @param prepared Native driver object
+   * @param future Wrapped driver object
    */
-  Prepared(const CassPrepared* prepared)
-      : Object<const CassPrepared, cass_prepared_free>(prepared) {}
-
-  /**
-   * Create the prepared object from a shared reference
-   *
-   * @param prepared Shared reference
-   */
-  Prepared(Ptr prepared)
-      : Object<const CassPrepared, cass_prepared_free>(prepared) {}
+  Prepared(Future future)
+      : Object<const CassPrepared, cass_prepared_free>(future.prepared())
+      , future_(future) {}
 
   /**
    * Bind the prepared object and create a statement
@@ -93,6 +87,30 @@ public:
    * @return Value type at the specified column index
    */
   CassValueType value_type(const std::string& name) { return cass_data_type_type(data_type(name)); }
+
+  /**
+   * Get the error code from the future
+   *
+   * @return Error code of the future
+   */
+  CassError error_code() { return future_.error_code(); }
+
+  /**
+   * Get the human readable description of the error code
+   *
+   * @return Error description
+   */
+  const std::string error_description() { return future_.error_description(); }
+
+  /**
+   * Get the error message of the future if an error occurred
+   *
+   * @return Error message
+   */
+  const std::string error_message() { return future_.error_message(); }
+
+private:
+  Future future_;
 };
 
 }} // namespace test::driver

@@ -143,9 +143,9 @@ public:
   }
 
   /**
-   * Sets the statement's keyspace for use with token-aware routing.
+   * Sets the statement's keyspace
    *
-   * @param keyspace Keyspace to aid in token aware routing for statement
+   * @param keyspace Keyspace to use when executing the statement
    */
   void set_keyspace(const std::string& keyspace) {
     ASSERT_EQ(CASS_OK, cass_statement_set_keyspace(get(), keyspace.c_str()));
@@ -341,6 +341,15 @@ public:
    */
   void set_serial_consistency(CassConsistency serial_consistency) {
     ASSERT_EQ(CASS_OK, cass_batch_set_serial_consistency(get(), serial_consistency));
+  }
+
+  /**
+   * Sets the batch's keyspace
+   *
+   * @param keyspace Keyspace to use when executing the batch
+   */
+  void set_keyspace(const std::string& keyspace) {
+    ASSERT_EQ(CASS_OK, cass_batch_set_keyspace(get(), keyspace.c_str()));
   }
 };
 
