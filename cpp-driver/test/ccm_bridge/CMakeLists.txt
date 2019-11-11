@@ -23,9 +23,6 @@ if(OPENSSL_CLEANUP)
   add_definitions(-DOPENSSL_CLEANUP)
 endif()
 
-# Constants
-set(CCM_BRIDGE_CONFIGURATION_FILE ${PROJECT_SOURCE_DIR}/data/config.txt) # CCM configuration file
-
 # Gather the header and source files
 file(GLOB CCM_BRIDGE_INCLUDE_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
 file(GLOB CCM_BRIDGE_SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
@@ -92,7 +89,6 @@ include_directories(${CCM_BRIDGE_INCLUDES}
 # Build the CCM bridge static library
 add_library(CCMBridge STATIC ${CCM_BRIDGE_SRC_FILES}
                              ${CCM_BRIDGE_INCLUDE_FILES}
-                             ${CCM_BRIDGE_CONFIGURATION_FILE}
                              ${LIBSSH2_INCLUDE_FILES})
 if(LIBSSH2_LIBRARY_NAME)
   add_dependencies(CCMBridge ${LIBSSH2_LIBRARY_NAME})
@@ -103,6 +99,3 @@ if(LIBUV_LIBRARY_NAME)
 else()
   add_dependencies(CCMBridge ${LIBUV_LIBRARIES})
 endif()
-
-# Copy data file to output directory
-configure_file(${CCM_BRIDGE_CONFIGURATION_FILE} ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)

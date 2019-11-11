@@ -36,14 +36,6 @@ typedef struct _LIBSSH2_SESSION LIBSSH2_SESSION;
 typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 #endif
 
-#if defined(_MSC_VER)
-#define CCM_BRIDGE_DEPRECATED(func) __declspec(deprecated) func
-#elif defined(__GNUC__) || defined(__INTEL_COMPILER)
-#define CCM_BRIDGE_DEPRECATED(func) func __attribute__((deprecated))
-#else
-#define CCM_BRIDGE_DEPRECATED(func) func
-#endif
-
 // Default values
 #define DEFAULT_CASSANDRA_VERSION CassVersion("3.11.4")
 #define DEFAULT_DSE_VERSION DseVersion("6.7.5")
@@ -208,16 +200,6 @@ public:
          bool is_verbose = DEFAULT_IS_VERBOSE);
 
   /**
-   * Constructor
-   *
-   * @param configuration_file Full path to configuration file
-   * @throws BridgeException
-   * @deprecated Configuration file will be removed after new test framework
-   *             is fully implemented
-   */
-  CCM_BRIDGE_DEPRECATED(Bridge(const std::string& configuration_file));
-
-  /**
    * Destructor
    */
   ~Bridge();
@@ -273,26 +255,6 @@ public:
   bool create_cluster(std::vector<unsigned short> data_center_nodes, bool with_vnodes = false,
                       bool is_password_authenticator = false, bool is_ssl = false,
                       bool is_client_authentication = false);
-
-  /**
-   * Create a Cassandra cluster
-   *
-   * @param data_center_one_nodes Number of nodes for DC1 (default: 1)
-   * @param data_center_two_nodes Number of nodes for DC2 (default: 0)
-   * @param with_vnodes True if vnodes tokens should be used; false otherwise
-   *                   (default: false)
-   * @param is_ssl True if SSL should be enabled; false otherwise
-   *               (default: false)
-   * @param is_client_authentication True if client authentication should be
-   *                                enabled; false otherwise (default: false)
-   * @return True if cluster was created or switched; false otherwise
-   * @deprecated More than two data centers are needed; will be removed after
-   *             refactor of test harness
-   */
-  bool CCM_BRIDGE_DEPRECATED(create_cluster(unsigned short data_center_one_nodes = 1,
-                                            unsigned short data_center_two_nodes = 0,
-                                            bool with_vnodes = false, bool is_ssl = false,
-                                            bool is_client_authentication = false));
 
   /**
    * Check to see if the active cluster is no longer accepting connections
@@ -637,17 +599,6 @@ public:
   std::string get_ip_prefix();
 
   /**
-   * Get the IP prefix indicated by the `HOST` setting in the configuration
-   * file
-   *
-   * @param configuration_file Full path to configuration file
-   * @return IP prefix from the configuration file
-   * @deprecated Configuration file will be removed after new test framework
-   *             is fully implemented
-   */
-  CCM_BRIDGE_DEPRECATED(static std::string get_ip_prefix(const std::string& configuration_file));
-
-  /**
    * Get the Cassandra version from the active cluster
    *
    * @return Cassandra version
@@ -656,33 +607,12 @@ public:
   CassVersion get_cassandra_version();
 
   /**
-   * Get the Cassandra version indicated in the configuration file
-   *
-   * @param configuration_file Full path to configuration file
-   * @return Cassandra version from the configuration file
-   * @deprecated Configuration file will be removed after new test framework
-   *             is fully implemented
-   */
-  CCM_BRIDGE_DEPRECATED(
-      static CassVersion get_cassandra_version(const std::string& configuration_file));
-
-  /**
    * Get the DSE version from the active cluster
    *
    * @return DSE version
    * @throws BridgeException
    */
   DseVersion get_dse_version();
-
-  /**
-   * Get the DSE version indicated in the configuration file
-   *
-   * @param configuration_file Full path to configuration file
-   * @return DSE version from the configuration file
-   * @deprecated Configuration file will be removed after new test framework
-   *             is fully implemented
-   */
-  CCM_BRIDGE_DEPRECATED(static DseVersion get_dse_version(const std::string& configuration_file));
 
   /**
    * Set the DSE workload on a node
