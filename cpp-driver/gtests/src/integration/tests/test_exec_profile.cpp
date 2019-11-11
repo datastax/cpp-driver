@@ -622,7 +622,6 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, RetryPolicy) {
   ASSERT_EQ(CASS_OK, result.error_code());
   ASSERT_EQ(0u, logger_.count());
 
-  // TODO(fero): Create a write timeout test for using Simulacron
   // NOTE: Tested locally with batch to ensure profiles are set with correct
   //      retry policy (if available)
 

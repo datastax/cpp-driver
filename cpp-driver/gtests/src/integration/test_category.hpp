@@ -44,10 +44,6 @@ public:
    * DataStax Enterprise category
    */
   static const TestCategory DSE;
-  /**
-   * Stubbed Cassandra category
-   */
-  static const TestCategory SIMULACRON;
 
   /**
    * Default constructor to handle issues with static initialization of
