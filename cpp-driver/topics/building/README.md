@@ -169,36 +169,6 @@ cmake -DCASS_BUILD_EXAMPLES=On ..
 #### Building tests (optional)
 
 Tests (integration and unit) are not built by default and need to be enabled.
-Before proceeding [Boost] v1.59.0+ must be installed to properly configure and
-build the integration and unit tests.
-
-Once [Boost] is installed, update your CMake line to build tests.
-
-##### Boost
-
-###### CentOS/RHEL and Ubuntu
-
-CentOS/RHEL and Ubuntu do not contain Boost v1.59+ libraries in its
-repositories; however the following steps will install Boost from source:
-
-__Note__: Ensure previous version of Boost has been removed before proceeding.
-
-```bash
-pushd /tmp
-wget http://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz/download -O boost_1_68_0.tar.gz
-tar xzf boost_1_68_0.tar.gz
-pushd boost_1_68_0
-./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test
-sudo ./b2 cxxflags="-fPIC" install
-popd
-popd
-```
-
-###### Mac OS
-
-```bash
-brew install boost
-```
 
 ##### Integration tests
 

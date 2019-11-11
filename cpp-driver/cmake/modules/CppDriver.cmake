@@ -88,13 +88,13 @@ endmacro()
 # CassOptionalDependencies
 #
 # Configure enabled optional dependencies if found or if Windows use an
-# external project to build Boost, OpenSSL, zlib.
+# external project to build OpenSSL and zlib.
 #
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
 macro(CassOptionalDependencies)
   # Boost
-  if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS)
+  if(CASS_USE_BOOST_ATOMIC)
     CassUseBoost()
   endif()
 
@@ -387,7 +387,6 @@ macro(CassConfigureTests)
     # Add CCM bridge as a dependency for integration tests
     set(CCM_BRIDGE_INCLUDES "${CASS_ROOT_DIR}/test/ccm_bridge/src")
     add_subdirectory(${CASS_ROOT_DIR}/test/ccm_bridge)
-    add_subdirectory(${CASS_ROOT_DIR}/test/integration_tests)
   endif()
 
   if (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
@@ -524,11 +523,10 @@ endmacro()
 #------------------------
 # CassUseBoost
 #
-# Add includes, libraries, define flags required for using Boost if found or if
-# Windows use an external project to build Boost.
+# Add includes and define flags required for using Boost if found.
 #
-# Input: CASS_USE_STATIC_LIBS, CASS_USE_BOOST_ATOMIC, CASS_INCLUDES, CASS_LIBS
-# Output: CASS_INCLUDES and CASS_LIBS
+# Input: CASS_USE_BOOST_ATOMIC, CASS_INCLUDES
+# Output: CASS_INCLUDES
 #------------------------
 macro(CassUseBoost)
   # Allow for boost directory to be specified on the command line
@@ -550,64 +548,15 @@ macro(CassUseBoost)
     add_definitions(-DBOOST_ALL_NO_LIB)
   endif()
 
-  # Determine if shared or static boost libraries should be used
-  if(CASS_USE_STATIC_LIBS OR
-     (WIN32 AND CASS_BUILD_INTEGRATION_TESTS)) # Force the use of Boost static libraries for Windows (e.g. executables)
-    set(Boost_USE_STATIC_LIBS ON)
-  else()
-    set(Boost_USE_STATIC_LIBS OFF)
-    add_definitions(-DBOOST_ALL_DYN_LINK)
-  endif()
-  set(Boost_USE_STATIC_RUNTIME OFF)
-  set(Boost_USE_MULTITHREADED ON)
-  add_definitions(-DBOOST_THREAD_USES_MOVE)
-
   # Check for general Boost availability
   find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} QUIET)
-  if ((WIN32 AND NOT Boost_FOUND) AND
-      (CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS))
-    message(STATUS "Unable to Locate Boost: Third party build step will be performed")
-    include(ExternalProject-Boost)
-  else()
-    message(STATUS "Boost version: v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-    # Ensure the driver components exist (optional)
-    if(CASS_USE_BOOST_ATOMIC)
-      if(NOT Boost_INCLUDE_DIRS)
-        message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
-      endif()
-
-      # Assign Boost include for atomics
-      set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
+  if(CASS_USE_BOOST_ATOMIC)
+    if(NOT Boost_INCLUDE_DIRS)
+      message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
     endif()
 
-    # Determine if Boost components are available for test executables
-    if(CASS_BUILD_INTEGRATION_TESTS)
-      # Handle new required version of CMake for Boost v1.66.0 (Windows only)
-      if(WIN32)
-        if(Boost_FOUND)
-          if(Boost_VERSION GREATER 106600 OR Boost_VERSION EQUAL 106600)
-            # Ensure CMake version is v3.11.0+
-            if(CMAKE_VERSION VERSION_LESS 3.11.0)
-              message(FATAL_ERROR "Boost v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} requires CMake v3.11.0+."
-                "Updgrade CMake or downgrade Boost to v${CASS_MINIMUM_BOOST_VERSION} - v1.65.1.")
-            endif()
-          endif()
-        endif()
-      endif()
-
-      # Ensure Boost components are available
-      find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono system thread unit_test_framework)
-      if(NOT Boost_FOUND)
-        # Ensure Boost was not found due to minimum version requirement
-        set(CASS_FOUND_BOOST_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-        if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "${CASS_MINIMUM_BOOST_VERSION}")
-          OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "${CASS_MINIMUM_BOOST_VERSION}"))
-          message(FATAL_ERROR "Boost [chrono, system, thread, and unit_test_framework] are required to build tests")
-        else()
-          message(FATAL_ERROR "Boost v${CASS_FOUND_BOOST_VERSION} Found: v${CASS_MINIMUM_BOOST_VERSION} or greater required")
-        endif()
-      endif()
-    endif()
+    # Assign Boost include for atomics
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
   endif()
 
   # Determine if additional Boost definitions are required for driver/executables
