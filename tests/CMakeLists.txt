@@ -10,7 +10,7 @@ include(Gtest)
 GtestOptions()
 
 # Build the base include paths for the tests
-set(CASS_TESTS_ROOT "${CASS_ROOT_DIR}/gtests")
+set(CASS_TESTS_ROOT "${CASS_ROOT_DIR}/tests")
 set(CASS_TESTS_SOURCE_DIR "${CASS_TESTS_ROOT}/src")
 set(TESTS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(VENDOR_DIR "${CASS_TESTS_SOURCE_DIR}/vendor")
@@ -44,16 +44,13 @@ if(DSE_BUILD_INTEGRATION_TESTS)
   # non-prefixed variables, except for the actual Cassandra integration
   # test files (e.g. not CASS_INTEGRATION_TESTS_TESTS_SOURCE_FILES).
   # Those tests are built into their own test program in core.
-  foreach(var_name INTEGRATION_TESTS_INCLUDE_FILES INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES
-      INTEGRATION_TESTS_POLICIES_INCLUDE_FILES INTEGRATION_TESTS_VALUES_INCLUDE_FILES
-      INTEGRATION_TESTS_SOURCE_FILES INTEGRATION_TESTS_OBJECTS_SOURCE_FILES)
+  foreach(var_name INTEGRATION_TESTS_INCLUDE_FILES INTEGRATION_TESTS_CCM_INCLUDE_FILES
+      INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES INTEGRATION_TESTS_POLICIES_INCLUDE_FILES
+      INTEGRATION_TESTS_VALUES_INCLUDE_FILES INTEGRATION_TESTS_SOURCE_FILES
+      INTEGRATION_TESTS_CCM_SOURCE_FILES INTEGRATION_TESTS_OBJECTS_SOURCE_FILES)
     set(${var_name} ${DSE_${var_name}} ${CASS_${var_name}})
   endforeach()
   set(INTEGRATION_TESTS_TESTS_SOURCE_FILES ${DSE_INTEGRATION_TESTS_TESTS_SOURCE_FILES})
-
-  if(LIBSSH2_FOUND)
-    add_definitions(-DCASS_USE_LIBSSH2)
-  endif()
 
   set(INTEGRATION_TESTS_SOURCE_DIR "${TESTS_SOURCE_DIR}/integration")
   set(CASS_INTEGRATION_TESTS_SOURCE_DIR "${CASS_TESTS_SOURCE_DIR}/integration")
@@ -66,32 +63,27 @@ if(DSE_BUILD_INTEGRATION_TESTS)
   include_directories(${CASS_INTEGRATION_TESTS_SOURCE_DIR})
 
   GtestCommonIntegrationTestSourceFiles()
+  GtestLibssh2IntegrationTest()
   add_executable(${INTEGRATION_TESTS_NAME}
-                 ${INTEGRATION_TESTS_INCLUDE_FILES}
-                 ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES}
-                 ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES}
-                 ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES}
                  ${DSE_API_HEADER_FILES}
                  ${COMMON_INTEGRATION_TEST_INCLUDE_FILES}
                  ${COMMON_INTEGRATION_TEST_SOURCE_FILES}
-                 ${RAPIDJSON_HEADER_FILES}
-  )
+                 ${INTEGRATION_TESTS_LIBSSH2_INCLUDE_FILES}
+                 ${RAPIDJSON_HEADER_FILES})
   if(CMAKE_VERSION VERSION_LESS "2.8.11")
     include_directories(${INTEGRATION_TESTS_SOURCE_DIR})
-    include_directories(${CCM_BRIDGE_INCLUDES})
+    include_directories(${CASS_INTEGRATION_TESTS_SOURCE_DIR}/ccm)
   else()
     target_include_directories(${INTEGRATION_TESTS_NAME} PUBLIC ${INTEGRATION_TESTS_SOURCE_DIR})
-    target_include_directories(${INTEGRATION_TESTS_NAME} PUBLIC ${CCM_BRIDGE_INCLUDES})
+    target_include_directories(${INTEGRATION_TESTS_NAME} PUBLIC ${CASS_INTEGRATION_TESTS_SOURCE_DIR}/ccm)
   endif()
   target_link_libraries(${INTEGRATION_TESTS_NAME}
-                        CCMBridge
-                        ${CCM_BRIDGE_LIBRARIES}
-                        ${GOOGLE_TEST_LIBRARIES}
                         ${DSE_LIBS}
-                        ${PROJECT_LIB_NAME_TARGET})
+                        ${PROJECT_LIB_NAME_TARGET}
+                        ${INTEGRATION_TESTS_LIBSSH2_LIBRARIES})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY PROJECT_LABEL ${INTEGRATION_TESTS_DISPLAY_NAME})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
-  if(LIBSSH2_LIBRARY_NAME)
+  if(LIBSSH2_LIBRARY_NAME) # Handle ExternalProject dependency
     add_dependencies(${INTEGRATION_TESTS_NAME} ${LIBSSH2_LIBRARY_NAME})
   endif()
 
@@ -111,11 +103,11 @@ endif()
 if(DSE_BUILD_UNIT_TESTS)
   set(DSE_UNIT_TEST_EXTRA_FILES
     "${DSE_API_HEADER_FILES}"
-    "${CASS_ROOT_DIR}/gtests/src/unit/unit.cpp"
-    "${CASS_ROOT_DIR}/gtests/src/unit/mockssandra.cpp")
+    "${CASS_ROOT_DIR}/tests/src/unit/unit.cpp"
+    "${CASS_ROOT_DIR}/tests/src/unit/mockssandra.cpp")
   set(DSE_UNIT_TEST_EXTRA_INCLUDES
     "${DSE_INCLUDES}"
-    "${CASS_ROOT_DIR}/gtests/src/unit/")
+    "${CASS_ROOT_DIR}/tests/src/unit/")
   GtestUnitTests("dse"
     "${DSE_UNIT_TEST_EXTRA_FILES}"
     "${DSE_UNIT_TEST_EXTRA_INCLUDES}"

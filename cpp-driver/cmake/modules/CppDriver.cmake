@@ -383,14 +383,8 @@ endmacro()
 # Input: CASS_BUILD_INTEGRATION_TESTS, CASS_BUILD_UNIT_TESTS, CASS_ROOT_DIR
 #------------------------
 macro(CassConfigureTests)
-  if(CASS_BUILD_INTEGRATION_TESTS)
-    # Add CCM bridge as a dependency for integration tests
-    set(CCM_BRIDGE_INCLUDES "${CASS_ROOT_DIR}/test/ccm_bridge/src")
-    add_subdirectory(${CASS_ROOT_DIR}/test/ccm_bridge)
-  endif()
-
   if (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
-    add_subdirectory(${CASS_ROOT_DIR}/gtests)
+    add_subdirectory(${CASS_ROOT_DIR}/tests)
   endif()
 endmacro()
 
