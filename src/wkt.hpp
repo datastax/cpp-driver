@@ -43,6 +43,13 @@ public:
       , end_(other.end_)
       , skip_number_(skip_number) {}
 
+  WktLexer& operator=(const WktLexer& other) {
+    position_ = other.position_;
+    end_ = other.end_;
+    skip_number_ = other.skip_number_;
+    return *this;
+  }
+
   double number() const { return number_; }
 
   Token next_token();
