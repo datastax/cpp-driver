@@ -15,9 +15,6 @@
 */
 
 #include "integration.hpp"
-#include "testing.hpp"
-
-using namespace datastax::internal::testing;
 
 /**
  * Prepared integration tests; common operations
@@ -141,10 +138,10 @@ CASSANDRA_INTEGRATION_TEST_F(PreparedTests, PrepareFromExistingSimpleStatement) 
   Statement bound_statement = session_.prepare_from_existing(statement).bind();
 
   // Validate that the bound statement inherited the settings from the original statement
-  EXPECT_EQ(get_consistency(bound_statement.get()), CASS_CONSISTENCY_LOCAL_QUORUM);
-  EXPECT_EQ(get_serial_consistency(bound_statement.get()), CASS_CONSISTENCY_SERIAL);
-  EXPECT_EQ(get_request_timeout_ms(bound_statement.get()), 99999u);
-  EXPECT_EQ(get_retry_policy(bound_statement.get()), retry_policy.get());
+  EXPECT_EQ(bound_statement.consistency(), CASS_CONSISTENCY_LOCAL_QUORUM);
+  EXPECT_EQ(bound_statement.serial_consistency(), CASS_CONSISTENCY_SERIAL);
+  EXPECT_EQ(bound_statement.request_timeout_ms(), 99999u);
+  EXPECT_EQ(bound_statement.retry_policy(), retry_policy.get());
 
   bound_statement.bind<Integer>(0, Integer(1));
 
@@ -186,10 +183,10 @@ CASSANDRA_INTEGRATION_TEST_F(PreparedTests, PrepareFromExistingBoundStatement) {
   Statement bound_statement2 = session_.prepare_from_existing(bound_statement1).bind();
 
   // Validate that the bound statement inherited the settings from the original statement
-  EXPECT_EQ(get_consistency(bound_statement2.get()), CASS_CONSISTENCY_LOCAL_QUORUM);
-  EXPECT_EQ(get_serial_consistency(bound_statement2.get()), CASS_CONSISTENCY_SERIAL);
-  EXPECT_EQ(get_request_timeout_ms(bound_statement2.get()), 99999u);
-  EXPECT_EQ(get_retry_policy(bound_statement2.get()), retry_policy.get());
+  EXPECT_EQ(bound_statement2.consistency(), CASS_CONSISTENCY_LOCAL_QUORUM);
+  EXPECT_EQ(bound_statement2.serial_consistency(), CASS_CONSISTENCY_SERIAL);
+  EXPECT_EQ(bound_statement2.request_timeout_ms(), 99999u);
+  EXPECT_EQ(bound_statement2.retry_policy(), retry_policy.get());
 
   bound_statement2.bind<Integer>(0, Integer(1));
 

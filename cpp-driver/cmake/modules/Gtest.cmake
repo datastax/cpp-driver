@@ -246,8 +246,7 @@ macro(GtestUnitTests project_name extra_files extra_includes excluded_test_files
   # and source files required to shared that code.
   set(INTEGRATION_TESTS_SOURCE_DIR ${CASS_ROOT_DIR}/tests/src/integration)
   set(INTEGRATION_TESTS_CCM_SOURCE_DIR ${INTEGRATION_TESTS_SOURCE_DIR}/ccm)
-  set(INTEGRATION_TESTS_SOURCE_FILES ${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp
-                                     ${INTEGRATION_TESTS_SOURCE_DIR}/driver_utils.cpp)
+  set(INTEGRATION_TESTS_SOURCE_FILES ${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp)
   set(INTEGRATION_TESTS_CCM_SOURCE_FILES "${INTEGRATION_TESTS_CCM_SOURCE_DIR}/tsocket.cpp")
   file(GLOB UNIT_TESTS_INCLUDE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.hpp )
   file(GLOB UNIT_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.cpp)

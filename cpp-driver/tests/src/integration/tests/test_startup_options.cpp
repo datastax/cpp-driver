@@ -46,6 +46,6 @@ CASSANDRA_INTEGRATION_TEST_F(StartupOptionsTests, DriverOptions) {
   ASSERT_EQ(2u, result.row_count()); // Control connection and request processor connection
   ASSERT_EQ(2u, result.column_count());
   Row row = result.first_row();
-  ASSERT_EQ(Varchar(driver::internals::Utils::driver_name()), row.next().as<Varchar>());
-  ASSERT_EQ(Varchar(driver::internals::Utils::driver_version()), row.next().as<Varchar>());
+  ASSERT_EQ(Varchar(driver_name()), row.next().as<Varchar>());
+  ASSERT_EQ(Varchar(driver_version()), row.next().as<Varchar>());
 }

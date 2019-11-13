@@ -15,6 +15,7 @@
 */
 
 #include "integration.hpp"
+#include "testing.hpp"
 
 class ConfigTests : public Integration {
 public:
@@ -24,8 +25,8 @@ public:
 CASSANDRA_INTEGRATION_TEST_F(ConfigTests, Options) {
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_connect_timeout(9999u).with_port(7000);
-  EXPECT_EQ(9999u, test::driver::internals::Utils::connect_timeout(cluster.get()));
-  EXPECT_EQ(7000, test::driver::internals::Utils::port(cluster.get()));
+  EXPECT_EQ(9999u, datastax::internal::testing::get_connect_timeout_from_cluster(cluster.get()));
+  EXPECT_EQ(7000, datastax::internal::testing::get_port_from_cluster(cluster.get()));
 }
 
 CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsSimple) {
@@ -33,7 +34,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsSimple) {
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_contact_points(contact_points);
   EXPECT_STREQ(contact_points.c_str(),
-               test::driver::internals::Utils::contact_points(cluster.get()).c_str());
+               datastax::internal::testing::get_contact_points_from_cluster(cluster.get()).c_str());
 }
 
 CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsClear) {
@@ -41,9 +42,9 @@ CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsClear) {
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_contact_points(contact_points);
   EXPECT_STREQ(contact_points.c_str(),
-               test::driver::internals::Utils::contact_points(cluster.get()).c_str());
+               datastax::internal::testing::get_contact_points_from_cluster(cluster.get()).c_str());
   cluster.with_contact_points("");
-  EXPECT_TRUE(test::driver::internals::Utils::contact_points(cluster.get()).empty());
+  EXPECT_TRUE(datastax::internal::testing::get_contact_points_from_cluster(cluster.get()).empty());
 }
 
 CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsExtraCommas) {
@@ -51,7 +52,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsExtraCommas) {
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_contact_points(contact_points);
   EXPECT_STREQ("127.0.0.1,127.0.0.2,127.0.0.3",
-               test::driver::internals::Utils::contact_points(cluster.get()).c_str());
+               datastax::internal::testing::get_contact_points_from_cluster(cluster.get()).c_str());
 }
 
 CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsExtraWhitespace) {
@@ -60,16 +61,17 @@ CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsExtraWhitespace) {
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_contact_points(contact_points);
   EXPECT_STREQ("127.0.0.1,127.0.0.2,127.0.0.3",
-               test::driver::internals::Utils::contact_points(cluster.get()).c_str());
+               datastax::internal::testing::get_contact_points_from_cluster(cluster.get()).c_str());
 }
 
 CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsAppend) {
   test::driver::Cluster cluster = test::driver::Cluster::build().with_contact_points("127.0.0.1");
-  EXPECT_STREQ("127.0.0.1", test::driver::internals::Utils::contact_points(cluster.get()).c_str());
+  EXPECT_STREQ("127.0.0.1",
+               datastax::internal::testing::get_contact_points_from_cluster(cluster.get()).c_str());
   cluster.with_contact_points("127.0.0.2");
   EXPECT_STREQ("127.0.0.1,127.0.0.2",
-               test::driver::internals::Utils::contact_points(cluster.get()).c_str());
+               datastax::internal::testing::get_contact_points_from_cluster(cluster.get()).c_str());
   cluster.with_contact_points("127.0.0.3");
   EXPECT_STREQ("127.0.0.1,127.0.0.2,127.0.0.3",
-               test::driver::internals::Utils::contact_points(cluster.get()).c_str());
+               datastax::internal::testing::get_contact_points_from_cluster(cluster.get()).c_str());
 }

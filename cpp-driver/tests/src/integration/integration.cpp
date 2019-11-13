@@ -17,6 +17,10 @@
 #include "integration.hpp"
 #include "options.hpp"
 
+#include "driver_info.hpp"
+#include "get_time.hpp"
+#include "murmur3.hpp"
+
 #include <algorithm>
 #include <cstdarg>
 #include <iostream>
@@ -32,6 +36,9 @@
 
 // Initialize static variables
 bool Integration::skipped_message_displayed_ = false;
+
+using namespace datastax::internal;
+using namespace ::testing;
 
 Integration::Integration()
     : ccm_(NULL)
@@ -73,7 +80,7 @@ Integration::Integration()
   }
 
   // Get the name of the test and the case/suite it belongs to
-  const testing::TestInfo* test_information = testing::UnitTest::GetInstance()->current_test_info();
+  const TestInfo* test_information = UnitTest::GetInstance()->current_test_info();
   test_name_ = test_information->name();
 
   // Determine if this is a typed test (e.g. ends in a number)
@@ -496,3 +503,15 @@ bool Integration::wait_for_logger(size_t expected_count) {
   }
   return logger_.count() >= expected_count;
 }
+
+int64_t Integration::murmur3_hash(const std::string& value) {
+  return MurmurHash3_x64_128(value.data(), value.size(), 0);
+}
+
+uint64_t Integration::time_since_epoch_in_ms() { return get_time_since_epoch_ms(); }
+
+uint64_t Integration::time_since_epoch_us() { return get_time_since_epoch_us(); }
+
+std::string Integration::driver_name() { return datastax::internal::driver_name(); }
+
+std::string Integration::driver_version() { return datastax::internal::driver_version(); }

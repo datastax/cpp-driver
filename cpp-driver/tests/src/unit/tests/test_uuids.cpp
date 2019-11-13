@@ -17,15 +17,15 @@
 #include <gtest/gtest.h>
 
 #include "cassandra.h"
+#include "get_time.hpp"
 #include "scoped_ptr.hpp"
-#include "testing.hpp"
 
 #include <algorithm>
 #include <ctype.h>
 #include <string.h>
 
 using namespace datastax;
-using namespace datastax::internal::testing;
+using namespace datastax::internal;
 
 inline bool operator!=(const CassUuid& u1, const CassUuid& u2) {
   return u1.clock_seq_and_node != u2.clock_seq_and_node ||
@@ -41,7 +41,7 @@ TEST(UuidUnitTest, V1) {
 
   for (int i = 0; i < 1000; ++i) {
     CassUuid uuid;
-    uint64_t curr_ts = get_time_since_epoch_in_ms();
+    uint64_t curr_ts = get_time_since_epoch_ms();
     cass_uuid_gen_time(uuid_gen, &uuid);
     cass_uint64_t ts = cass_uuid_timestamp(uuid);
 
@@ -65,7 +65,7 @@ TEST(UuidUnitTest, V1) {
 
 TEST(UuidUnitTest, V1MinMax) {
   cass_uint64_t founded_ts = 1270080000; // April 2010
-  cass_uint64_t curr_ts = get_time_since_epoch_in_ms();
+  cass_uint64_t curr_ts = get_time_since_epoch_ms();
 
   CassUuid min_uuid_1;
   CassUuid min_uuid_2;

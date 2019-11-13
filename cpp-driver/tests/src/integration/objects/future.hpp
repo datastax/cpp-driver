@@ -20,7 +20,8 @@
 
 #include "objects/object_base.hpp"
 
-#include "driver_utils.hpp"
+#include "string_ref.hpp"
+#include "testing.hpp"
 
 #include <string>
 
@@ -60,8 +61,16 @@ public:
    *
    * @return Attempted hosts/Addresses (sorted)
    */
-  const std::vector<std::string> attempted_hosts() {
-    return internals::Utils::attempted_hosts(get());
+  std::vector<std::string> attempted_hosts() {
+    datastax::StringVec internal_attempted_hosts =
+        datastax::internal::testing::get_attempted_hosts_from_future(get());
+    std::vector<std::string> attempted_hosts;
+    for (datastax::StringVec::iterator it = internal_attempted_hosts.begin(),
+                                       end = internal_attempted_hosts.end();
+         it != end; ++it) {
+      attempted_hosts.push_back(std::string(it->data(), it->size()));
+    }
+    return attempted_hosts;
   }
 
   /**
@@ -95,14 +104,20 @@ public:
    *
    * @return Host/Address
    */
-  const std::string host() { return internals::Utils::host(get()); }
+  std::string host() {
+    datastax::String host = datastax::internal::testing::get_host_from_future(get());
+    return std::string(host.data(), host.size());
+  }
 
   /**
    * Get the server name of the future
    *
    * @return Server name
    */
-  const std::string server_name() { return internals::Utils::server_name(get()); }
+  std::string server_name() {
+    datastax::String server_name = datastax::internal::testing::get_server_name(get());
+    return std::string(server_name.data(), server_name.size());
+  }
 
   /**
    * Get the result from the future

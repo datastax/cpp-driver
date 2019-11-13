@@ -19,6 +19,7 @@
 
 #include "cassandra.h"
 #include "string.hpp"
+#include "string_ref.hpp"
 #include "vector.hpp"
 
 #include <stdint.h>
@@ -27,15 +28,13 @@ namespace datastax { namespace internal { namespace testing {
 
 CASS_EXPORT String get_host_from_future(CassFuture* future);
 
+CASS_EXPORT StringVec get_attempted_hosts_from_future(CassFuture* future);
+
 CASS_EXPORT unsigned get_connect_timeout_from_cluster(CassCluster* cluster);
 
 CASS_EXPORT int get_port_from_cluster(CassCluster* cluster);
 
 CASS_EXPORT String get_contact_points_from_cluster(CassCluster* cluster);
-
-CASS_EXPORT int64_t create_murmur3_hash_from_string(const String& value);
-
-CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
 
 CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, String ip_address, int port);
 
@@ -46,6 +45,10 @@ CASS_EXPORT CassConsistency get_serial_consistency(const CassStatement* statemen
 CASS_EXPORT uint64_t get_request_timeout_ms(const CassStatement* statement);
 
 CASS_EXPORT const CassRetryPolicy* get_retry_policy(const CassStatement* statement);
+
+CASS_EXPORT String get_server_name(CassFuture* future);
+
+CASS_EXPORT void set_record_attempted_hosts(CassStatement* statement, bool enable);
 
 }}} // namespace datastax::internal::testing
 

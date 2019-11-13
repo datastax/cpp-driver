@@ -19,7 +19,6 @@
 #include "driver_info.hpp"
 #include "query_request.hpp"
 #include "session.hpp"
-#include "testing.hpp"
 
 #define APPLICATION_NAME "DataStax C/C++ Test Harness"
 #define APPLICATION_VERSION "1.0.0"

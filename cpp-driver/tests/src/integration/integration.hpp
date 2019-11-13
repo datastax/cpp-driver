@@ -658,6 +658,42 @@ protected:
    */
   bool wait_for_logger(size_t expected_count);
 
+  /**
+   * Get the Murmur3 hash for a given value
+   *
+   * @param value Value to calculate Murmur3 hash for
+   * @return Murmur3 hash for value
+   */
+  int64_t murmur3_hash(const std::string& value);
+
+  /**
+   * Get the time since epoch in microseconds
+   *
+   * @return Time since epoch in microseconds
+   */
+  uint64_t time_since_epoch_in_ms();
+
+  /**
+   * Get the time since epoch in microseconds
+   *
+   * @return Time since epoch in microseconds
+   */
+  uint64_t time_since_epoch_us();
+
+  /**
+   * Get the driver name as configured by the driver
+   *
+   * @return Driver name
+   */
+  std::string driver_name();
+
+  /**
+   * Get the driver version as configured by the driver
+   *
+   * @return Driver version
+   */
+  std::string driver_version();
+
 private:
   /**
    * Keyspace creation query (generated via SetUp)

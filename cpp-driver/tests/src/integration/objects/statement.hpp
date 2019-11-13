@@ -24,7 +24,7 @@
 #include "objects/future.hpp"
 #include "objects/retry_policy.hpp"
 
-#include "driver_utils.hpp"
+#include "testing.hpp"
 
 #include <gtest/gtest.h>
 
@@ -107,6 +107,40 @@ public:
   }
 
   /**
+   * Get the statement's consistency level
+   *
+   * @return Consistency in use by the statement
+   */
+  CassConsistency consistency() { return datastax::internal::testing::get_consistency(get()); }
+
+  /**
+   * Get the statement's request timeout
+   *
+   * @return Request timeout (in milliseconds) in by for the statement
+   */
+  uint64_t request_timeout_ms() {
+    return datastax::internal::testing::get_request_timeout_ms(get());
+  }
+
+  /**
+   * Get the statement's retry policy
+   *
+   * @return Retry policy in use by the statement
+   */
+  const CassRetryPolicy* retry_policy() {
+    return datastax::internal::testing::get_retry_policy(get());
+  }
+
+  /**
+   * Get the statement's serial consistency level
+   *
+   * @return Serial consistency in use by the statement
+   */
+  CassConsistency serial_consistency() {
+    return datastax::internal::testing::get_serial_consistency(get());
+  }
+
+  /**
    * Assign/Set the statement's consistency level
    *
    * @param consistency Consistency to use for the statement
@@ -158,7 +192,7 @@ public:
    * @param enable True if attempted host should be recorded; false otherwise
    */
   void set_record_attempted_hosts(bool enable) {
-    return internals::Utils::set_record_attempted_hosts(get(), enable);
+    return datastax::internal::testing::set_record_attempted_hosts(get(), enable);
   }
 
   /**

@@ -41,6 +41,22 @@ String get_host_from_future(CassFuture* future) {
   return response_future->address().hostname_or_address();
 }
 
+StringVec get_attempted_hosts_from_future(CassFuture* future) {
+  if (future->type() != Future::FUTURE_TYPE_RESPONSE) {
+    return StringVec();
+  }
+  StringVec attempted_hosts;
+  ResponseFuture* response_future = static_cast<ResponseFuture*>(future->from());
+
+  AddressVec attempted_addresses = response_future->attempted_addresses();
+  for (AddressVec::iterator it = attempted_addresses.begin(); it != attempted_addresses.end();
+       ++it) {
+    attempted_hosts.push_back(it->to_string());
+  }
+  std::sort(attempted_hosts.begin(), attempted_hosts.end());
+  return attempted_hosts;
+}
+
 unsigned get_connect_timeout_from_cluster(CassCluster* cluster) {
   return cluster->config().connect_timeout_ms();
 }
@@ -92,6 +108,17 @@ uint64_t get_request_timeout_ms(const CassStatement* statement) {
 
 const CassRetryPolicy* get_retry_policy(const CassStatement* statement) {
   return CassRetryPolicy::to(statement->from()->retry_policy().get());
+}
+
+String get_server_name(CassFuture* future) {
+  if (future->type() != Future::FUTURE_TYPE_RESPONSE) {
+    return "";
+  }
+  return static_cast<ResponseFuture*>(future->from())->address().server_name();
+}
+
+void set_record_attempted_hosts(CassStatement* statement, bool enable) {
+  static_cast<Statement*>(statement->from())->set_record_attempted_addresses(enable);
 }
 
 }}} // namespace datastax::internal::testing

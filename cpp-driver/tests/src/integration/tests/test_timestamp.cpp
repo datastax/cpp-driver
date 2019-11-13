@@ -160,8 +160,7 @@ CASSANDRA_INTEGRATION_TEST_F(TimestampTests, ServerSideTimestampGeneratorStateme
   connect(default_cluster().with_timestamp_generator(generator));
 
   Text key(generate_key());
-  BigInteger expected_timestamp(
-      static_cast<int64_t>(driver::internals::Utils::time_since_epoch_us()));
+  BigInteger expected_timestamp(static_cast<int64_t>(time_since_epoch_us()));
   session_.execute(create_insert_statement(key));
 
   EXPECT_NEAR(static_cast<double>(expected_timestamp.value()),
@@ -189,8 +188,7 @@ CASSANDRA_INTEGRATION_TEST_F(TimestampTests, ServerSideTimestampGeneratorBatchSt
     keys.push_back(generate_key());
     batch_statement.add(create_insert_statement(keys.back()));
   }
-  BigInteger expected_timestamp(
-      static_cast<int64_t>(driver::internals::Utils::time_since_epoch_us()));
+  BigInteger expected_timestamp(static_cast<int64_t>(time_since_epoch_us()));
   session_.execute(batch_statement);
 
   BigInteger last_timestamp;

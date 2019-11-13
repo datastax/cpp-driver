@@ -116,7 +116,7 @@ protected:
     }
 
     // Generate the Murmur3 hash lookup token
-    int64_t token = test::driver::internals::Utils::murmur3_hash(value);
+    int64_t token = murmur3_hash(value);
 
     // Determine the host/IP address for the token
     TokenMap::const_iterator it = tokens_.upper_bound(token);
