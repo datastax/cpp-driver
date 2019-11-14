@@ -35,7 +35,7 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   CassRapidJson()
 
   set(INTEGRATION_TESTS_NAME "cassandra-integration-tests")
-  set(INTEGRATION_TESTS_DISPLAY_NAME "Integration Tests (cassandra)")
+  set(INTEGRATION_TESTS_DISPLAY_NAME "Integration Tests")
   set(INTEGRATION_TESTS_SOURCE_DIR "${TESTS_SOURCE_DIR}/integration")
 
   GtestIntegrationTestFiles(${INTEGRATION_TESTS_SOURCE_DIR} "CASS")
@@ -78,6 +78,15 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   if(LIBSSH2_LIBRARY_NAME) # Handle ExternalProject dependency
     add_dependencies(${INTEGRATION_TESTS_NAME} ${LIBSSH2_LIBRARY_NAME})
   endif()
+
+  configure_file(embedded-ads.jar ${CMAKE_BINARY_DIR} COPYONLY)
+  if(WIN32)
+    # Copy the embedded ADS to additional locations for use with IDE
+    if(NOT EXISTS ${CMAKE_BINARY_DIR}/tests)
+      file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+    endif()
+    configure_file(embedded-ads.jar ${CMAKE_BINARY_DIR}/tests COPYONLY)
+  endif()
 endif()
 
 #------------------------------
@@ -89,5 +98,5 @@ if(CASS_BUILD_UNIT_TESTS)
   set(MINIZIP_SOURCE_FILES ${MINIZIP_INCLUDE_DIR}/ioapi.c
                            ${MINIZIP_INCLUDE_DIR}/zip.c)
 
-  GtestUnitTests("cassandra" "${MINIZIP_SOURCE_FILES}" "${MINIZIP_INCLUDE_DIR}" "${CASS_EXCLUDED_UNIT_TEST_FILES}")
+  GtestUnitTests("${MINIZIP_SOURCE_FILES}" "${MINIZIP_INCLUDE_DIR}" "${CASS_EXCLUDED_UNIT_TEST_FILES}")
 endif()

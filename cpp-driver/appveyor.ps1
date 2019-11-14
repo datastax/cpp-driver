@@ -164,17 +164,10 @@ Function Initialize-Build-Environment {
   $Env:DRIVER_ARTIFACTS_LOGS_DIR = "$($Env:DRIVER_ARTIFACTS_DIR)/logs"
 
   # Generate the environment variables for the third party archives
+  $Env:KERBEROS_ARCHIVE = "kfw-$($kerberos_version)-$($windows_architecture)-msvc100.zip"
   $Env:LIBUV_ARTIFACT_ARCHIVE = "libuv-$($libuv_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
   $Env:OPENSSL_ARTIFACT_ARCHIVE = "openssl-$($openssl_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
   $Env:ZLIB_ARTIFACT_ARCHIVE = "zlib-$($zlib_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-
-  # Generate DataStax Enterprise specific environment variables
-  If ($Env:DRIVER_TYPE -Like "dse") {
-    # Generate the Kerberos environment variables
-    $Env:KERBEROS_ARCHIVE = "kfw-$($kerberos_version)-$($windows_architecture)-msvc100.zip"
-    $Env:KERBEROS_DOWNLOAD_URL = "$($download_url_prefix)/kerberos/$($kerberos_version)/$($Env:KERBEROS_ARCHIVE)"
-    $Env:KERBEROS_ROOT_DIR = "$($libs_location_prefix)/$($Env:Platform)/100/kfw-$($kerberos_version)"
-  }
 
   # Generate default environment variables for per commit builds
   If ($Env:APPVEYOR_BUILD_WORKER_IMAGE -Like "Visual Studio 2019") {
@@ -187,6 +180,10 @@ Function Initialize-Build-Environment {
   # Generate the default Boost environment variables
   $Env:BOOST_ROOT = "C:/Libraries/boost_$($boost_version_directory_suffix)"
   $Env:BOOST_INCLUDEDIR = "$($Env:BOOST_ROOT)/include"
+
+  # Generate the Kerberos environment variables
+  $Env:KERBEROS_DOWNLOAD_URL = "$($download_url_prefix)/kerberos/$($kerberos_version)/$($Env:KERBEROS_ARCHIVE)"
+  $Env:KERBEROS_ROOT_DIR = "$($libs_location_prefix)/$($Env:Platform)/100/kfw-$($kerberos_version)"
 
   # Generate the default libssh2 environment variables
   $Env:LIBSSH2_ROOT_DIR = "$($dependencies_location_prefix)/libssh2-$($libssh2_version)"
@@ -474,34 +471,31 @@ add_dependencies(`${PROJECT_NAME} `${ZLIB_LIBRARY_NAME})
     Pop-Location
   }
 
-  # Handle installation of DataStax Enterprise dependencies
-  If ($Env:DRIVER_TYPE -Like "dse") {
-    # Determine if Kerberos for Windows should be installed (cached)
-    If (-Not (Test-Path -Path "$($Env:KERBEROS_ROOT_DIR)")) {
-      # Download and extract the dependency
-      try {
-        Write-Host "Downloading and extracting Kerberos for Windows"
-        New-Item -ItemType Directory -Force -Path "$($Env:KERBEROS_ROOT_DIR)" | Out-Null
-        If ($Env:APPVEYOR -Like "True") {
-          Start-FileDownload "$($Env:KERBEROS_DOWNLOAD_URL)" -FileName $Env:KERBEROS_ARCHIVE
-        } Else {
-          curl.exe -o "$($Env:KERBEROS_ARCHIVE)" "$($Env:KERBEROS_DOWNLOAD_URL)"
-        }
-        $argument_list = @"
+  # Determine if Kerberos for Windows should be installed (cached)
+  If (-Not (Test-Path -Path "$($Env:KERBEROS_ROOT_DIR)")) {
+    # Download and extract the dependency
+    try {
+      Write-Host "Downloading and extracting Kerberos for Windows"
+      New-Item -ItemType Directory -Force -Path "$($Env:KERBEROS_ROOT_DIR)" | Out-Null
+      If ($Env:APPVEYOR -Like "True") {
+        Start-FileDownload "$($Env:KERBEROS_DOWNLOAD_URL)" -FileName $Env:KERBEROS_ARCHIVE
+      } Else {
+        curl.exe -o "$($Env:KERBEROS_ARCHIVE)" "$($Env:KERBEROS_DOWNLOAD_URL)"
+      }
+      $argument_list = @"
 -o"$($Env:KERBEROS_ROOT_DIR)" x "$($Env:KERBEROS_ARCHIVE)"
 "@
-        $process = Start-Process -FilePath 7z -ArgumentList $argument_list -PassThru -Wait -NoNewWindow
-        If ($process.ExitCode -ne 0) {
-          Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_ROOT_DIR)"
-          Throw "Failed to extract Kerberos"
-        }
-
-        # Delete the binary archive
-        Remove-Item $Env:KERBEROS_ARCHIVE
-      } catch {
+      $process = Start-Process -FilePath 7z -ArgumentList $argument_list -PassThru -Wait -NoNewWindow
+      If ($process.ExitCode -ne 0) {
         Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_ROOT_DIR)"
-        Throw $PSItem
+        Throw "Failed to extract Kerberos"
       }
+
+      # Delete the binary archive
+      Remove-Item $Env:KERBEROS_ARCHIVE
+    } catch {
+      Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_ROOT_DIR)"
+      Throw $PSItem
     }
   }
 
@@ -571,7 +565,7 @@ Function Build-Driver {
   }
 
   # Build the driver
-  $driver_type = "Apache Cassandra"
+  $driver_type = "Apache Cassandra and DataStax Products"
   If ($Env:DRIVER_TYPE -Like "dse") {
     $driver_type = "DSE"
   }
@@ -611,23 +605,10 @@ Function Execute-Driver-Unit-Tests {
   # Update the PATH for the test executables to run with output
   $Env:PATH = "$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests;$($Env:PATH)"
 
-  # Execute the Apache Cassandra unit tests
+  # Execute the unit tests
   $is_failure = $False
-  cassandra-unit-tests.exe --gtest_output=xml:"$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests\cassandra-unit-tests-gtest-results.xml"
+  cassandra-unit-tests.exe --gtest_output=xml:"$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests\unit-tests-gtest-results.xml"
   If ($LastExitCode -ne 0) {
-    $is_failure = $True
-  }
-
-  If ($Env:DRIVER_TYPE -Like "dse") {
-    # Execute the Apache Cassandra unit tests
-    dse-unit-tests.exe --gtest_output=xml:"$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests\dse-unit-tests-gtest-results.xml"
-    If ($LastExitCode -ne 0) {
-      $is_failure = $True
-    }
-  }
-
-  # Check to see if there was a failure executing the tests
-  If ($is_failure) {
     Throw "Error Executing Unit tests: Check tests tab or download from the artifacts"
   }
 }
@@ -717,7 +698,7 @@ a -tzip "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:ZLIB_ARTIFACT_ARCHIVE)" -r "$($Env:
 
 Function Push-Artifacts {
   If ($Env:APPVEYOR -Like "True") {
-    $driver_type = "Apache Cassandra"
+    $driver_type = "Apache Cassandra and DataStax Products"
     If ($Env:DRIVER_TYPE -Like "dse") {
       $driver_type = "DSE"
     }

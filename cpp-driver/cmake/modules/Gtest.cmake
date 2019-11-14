@@ -230,16 +230,15 @@ endmacro()
 # Configure unit tests to be built.
 #
 # Arguments:
-#   project_name        - Name of project that has Google Test unit tests.
 #   extra_files         - List of extra files to build into the test executable, if
 #                         any.
 #   extra_includes      - List of extra includes to include into the text
 #                         executable, if any.
 #   excluded_test_files - List of test files to exclude from the build.
 #------------------------
-macro(GtestUnitTests project_name extra_files extra_includes excluded_test_files)
-  set(UNIT_TESTS_NAME "${project_name}-unit-tests")
-  set(UNIT_TESTS_DISPLAY_NAME "Unit Tests (${project_name})")
+macro(GtestUnitTests extra_files extra_includes excluded_test_files)
+  set(UNIT_TESTS_NAME "cassandra-unit-tests")
+  set(UNIT_TESTS_DISPLAY_NAME "Unit Tests")
   set(UNIT_TESTS_SOURCE_DIR "${TESTS_SOURCE_DIR}/unit")
 
   # The unit tests use `test::Utils::msleep()` and this is the minimum include

@@ -1,0 +1,46 @@
+/*
+  Copyright (c) DataStax, Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#include "objects/dse_graph_edge.hpp"
+#include "objects/dse_graph_result.hpp"
+
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::id() { return edge_.id; }
+
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::label() { return edge_.label; }
+
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::type() { return edge_.type; }
+
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::properties() {
+  return edge_.properties;
+}
+
+test::driver::dse::GraphVertex test::driver::dse::GraphEdge::in_vertex() {
+  GraphResult vertex(edge_.in_vertex);
+  return vertex.vertex();
+}
+
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::in_vertex_label() {
+  return edge_.in_vertex_label;
+}
+
+test::driver::dse::GraphVertex test::driver::dse::GraphEdge::out_vertex() {
+  GraphResult vertex(edge_.out_vertex);
+  return vertex.vertex();
+}
+
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::out_vertex_label() {
+  return edge_.out_vertex_label;
+}

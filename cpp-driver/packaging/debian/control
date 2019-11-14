@@ -15,25 +15,25 @@ Section: libs
 Architecture: any
 Pre-Depends: multiarch-support, ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: C/C++ client driver for Apache Cassandra - runtime library
+Description: C/C++ client driver for Apache Cassandra and DataStax Products - runtime library
  A modern, feature-rich, and highly tunable C/C++ client library for Apache
- Cassandra using exclusively Cassandra's native protocol and Cassandra Query
- Language.
+ Cassandra and DataStax Products using Cassandra's native protocol and Cassandra Query
+ Language along with extensions for DataStax Products.
 
 Package: cassandra-cpp-driver-dev
 Section: libdevel
 Architecture: any
 Depends: cassandra-cpp-driver (= ${binary:Version}), ${misc:Depends}
-Description: C/C++ client driver for Apache Cassandra - development files
+Description: C/C++ client driver for Apache Cassandra and DataStax Products - development files
  A modern, feature-rich, and highly tunable C/C++ client library for Apache
- Cassandra using exclusively Cassandra's native protocol and Cassandra Query
- Language.
+ Cassandra and DataStax Products using Cassandra's native protocol and Cassandra Query
+ Language along with extensions for DataStax Products.
 
 Package: cassandra-cpp-driver-dbg
 Section: debug
 Architecture: any
 Depends: cassandra-cpp-driver (= ${binary:Version}), ${misc:Depends}
-Description: C/C++ client driver for Apache Cassandra - debugging symbols
+Description: C/C++ client driver for Apache Cassandra and DataStax Products - debugging symbols
  A modern, feature-rich, and highly tunable C/C++ client library for Apache
- Cassandra using exclusively Cassandra's native protocol and Cassandra Query
- Language.
+ Cassandra and DataStax Products using Cassandra's native protocol and Cassandra Query
+ Language along with extensions for DataStax Products.

@@ -129,7 +129,7 @@ private:
 class BootstrapListener : public testing::EmptyTestEventListener {
   void OnTestProgramStart(const testing::UnitTest& unit_test) {
     std::cout << "Starting DataStax C/C++ Driver Unit Test" << std::endl;
-    std::cout << "  Cassandra driver v" << CASS_VERSION_MAJOR << "." << CASS_VERSION_MINOR << "."
+    std::cout << "  v" << CASS_VERSION_MAJOR << "." << CASS_VERSION_MINOR << "."
               << CASS_VERSION_PATCH;
     if (!String(CASS_VERSION_SUFFIX).empty()) {
       std::cout << "-" << CASS_VERSION_SUFFIX;

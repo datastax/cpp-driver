@@ -3,6 +3,8 @@ schedules:
     schedule: adhoc
     notify:
       slack: cpp-driver-dev-bots
+    env_vars: |
+      CI_SCHEDULE=adhoc
   commit:
     schedule: per_commit
     notify:
@@ -45,7 +47,7 @@ build:
       FUNCTIONS+=($(grep -Eoh '^cass_\s*(\w+)\s*\(' include/cassandra.h | awk -F '(' '{print $1}'))
       check_driver_exports 'build/libcassandra_static.a' "${FUNCTIONS[@]}"
 
-      build/cassandra-unit-tests --gtest_output=xml:cassandra-unit-test-results.xml
+      build/cassandra-unit-tests --gtest_output=xml:unit-test-results.xml
 
       if [ -f build/cassandra-integration-tests ]; then
         build/cassandra-integration-tests --category=cassandra --keep-clusters --verbose --gtest_filter=DbaasTests* --gtest_output=xml:dbaas-integration-test-results.xml

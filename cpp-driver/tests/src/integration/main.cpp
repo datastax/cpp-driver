@@ -46,7 +46,7 @@ public:
   void OnTestProgramStart(const testing::UnitTest& unit_test) {
     if (!is_settings_displayed_) {
       std::cout << "Starting DataStax C/C++ Driver Integration Test" << std::endl;
-      std::cout << "  Cassandra driver v" << CASS_VERSION_MAJOR << "." << CASS_VERSION_MINOR << "."
+      std::cout << "  v" << CASS_VERSION_MAJOR << "." << CASS_VERSION_MINOR << "."
                 << CASS_VERSION_PATCH;
       if (!std::string(CASS_VERSION_SUFFIX).empty()) {
         std::cout << "-" << CASS_VERSION_SUFFIX;

@@ -30,11 +30,11 @@ TEST_F(ProtocolVersionUnitTest, LowestSupported) {
 }
 
 TEST_F(ProtocolVersionUnitTest, HighestSupported) {
-  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V4), ProtocolVersion::highest_supported());
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV1), ProtocolVersion::highest_supported());
 }
 
 TEST_F(ProtocolVersionUnitTest, NewestBeta) {
-  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V5), ProtocolVersion::newest_beta());
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV2), ProtocolVersion::newest_beta());
 }
 
 TEST_F(ProtocolVersionUnitTest, IsValid) {
@@ -68,17 +68,17 @@ TEST_F(ProtocolVersionUnitTest, IsValid) {
     EXPECT_TRUE(v4.is_valid());
   }
 
-  { // Invalid (beta version)
+  { // Invalid (Cassandra beta version)
     ProtocolVersion v5(CASS_PROTOCOL_VERSION_V5);
     EXPECT_FALSE(v5.is_valid());
   }
 
-  { // Invalid (DSE version)
+  { // Valid
     ProtocolVersion vDSE1(CASS_PROTOCOL_VERSION_DSEV1);
-    EXPECT_FALSE(vDSE1.is_valid());
+    EXPECT_TRUE(vDSE1.is_valid());
   }
 
-  { // Invalid (DSE version)
+  { // Invalid (beta version)
     ProtocolVersion vDSE2(CASS_PROTOCOL_VERSION_DSEV2);
     EXPECT_FALSE(vDSE2.is_valid());
   }
@@ -90,14 +90,14 @@ TEST_F(ProtocolVersionUnitTest, IsBeta) {
     EXPECT_FALSE(invalid.is_beta());
   }
 
-  { // Valid beta
-    ProtocolVersion v5(CASS_PROTOCOL_VERSION_V5);
-    EXPECT_TRUE(v5.is_beta());
+  { // Valid beta (DSE version)
+    ProtocolVersion vDSE2(CASS_PROTOCOL_VERSION_DSEV2);
+    EXPECT_TRUE(vDSE2.is_beta());
   }
 
-  { // Not valid beta (DSE version)
-    ProtocolVersion vDSE2(CASS_PROTOCOL_VERSION_DSEV2);
-    EXPECT_FALSE(vDSE2.is_beta());
+  { // Invalid beta
+    ProtocolVersion v5(CASS_PROTOCOL_VERSION_V5);
+    EXPECT_FALSE(v5.is_beta());
   }
 }
 
@@ -124,13 +124,20 @@ TEST_F(ProtocolVersionUnitTest, ToString) {
 }
 
 TEST_F(ProtocolVersionUnitTest, AttemptLowerSupported) {
-  ProtocolVersion version(CASS_PROTOCOL_VERSION_V4);
+  ProtocolVersion version(CASS_PROTOCOL_VERSION_DSEV2);
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV2), version);
+
+  EXPECT_TRUE(version.attempt_lower_supported("127.0.0.1"));
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV1), version);
+
+  EXPECT_TRUE(version.attempt_lower_supported("127.0.0.1"));
   EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V4), version);
 
   EXPECT_TRUE(version.attempt_lower_supported("127.0.0.1"));
   EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V3), version);
 
-  EXPECT_FALSE(version.attempt_lower_supported("127.0.0.1"));
+  EXPECT_FALSE(version.attempt_lower_supported("127.0.0.1")); // Can't go any lower
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V3), version);
 }
 
 TEST_F(ProtocolVersionUnitTest, SupportsSetKeyspace) {
@@ -139,7 +146,15 @@ TEST_F(ProtocolVersionUnitTest, SupportsSetKeyspace) {
     EXPECT_TRUE(v5.supports_set_keyspace());
   }
 
+  { // Supported
+    ProtocolVersion DSEv2(CASS_PROTOCOL_VERSION_DSEV2);
+    EXPECT_TRUE(DSEv2.supports_set_keyspace());
+  }
+
   { // Not supported
+    ProtocolVersion DSEv1(CASS_PROTOCOL_VERSION_DSEV1);
+    EXPECT_FALSE(DSEv1.supports_set_keyspace());
+
     for (int i = CASS_PROTOCOL_VERSION_V1; i <= CASS_PROTOCOL_VERSION_V4; ++i) {
       ProtocolVersion version(i);
       EXPECT_FALSE(version.supports_set_keyspace());
@@ -148,8 +163,23 @@ TEST_F(ProtocolVersionUnitTest, SupportsSetKeyspace) {
 }
 
 TEST_F(ProtocolVersionUnitTest, SupportsResultMetadataId) {
-  for (int i = CASS_PROTOCOL_VERSION_V1; i <= CASS_PROTOCOL_VERSION_V5; ++i) {
-    ProtocolVersion version(i);
-    EXPECT_FALSE(version.supports_result_metadata_id());
+  { // Supported
+    ProtocolVersion v5(CASS_PROTOCOL_VERSION_V5);
+    EXPECT_TRUE(v5.supports_result_metadata_id());
+  }
+
+  { // Supported
+    ProtocolVersion DSEv2(CASS_PROTOCOL_VERSION_DSEV2);
+    EXPECT_TRUE(DSEv2.supports_result_metadata_id());
+  }
+
+  { // Not supported
+    ProtocolVersion DSEv1(CASS_PROTOCOL_VERSION_DSEV1);
+    EXPECT_FALSE(DSEv1.supports_result_metadata_id());
+
+    for (int i = CASS_PROTOCOL_VERSION_V1; i <= CASS_PROTOCOL_VERSION_V4; ++i) {
+      ProtocolVersion version(i);
+      EXPECT_FALSE(version.supports_result_metadata_id());
+    }
   }
 }

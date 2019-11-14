@@ -217,7 +217,7 @@ endmacro()
 # Arguments:
 #    examples_dir - directory containing all example sub-directories.
 macro(CassBuildExamples examples_dir)
-  file(GLOB EXAMPLES_TO_BUILD "${examples_dir}/*/CMakeLists.txt")
+  file(GLOB_RECURSE EXAMPLES_TO_BUILD "${examples_dir}/*/CMakeLists.txt")
   foreach(example ${EXAMPLES_TO_BUILD})
     get_filename_component(exdir ${example} PATH)
     add_subdirectory(${exdir})
@@ -824,7 +824,7 @@ macro(CassSetCompilerFlags)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 
     # Assign additional library requirements for Windows
-    set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv)
+    set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv version)
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # GCC specific compiler options
     # I disabled long-long warning because boost generates about 50 such warnings

@@ -4,7 +4,7 @@ libdir=${prefix}/lib/@DEB_HOST_MULTIARCH@
 includedir=${prefix}/include
 
 Name: cassandra
-Description: A C/C++ client driver for Apache Cassandra
+Description: A C/C++ client driver for Apache Cassandra and DataStax Products
 Version: @DEB_VERSION_UPSTREAM@
 Libs: -L${libdir} -lcassandra
 Cflags:
