@@ -101,14 +101,13 @@ String implode(const Vector<String>& vec, const char delimiter /* = ' ' */) {
   return str;
 }
 
+static bool not_isspace(int c) { return !::isspace(c); }
+
 String& trim(String& str) {
   // Trim front
-  str.erase(str.begin(),
-            std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun<int, int>(::isspace))));
+  str.erase(str.begin(), std::find_if(str.begin(), str.end(), not_isspace));
   // Trim back
-  str.erase(
-      std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(::isspace))).base(),
-      str.end());
+  str.erase(std::find_if(str.rbegin(), str.rend(), not_isspace).base(), str.end());
   return str;
 }
 
