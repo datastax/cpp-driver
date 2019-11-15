@@ -339,7 +339,7 @@ public:
     create_zip_file(buffer.GetString());
     cloud_config_.load(creds_zip_file(), &config_);
 
-    use_ssl(ca_cert(), ca_key(), HTTP_MOCK_HOSTNAME); // Ensure HttpServer is configured to use SSL
+    use_ssl(ca_key(), ca_cert(), HTTP_MOCK_HOSTNAME); // Ensure HttpServer is configured to use SSL
 
     ClusterSettings settings(config_);
     resolver_ = config_.cluster_metadata_resolver_factory()->new_instance(settings);
