@@ -19,7 +19,6 @@ skip_commits:
     - '**/LICENSE'
     - '**/LICENSE.txt'
     - packaging/
-    - test/ccm_bridge/data/
 shallow_clone: false
 cache:
   - C:\projects\dependencies\bin -> appveyor.ps1

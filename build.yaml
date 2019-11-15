@@ -10,7 +10,7 @@ schedules:
     notify:
       slack: cpp-driver-dev-bots
     branches:
-      include: ["/CPP-\\d+/", "master", "2.0.0-alpha"]
+      include: ["/CPP-\\d+/", "unified_driver"]
     env_vars: |
       CI_SCHEDULE=commit
   nightly:
@@ -18,7 +18,7 @@ schedules:
     notify:
       slack: cpp-driver-dev-bots
     branches:
-      include: ["/CPP-\\d+/", "master", "2.0.0-alpha"]
+      include: ["/CPP-\\d+/", "unified_driver"]
     matrix:
       exclude:
         - os: ['ubuntu/trusty64/cpp', 'ubuntu/xenial64/cpp', 'centos/6-64/cpp', 'centos/7-64/cpp', 'osx/high-sierra']
@@ -38,44 +38,34 @@ env:
   LIBUV_VERSION: 1.33.0
 build:
   - script: |
-      . ./cpp-driver/.build.sh
-      configure_environment
-      install_dependencies
+      . cpp-driver/.build.sh
+      (
+        cd cpp-driver
+        configure_environment
+        install_dependencies
 
-      build_driver 'DSE'
+        build_driver 'CASS'
+      )
 
-      FUNCTIONS+=($(grep -Eoh '(^cass_\s*(\w+)\s*\()|(^dse_\s*(\w+)\s*\()' include/dse.h | awk -F '(' '{print $1}'));
+      FUNCTIONS+=($(grep -Eoh '(^cass_\s*(\w+)\s*\()|(^dse_\s*(\w+)\s*\()' cpp-driver/include/dse.h | awk -F '(' '{print $1}'));
       FUNCTIONS+=($(grep -Eoh '^cass_\s*(\w+)\s*\(' cpp-driver/include/cassandra.h | awk -F '(' '{print $1}'))
-      check_driver_exports 'build/libdse_static.a' "${FUNCTIONS[@]}"
+      check_driver_exports 'cpp-driver/build/libcassandra_static.a' "${FUNCTIONS[@]}"
 
-      build/cassandra-unit-tests --gtest_output=xml:cassandra-unit-test-results.xml
-      build/dse-unit-tests --gtest_output=xml:dse-unit-test-results.xml
+      cpp-driver/build/cassandra-unit-tests --gtest_output=xml:unit-test-results.xml
 
-      if [ -f build/cassandra-integration-tests ]; then
-        build/cassandra-integration-tests --category=cassandra --keep-clusters --verbose --gtest_filter=DbaasTests* --gtest_output=xml:dbaas-integration-test-results.xml
+      if [ -f cpp-driver/build/cassandra-integration-tests ]; then
+        cpp-driver/build/cassandra-integration-tests --category=cassandra --keep-clusters --verbose --gtest_filter=DbaasTests* --gtest_output=xml:dbaas-integration-test-results.xml
       fi
 
-      install_driver
-      test_installed_driver 'dse'
+      (
+        cd cpp-driver
+        install_driver
+        test_installed_driver 'cassandra'
+      )
 
   - xunit:
     - "*test-results.xml"
 package:
   allow_empty: true
   include: # list of files and glob paths to include in the artifact, relative to the current working directory
-    - packaging/packages/*
-release:
-  matrix:
-    exclude:
-      - os: [ osx/high-sierra ]
-    env_vars: |
-      CI_SCHEDULE=release
-  after:
-    each:
-      - script: |
-          . ./cpp-driver/.build.sh
-          DRIVER_VERSION=$(get_driver_version 'include/dse.h' 'DSE')
-          # Uploading driver packages
-          curl -$ARTIFACTORY_CREDS -T "{$(echo packaging/packages/dse-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-dse-driver/builds/$version/$SHA/$DISTRO/$RELEASE/dse/v$DRIVER_VERSION/"
-          # Uploading libuv packages
-          curl -$ARTIFACTORY_CREDS -T "{$(echo packaging/packages/libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-dse-driver/builds/$version/$SHA/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
+    - cpp-driver/packaging/packages/*

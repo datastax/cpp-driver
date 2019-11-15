@@ -20,7 +20,6 @@ skip_commits:
     - '**/LICENSE.txt'
     - packaging/
     - cpp-driver/packaging/
-    - cpp-driver/test/ccm_bridge/data/
 shallow_clone: false
 cache:
   - C:\projects\dependencies\bin -> cpp-driver\appveyor.ps1
@@ -37,7 +36,7 @@ environment:
   ARTIFACTORY_PASSWORD:
     secure: h28bN22Py3CZPqrWoZWEjIFnpes+kslusCKP1mRYdUqBEf+OO1kFEQTZ9DGD7tuCSIIRDI3Mf9LX8zgUdmdlZA==
   APPVEYOR_IGNORE_COMMIT_FILTERING_ON_TAG: true
-  DRIVER_TYPE: DSE
+  DRIVER_TYPE: CASS
   LIBSSH2_VERSION: 1.9.0
   LIBUV_VERSION: 1.33.0
   OPENSSL_1_0_VERSION: 1.0.2s
@@ -95,7 +94,9 @@ environment:
 #init:
 #  - ps: iex ((New-Object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 install:
-  - ps: . .\cpp-driver\appveyor.ps1 # Source AppVeyor build functions
+  - ps: $Env:APPVEYOR_BUILD_FOLDER += "\cpp-driver"
+  - ps: Set-Location -Path cpp-driver
+  - ps: . .\appveyor.ps1 # Source AppVeyor build functions
   - ps: Build-Configuration-Information
   - ps: Hardware-Information
   - ps: Environment-Information
