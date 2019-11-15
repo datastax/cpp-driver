@@ -63,7 +63,65 @@ using datastax::internal::core::UuidGen;
 
 namespace mockssandra {
 
-static DH* dh_parameters() {
+namespace {
+
+template <class T>
+struct FreeDeleterImpl {};
+
+#define MAKE_DELETER(type, free_func)               \
+  template <>                                       \
+  struct FreeDeleterImpl<type> {                    \
+    static void free(type* ptr) { free_func(ptr); } \
+  };
+
+MAKE_DELETER(BIO, BIO_free)
+MAKE_DELETER(DH, DH_free)
+MAKE_DELETER(EVP_PKEY, EVP_PKEY_free)
+MAKE_DELETER(EVP_PKEY_CTX, EVP_PKEY_CTX_free)
+MAKE_DELETER(X509, X509_free)
+MAKE_DELETER(X509_REQ, X509_REQ_free)
+MAKE_DELETER(X509_EXTENSION, X509_EXTENSION_free)
+
+template <class T>
+struct FreeDeleter {
+  void operator()(T* ptr) const { FreeDeleterImpl<T>::free(ptr); }
+};
+
+template <class T>
+class Scoped : public ScopedPtr<T, FreeDeleter<T> > {
+public:
+  Scoped(T* ptr = NULL)
+      : ScopedPtr<T, FreeDeleter<T> >(ptr) {}
+};
+
+void print_ssl_error() {
+  unsigned long err = ERR_get_error();
+  char buf[256];
+  ERR_error_string_n(err, buf, sizeof(buf));
+  fprintf(stderr, "%s\n", buf);
+}
+
+X509* load_cert(const String& cert) {
+  X509* x509 = NULL;
+  Scoped<BIO> bio(BIO_new_mem_buf(const_cast<char*>(cert.c_str()), cert.length()));
+  if (PEM_read_bio_X509(bio.get(), &x509, NULL, NULL) == NULL) {
+    print_ssl_error();
+    return NULL;
+  }
+  return x509;
+}
+
+EVP_PKEY* load_private_key(const String& key) {
+  EVP_PKEY* pkey = NULL;
+  Scoped<BIO> bio(BIO_new_mem_buf(const_cast<char*>(key.c_str()), key.length()));
+  if (!PEM_read_bio_PrivateKey(bio.get(), &pkey, NULL, NULL)) {
+    print_ssl_error();
+    return NULL;
+  }
+  return pkey;
+}
+
+DH* dh_parameters() {
   // Generated using the following command: `openssl dhparam -C 2048`
   // Prime length of 2048 chosen to bypass client-side error:
   // `SSL3_CHECK_CERT_AND_ALGORITHM:dh key too small`
@@ -80,32 +138,32 @@ static DH* dh_parameters() {
       "VYp84xAy2M6mWWqUm/kokN9QjAiT/DZRxZK8VhY7O9+oATo7/YPCMd9Em417O13k\n"
       "+F0o/8IMaQvpmtlAsLc2ZKwGqqG+HD2dOwIBAg==\n"
       "-----END DH PARAMETERS-----";
-  BIO* bio = BIO_new_mem_buf(const_cast<char*>(dh_parameters_pem),
-                             -1); // Use null terminator for length
-  DH* dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
-  BIO_free(bio);
-  return dh;
+  Scoped<BIO> bio(BIO_new_mem_buf(const_cast<char*>(dh_parameters_pem),
+                                  -1)); // Use null terminator for length
+  return PEM_read_bio_DHparams(bio.get(), NULL, NULL, NULL);
 }
 
+} // namespace
+
 String Ssl::generate_key() {
-  EVP_PKEY* pkey = NULL;
-  EVP_PKEY_CTX* pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-  EVP_PKEY_keygen_init(pctx);
-  EVP_PKEY_CTX_set_rsa_keygen_bits(pctx, 2048);
-  EVP_PKEY_keygen(pctx, &pkey);
-  EVP_PKEY_CTX_free(pctx);
+  Scoped<EVP_PKEY_CTX> pctx(EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL));
 
-  String result;
-  BIO* bio = BIO_new(BIO_s_mem());
-  PEM_write_bio_PrivateKey(bio, pkey, NULL, NULL, 0, NULL, NULL);
+  EVP_PKEY_keygen_init(pctx.get());
+  EVP_PKEY_CTX_set_rsa_keygen_bits(pctx.get(), 2048);
+
+  Scoped<EVP_PKEY> pkey;
+  { // Generate RSA key
+    EVP_PKEY* temp = NULL;
+    EVP_PKEY_keygen(pctx.get(), &temp);
+    pkey.reset(temp);
+  }
+
+  Scoped<BIO> bio(BIO_new(BIO_s_mem()));
+  PEM_write_bio_PrivateKey(bio.get(), pkey.get(), NULL, NULL, 0, NULL, NULL);
+
   BUF_MEM* mem = NULL;
-  BIO_get_mem_ptr(bio, &mem);
-  result.append(mem->data, mem->length);
-  BIO_free(bio);
-
-  EVP_PKEY_free(pkey);
-
-  return result;
+  BIO_get_mem_ptr(bio.get(), &mem);
+  return String(mem->data, mem->length);
 }
 
 String Ssl::generate_cert(const String& key, String cn, String ca_cert, String ca_key) {
@@ -120,132 +178,74 @@ String Ssl::generate_cert(const String& key, String cn, String ca_cert, String c
 #endif
   }
 
-  EVP_PKEY* pkey = NULL;
-  { // Read key from string
-    BIO* bio = BIO_new_mem_buf(const_cast<char*>(key.c_str()), key.length());
-    if (!PEM_read_bio_PrivateKey(bio, &pkey, NULL, NULL)) {
-      BIO_free(bio);
-      return "";
-    }
-    BIO_free(bio);
-  }
+  Scoped<EVP_PKEY> pkey(load_private_key(key));
+  if (!pkey) return "";
 
-  X509_REQ* x509_req = NULL;
+  Scoped<X509_REQ> x509_req;
   if (!ca_cert.empty() && !ca_key.empty()) {
-    x509_req = X509_REQ_new();
-    X509_REQ_set_version(x509_req, 2);
-    X509_REQ_set_pubkey(x509_req, pkey);
+    x509_req.reset(X509_REQ_new());
+    X509_REQ_set_version(x509_req.get(), 2);
+    X509_REQ_set_pubkey(x509_req.get(), pkey.get());
 
-    X509_NAME* name = X509_REQ_get_subject_name(x509_req);
+    X509_NAME* name = X509_REQ_get_subject_name(x509_req.get());
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC,
                                reinterpret_cast<const unsigned char*>("US"), -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
                                reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
-    X509_REQ_sign(x509_req, pkey, EVP_sha256());
+    X509_REQ_sign(x509_req.get(), pkey.get(), EVP_sha256());
   }
 
-  X509* x509 = X509_new();
-  X509_set_version(x509, 2);
-  ASN1_INTEGER_set(X509_get_serialNumber(x509), 0);
-  X509_gmtime_adj(X509_get_notBefore(x509), 0);
-  X509_gmtime_adj(X509_get_notAfter(x509), static_cast<long>(60 * 60 * 24 * 365));
-  X509_set_pubkey(x509, pkey);
+  Scoped<X509> x509(X509_new());
+  X509_set_version(x509.get(), 2);
+  ASN1_INTEGER_set(X509_get_serialNumber(x509.get()), 0);
+  X509_gmtime_adj(X509_get_notBefore(x509.get()), 0);
+  X509_gmtime_adj(X509_get_notAfter(x509.get()), static_cast<long>(60 * 60 * 24 * 365));
+  X509_set_pubkey(x509.get(), pkey.get());
 
   if (x509_req) {
-    X509_set_subject_name(x509, X509_REQ_get_subject_name(x509_req));
+    X509_set_subject_name(x509.get(), X509_REQ_get_subject_name(x509_req.get()));
 
-    X509* x509_ca = NULL;
-    { // Read CA from string
-      BIO* bio = BIO_new_mem_buf(const_cast<char*>(ca_cert.c_str()), ca_cert.length());
-      if (!PEM_read_bio_X509(bio, &x509_ca, NULL, NULL)) {
-        X509_free(x509);
-        X509_REQ_free(x509_req);
-        BIO_free(bio);
-        return "";
-      }
-      BIO_free(bio);
-    }
-    X509_set_issuer_name(x509, X509_get_issuer_name(x509_ca));
+    Scoped<X509> x509_ca(load_cert(ca_cert));
+    if (!x509_ca) return "";
+    X509_set_issuer_name(x509.get(), X509_get_issuer_name(x509_ca.get()));
 
-    EVP_PKEY* pkey_ca = NULL;
-    { // Read key from string
-      BIO* bio = BIO_new_mem_buf(const_cast<char*>(ca_key.c_str()), ca_key.length());
-      if (!PEM_read_bio_PrivateKey(bio, &pkey_ca, NULL, NULL)) {
-        BIO_free(bio);
-        X509_free(x509);
-        X509_free(x509_ca);
-        X509_REQ_free(x509_req);
-        return "";
-      }
-      BIO_free(bio);
-    }
-    X509_sign(x509, pkey_ca, EVP_sha256());
-
-    X509_free(x509_ca);
-    EVP_PKEY_free(pkey_ca);
+    Scoped<EVP_PKEY> pkey_ca(load_private_key(ca_key));
+    if (!pkey_ca) return "";
+    X509_sign(x509.get(), pkey_ca.get(), EVP_sha256());
   } else {
     if (cn == "CA") { // Set the purpose as a CA certificate.
-      X509_EXTENSION* x509_ex;
       X509V3_CTX x509v3_ctx;
       X509V3_set_ctx_nodb(&x509v3_ctx);
-      X509V3_set_ctx(&x509v3_ctx, x509, x509, NULL, NULL, 0);
-      x509_ex = X509V3_EXT_conf_nid(NULL, &x509v3_ctx, NID_basic_constraints,
-                                    const_cast<char*>("critical,CA:TRUE"));
-      if (!x509_ex) {
-        X509_free(x509);
-        X509_EXTENSION_free(x509_ex);
-        return "";
-      }
-      X509_add_ext(x509, x509_ex, -1);
-      X509_EXTENSION_free(x509_ex);
+      X509V3_set_ctx(&x509v3_ctx, x509.get(), x509.get(), NULL, NULL, 0);
+
+      Scoped<X509_EXTENSION> x509_ex(X509V3_EXT_conf_nid(NULL, &x509v3_ctx, NID_basic_constraints,
+                                                         const_cast<char*>("critical,CA:TRUE")));
+      if (!x509_ex) return "";
+
+      X509_add_ext(x509.get(), x509_ex.get(), -1);
     }
-    X509_NAME* name = X509_get_subject_name(x509);
+    X509_NAME* name = X509_get_subject_name(x509.get());
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC,
                                reinterpret_cast<const unsigned char*>("US"), -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
                                reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
-    X509_set_issuer_name(x509, name);
-    X509_sign(x509, pkey, EVP_sha256());
+    X509_set_issuer_name(x509.get(), name);
+    X509_sign(x509.get(), pkey.get(), EVP_sha256());
   }
 
   String result;
   { // Write cert into string
-    BIO* bio = BIO_new(BIO_s_mem());
-    PEM_write_bio_X509(bio, x509);
+    Scoped<BIO> bio(BIO_new(BIO_s_mem()));
+    PEM_write_bio_X509(bio.get(), x509.get());
     BUF_MEM* mem = NULL;
-    BIO_get_mem_ptr(bio, &mem);
+    BIO_get_mem_ptr(bio.get(), &mem);
     result.append(mem->data, mem->length);
-    BIO_free(bio);
   }
-
-  X509_free(x509);
-  if (x509_req) X509_REQ_free(x509_req);
-
-  EVP_PKEY_free(pkey);
 
   return result;
 }
 
 namespace internal {
-
-static void print_ssl_error() {
-  unsigned long err = ERR_get_error();
-  char buf[256];
-  ERR_error_string_n(err, buf, sizeof(buf));
-  fprintf(stderr, "%s\n", buf);
-}
-
-static X509* load_cert(const String& cert) {
-  X509* x509 = NULL;
-  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert.c_str()), cert.length());
-  if (PEM_read_bio_X509(bio, &x509, NULL, NULL) == NULL) {
-    print_ssl_error();
-    BIO_free(bio);
-    return NULL;
-  }
-  BIO_free(bio);
-  return x509;
-}
 
 struct WriteReq {
   WriteReq(const char* data, size_t len, ClientConnection* connection)
@@ -499,59 +499,55 @@ bool ServerConnection::use_ssl(const String& key, const String& cert,
   SSL_CTX_set_verify(ssl_context_, SSL_VERIFY_NONE, NULL);
 
   { // Load server certificate
-    X509* x509 = load_cert(cert);
+    Scoped<X509> x509(load_cert(cert));
     if (!x509) return false;
-    if (SSL_CTX_use_certificate(ssl_context_, x509) <= 0) {
+    if (SSL_CTX_use_certificate(ssl_context_, x509.get()) <= 0) {
       print_ssl_error();
-      X509_free(x509);
       return false;
     }
-    X509_free(x509);
   }
 
   if (!ca_cert.empty()) { // Load CA certificate
-    X509* x509 = load_cert(ca_cert);
-    if (!x509) return false;
-    if (SSL_CTX_add_extra_chain_cert(ssl_context_, x509) <= 0) { // Certificate freed by function
-      print_ssl_error();
-      X509_free(x509);
-      return false;
-    }
-    if (require_client_cert) {
-      X509_STORE* cert_store = SSL_CTX_get_cert_store(ssl_context_);
-      if (X509_STORE_add_cert(cert_store, x509) <= 0) {
+
+    { // Add CA certificate to chain to send to the client
+      Scoped<X509> x509(load_cert(ca_cert));
+      if (!x509) return false;
+
+      if (SSL_CTX_add_extra_chain_cert(ssl_context_, x509.release()) <=
+          0) { // Certificate freed by function
         print_ssl_error();
         return false;
       }
+    }
+
+    if (require_client_cert) {
+      Scoped<X509> x509(load_cert(ca_cert));
+      if (!x509) return false;
+
+      // Add CA certificate to chain to validate peer certificate
+      X509_STORE* cert_store = SSL_CTX_get_cert_store(ssl_context_);
+      if (X509_STORE_add_cert(cert_store, x509.get()) <= 0) {
+        print_ssl_error();
+        return false;
+      }
+
       SSL_CTX_set_verify(ssl_context_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
     }
   }
 
-  EVP_PKEY* pkey = NULL;
-  { // Read key from string
-    BIO* bio = BIO_new_mem_buf(const_cast<char*>(key.c_str()), key.length());
-    if (PEM_read_bio_PrivateKey(bio, &pkey, on_password, (void*)"") == NULL) {
-      print_ssl_error();
-      BIO_free(bio);
-      return false;
-    }
-    BIO_free(bio);
-  }
+  Scoped<EVP_PKEY> pkey(load_private_key(key));
+  if (!pkey) return false;
 
-  if (SSL_CTX_use_PrivateKey(ssl_context_, pkey) <= 0) {
+  if (SSL_CTX_use_PrivateKey(ssl_context_, pkey.get()) <= 0) {
     print_ssl_error();
-    EVP_PKEY_free(pkey);
     return false;
   }
-  EVP_PKEY_free(pkey);
 
-  DH* dh = dh_parameters();
-  if (!dh || !SSL_CTX_set_tmp_dh(ssl_context_, dh)) {
+  Scoped<DH> dh(dh_parameters());
+  if (!dh || !SSL_CTX_set_tmp_dh(ssl_context_, dh.get())) {
     print_ssl_error();
-    DH_free(dh);
     return false;
   }
-  DH_free(dh);
 
   return true;
 }

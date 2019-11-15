@@ -50,7 +50,7 @@ SocketSettings HttpTest::use_ssl(const String& cn, bool is_server_using_ssl /*= 
   return settings;
 }
 
-void HttpTest::use_ssl(const String& ca_cert, const String& ca_key, const String& cn) {
+void HttpTest::use_ssl(const String& ca_key, const String& ca_cert, const String& cn) {
 #ifdef HAVE_OPENSSL
   key_ = mockssandra::Ssl::generate_key();
   cert_ = mockssandra::Ssl::generate_cert(key_, cn, ca_cert, ca_key);
