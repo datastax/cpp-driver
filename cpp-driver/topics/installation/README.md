@@ -2,8 +2,8 @@
 
 ## Packages
 
-Pre-built packages are available for CentOS 6/7 (64-bit only), Ubuntu
-12.04/14.04/16.04 (64-bit only) and Windows 7 SP1 and above (32-bit and 64-bit).
+Pre-built packages are available for CentOS 6/7, Ubuntu 14.04/16.04/18.04 and
+Windows 7 SP1 and above.
 
 ### CentOS
 
@@ -18,11 +18,11 @@ Pre-built packages are available for CentOS 6/7 (64-bit only), Ubuntu
   <tbody>
   <tr>
    <td>CentOS 6</td>
-   <td>http://downloads.datastax.com/cpp-driver/centos/6/dse</td>
+   <td>http://downloads.datastax.com/cpp-driver/centos/6/cassandra</td>
   </tr>
   <tr>
    <td>CentOS 7</td>
-   <td>http://downloads.datastax.com/cpp-driver/centos/7/dse</td>
+   <td>http://downloads.datastax.com/cpp-driver/centos/7/cassandra</td>
   </tr>
   </tbody>
 </table>
@@ -65,15 +65,15 @@ Note: Replace `<version>` with the release version of the package.
 Install the runtime library:
 
 ```bash
-rpm -Uvh dse-cpp-driver-<version>.rpm
+rpm -Uvh cassandra-cpp-driver-<version>.rpm
 ```
 
 When developing against the driver you'll also want to install the development
 package and the debug symbols.
 
 ```bash
-rpm -Uvh dse-cpp-driver-devel-<version>.rpm
-rpm -Uvh dse-cpp-driver-debuginfo-<version>.rpm
+rpm -Uvh cassandra-cpp-driver-devel-<version>.rpm
+rpm -Uvh cassandra-cpp-driver-debuginfo-<version>.rpm
 ```
 
 ### Ubuntu
@@ -89,15 +89,15 @@ rpm -Uvh dse-cpp-driver-debuginfo-<version>.rpm
   <tbody>
   <tr>
    <td>Ubuntu 14.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dse</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/cassandra</td>
   </tr>
   <tr>
    <td>Ubuntu 16.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dse</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/cassandra</td>
   </tr>
   <tr>
    <td>Ubuntu 18.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dse</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/18.04/cassandra</td>
   </tr>
   </tbody>
 </table>
@@ -144,15 +144,15 @@ Note: Replace `<version>` with the release version of the package.
 Install the runtime library:
 
 ```bash
-dpkg -i dse-cpp-driver_<version>.deb
+dpkg -i cassandra-cpp-driver_<version>.deb
 ```
 
 When developing against the driver you'll also want to install the development
 package and the debug symbols.
 
 ```bash
-dpkg -i dse-cpp-driver-dev_<version>.deb
-dpkg -i dse-cpp-driver-dbg_<version>.deb
+dpkg -i cassandra-cpp-driver-dev_<version>.deb
+dpkg -i cassandra-cpp-driver-dbg_<version>.deb
 ```
 
 ### Windows
@@ -168,7 +168,7 @@ dpkg -i dse-cpp-driver-dbg_<version>.deb
   <tbody>
   <tr>
    <td>Windows</td>
-   <td>http://downloads.datastax.com/cpp-driver/windows/dse</td>
+   <td>http://downloads.datastax.com/cpp-driver/windows/cassandra</td>
   </tr>
   </tbody>
 </table>
@@ -204,15 +204,7 @@ library directories to your project's `Additional Include Directories` and
 
 ## Building
 
-If prebuilt packages are not available for your platform or architecture you
-will need to build the driver from source. Building and installing the C/C++
-DataStax Enterprise Driver is similar to the core C/C++ driver. Directions
-for building and installing the core driver can be found [here](/building/). In
-addition to the core driver's dependencies the DSE driver also requires
-Kerberos:
-
-* Ubuntu requires the package `libkrb5-dev`
-* RHEL (CentOS) requires the package `krb5-devel`
-* Windows requires [Kerberos for Windows] to be installed
-
-[Kerberos for Windows]: http://web.mit.edu/kerberos/dist/index.html
+If pre-built packages are not available for your platform or architecture you
+will need to build the driver from source. Directions for building and
+installing the DataStax C/C++ Driver for Apache Cassandra and DataStax Products
+can be found [here](/topics/building/).

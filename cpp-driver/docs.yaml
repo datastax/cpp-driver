@@ -1,23 +1,27 @@
-title:   DataStax C/C++ Driver
-summary: DataStax C++ Driver for Apache Cassandra Documentation
-homepage: http://datastax.github.io/cpp-driver/
+title:  DataStax C/C++ Driver for Apache Cassandra and DataStax Products
+summary: DataStax C/C++ Driver for Apache Cassandra and DataStax Products Documentation
+homepage: http://docs.datastax.com/en/developer/cpp-driver/latest
 swiftype_drivers: cppdrivers
 sections:
   - title:     Features
     prefix:    /topics
     type:      markdown
     files:     'topics/**/*.md'
+  - title:     DSE Features
+    prefix:    /dse_features
+    type:      markdown
+    files:     'topics/dse_features/**/*.md'
   - title:     Changelog
     prefix:    /changelog
     type:      markdown
     files:     'CHANGELOG.md'
-  - title:     API docs
+  - title:     API Reference
     prefix:    /api
     type:      doxygen
     directory: 'include'
     config: |
-      PREDEFINED = CASS_EXPORT=
-      EXCLUDE_SYMBOLS = XX* CASS_ERROR CASS_ERROR_MAP CASS_ERROR_LAST_ENTRY CASS_LOG_LEVEL_MAP CASS_LOG_LAST_ENTRY CASS_DEPRECATED
+      PREDEFINED = "DSE_EXPORT=" "CASS_EXPORT="
+      EXCLUDE_SYMBOLS = XX* DSE_DEPRECATED CASS_ERROR CASS_ERROR_MAP CASS_ERROR_LAST_ENTRY CASS_LOG_LEVEL_MAP CASS_LOG_LAST_ENTRY CASS_DEPRECATED
       ENABLE_PREPROCESSING = YES
       MACRO_EXPANSION = YES
       EXPAND_ONLY_PREDEF = NO
@@ -25,7 +29,7 @@ sections:
       TYPEDEF_HIDES_STRUCT = YES
       EXTRACT_ALL = YES
       INLINE_SOURCES = NO
-      ALIASES = cassandra{1}="<b>Requires Cassandra:</b> \1"
+      ALIASES = dse{1}="<b>Requires DataStax Enterprise:</b> \1" cassandra{1}="<b>Requires Apache Cassandra:</b> \1"
 nanoc_config:
   checks:
     external_links:
@@ -54,6 +58,10 @@ rewrites:
   - http://www.datastax.com/documentation/cassandra/2.: https://docs.datastax.com/en/archived/cassandra/2.
   - http://downloads.datastax.com/cpp-driver: https://downloads.datastax.com/cpp-driver/
   - http://www.datastax.com/dev/blog/datastax-c-driver(.*)$: https://www.datastax.com/blog/
+  - https://web.mit.edu/kerberos: http://web.mit.edu/kerberos
+  - http://docs.datastax.com/en/cassandra/latest/cassandra/dml/dmlConfigConsistency.html: https://docs.datastax.com/en/ddac/doc/datastax_enterprise/dbInternals/dbIntConfigConsistency.html # Apache Cassandra docs are no longer maintained (use DDAC)
+  - https://www.h5l.org: https://github.com/heimdal/heimdal # Temporary until h5l.org is back online
+  - http://docs.datastax.com/en/developer/cpp-driver/latest/: / # Get current version documentation
 rules:
   use_path_nav_files_only: true
 

@@ -1,16 +1,18 @@
-# DataStax C/C++ Driver for Apache Cassandra
+# DataStax C/C++ Driver for Apache Cassandra and DataStax Products
 
 A modern, feature-rich] and highly tunable C/C++ client library for
 [Apache Cassandra] 2.1+ using exclusively Cassandra's binary protocol and
-Cassandra Query Language v3. __Use the [DSE C/C++ driver] for better
-compatibility and support for [DataStax Enterprise]__.
+Cassandra Query Language v3. This driver can also be used with other DataStax
+products:
+
+* [DataStax Enterprise]
+* [DataStax Constellation]
 
 ## Getting the Driver
 
 Binary versions of the driver, available for multiple operating systems and
 multiple architectures, can be obtained from our [download server]. The
-source code is made available via [GitHub]. __If using [DataStax Enterprise]
-use the [DSE C/C++ driver] instead__.
+source code is made available via [GitHub].
 
 Packages for the driver's dependencies, libuv (1.x)
 and OpenSSL, are also provided under the `dependencies` directory for each
@@ -51,6 +53,15 @@ provided with the distribution:
 * [Reverse DNS] with SSL peer identity verification support
 * Randomized contact points
 * [Speculative execution]
+* DSE Features
+  * [DSE authentication]
+    * Plaintext/DSE
+    * LDAP
+    * GSSAPI (Kerberos)
+  * [DSE geospatial types]
+  * [DSE graph integration]
+  * DSE [proxy authentication][DSE Proxy Authentication] and [proxy execution][DSE Proxy Execution]
+  * [DSE DateRange]
 * Support for [DataStax Constellation] Cloud Data Platform
 
 ## Compatibility
@@ -60,10 +71,9 @@ Cassandra's native protocol. The current version works with:
 
 * Apache Cassandra versions 2.1, 2.2 and 3.0+
 * Architectures: 32-bit (x86) and 64-bit (x64)
-* Compilers: GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013/2015/2017
+* Compilers: GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013/2015/2017/2019
 
-If using [DataStax Enterprise] the [DSE C/C++ driver] provides more features and
-better compatibility. A complete compatibility matrix for both Apache Cassandra
+A complete compatibility matrix for both Apache Cassandra
 and DataStax Enterprise can be found [here][cpp-driver-compatability-matrix].
 
 __Disclaimer__: DataStax products do not support big-endian systems.
@@ -92,6 +102,7 @@ The driver includes several examples in the [examples] directory.
 ## A Simple Example
 ```c
 #include <cassandra.h>
+/* Use "#include <dse.h>" when connecting to DataStax Enterpise */
 #include <stdio.h>
 
 int main(int argc, char* argv[]) {
@@ -181,7 +192,6 @@ CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 
 [Apache Cassandra]: http://cassandra.apache.org
-[DSE C/C++ driver]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest
 [DataStax Enterprise]: http://www.datastax.com/products/datastax-enterprise
 [Examples]: examples/
 [download server]: http://downloads.datastax.com/cpp-driver/
@@ -224,3 +234,9 @@ specific language governing permissions and limitations under the License.
 [Custom]: http://datastax.github.io/cpp-driver/topics/security/#custom
 [Reverse DNS]: http://datastax.github.io/cpp-driver/topics/security/ssl/#enabling-cassandra-identity-verification
 [Speculative execution]: http://datastax.github.io/cpp-driver/topics/configuration/#speculative-execution
+[DSE authentication]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication
+[DSE geospatial types]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/geotypes
+[DSE graph integration]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/graph
+[DSE Proxy Authentication]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication/#proxy-authentication
+[DSE Proxy Execution]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication/#proxy-execution
+[DSE DateRange]: https://github.com/datastax/cpp-driver/blob/master/examples/dse/date_range/date_range.c

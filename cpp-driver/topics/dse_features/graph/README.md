@@ -186,7 +186,7 @@ geometric type parameter use `dse_graph_object_add_point()`,
 `dse_graph_object_add_line_string()` and `dse_graph_object_add_polygon()`. To
 retrieve a geometric type from a graph result use `dse_graph_result_as_point()`,
 `dse_graph_result_as_line_string()` and `dse_graph_result_as_polygon()`. See the
-[geotypes section](/features/geotypes/) for more information.
+[geotypes section](/dse_features/geotypes/) for more information.
 
 ## Parameter values
 

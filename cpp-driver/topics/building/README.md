@@ -1,7 +1,8 @@
 # Building
 
-The C/C++ driver will build on most standard Unix-like and Microsoft Windows
-platforms. Packages are available for the following platforms:
+The DataStax C/C++ Driver for Apache Cassandra and DataStax Products will build
+on most standard Unix-like and Microsoft Windows platforms. Packages are
+available for the following platforms:
 
 * [CentOS 6][cpp-driver-centos6]
 * [CentOS 7][cpp-driver-centos7]
@@ -25,7 +26,15 @@ The C/C++ driver depends on the following software:
 
 * [CMake] v2.6.4+
 * [libuv] 1.x
-* [OpenSSL] v1.0.x or v1.1.x
+* Kerberos v5 ([Heimdal] or [MIT]) \*
+* [OpenSSL] v1.0.x or v1.1.x \*\*
+
+__\*__ Use the `CASS_USE_KERBEROS` CMake option to enable/disable Kerberos
+       support. Enabling this option will enable Kerberos authentication
+       protocol within the driver; defaults to `Off`.
+__\*\*__ Use the `CASS_USE_OPENSSL` CMake option to enable/disable OpenSSL
+         support. Disabling this option will disable SSL/TLS protocol support
+         within the driver; defaults to `On`.
 
 ## Linux/Mac OS
 
@@ -63,6 +72,20 @@ operating system. Ensure [Homebrew is installed][Homebrew] before proceeding.
 brew update
 brew upgrade
 brew install autoconf automake cmake libtool
+```
+
+#### Kerberos
+
+##### CentOS/RHEL (Yum)
+
+```bash
+yum install krb5-devel
+```
+
+##### Ubuntu (APT)
+
+```bash
+apt-get install libkrb5-dev
 ```
 
 #### libuv
@@ -170,6 +193,14 @@ cmake -DCASS_BUILD_EXAMPLES=On ..
 
 Tests (integration and unit) are not built by default and need to be enabled.
 
+##### All tests
+
+```bash
+cmake -DCASS_BUILD_TESTS=On ..
+```
+
+__Note__: This will build both the integration and unit tests
+
 ##### Integration tests
 
 ```bash
@@ -196,6 +227,9 @@ The driver is known to build with Visual Studio 2010, 2012, 2013, 2015, 2017, an
     or "Add CMake to the system PATH for current user"
 * Download and install [Strawberry Perl] or [ActiveState Perl]
   * Make sure to select the option "Add Perl to PATH environment variable"
+* Download and install Kerberos for Windows v4.0.1
+  * [32-bit][k4w-32]
+  * [64-bit][k4w-64]
 
 ### Building the driver
 
@@ -234,6 +268,15 @@ cmake -G "Visual Studio 16 2019" -A x64 -DCASS_BUILD_EXAMPLES=On ..
 
 Tests (integration and unit) are not built by default and need to be enabled.
 
+##### All tests
+
+```bash
+cmake -G "Visual Studio 16 2019" -A x64 -DCASS_BUILD_TESTS=On ..
+```
+
+__Note__: This will build both the integration and unit tests
+
+
 ##### Integration tests
 
 ```bash
@@ -263,5 +306,9 @@ cmake -G "Visual Studio 16 2019" -A x64 -DCASS_BUILD_UNIT_TESTS=On ..
 [CMake]: http://www.cmake.org/download
 [Strawberry Perl]: http://strawberryperl.com
 [ActiveState Perl]: https://www.perl.org/get.html#win32
+[k4w-32]: http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-i386.msi
+[k4w-64]: http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-amd64.msi
 [libuv]: http://libuv.org
+[Heimdal]: https://www.h5l.org
+[MIT]: https://web.mit.edu/kerberos
 [OpenSSL]: https://www.openssl.org

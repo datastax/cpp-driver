@@ -1,10 +1,7 @@
 # Testing
 Before proceeding ensure the tests were built using the [build procedures].
 
-Integration tests rely on [Cassandra Cluster Manager (CCM)](ccm) to be installed and a [configuration file](configuration)
-in the working directory where tests are executed.
-
-Details for running unit and integration tests can be found [here](running).
+Integration tests rely on [Cassandra Cluster Manager (CCM)](ccm) to be installed.
 
 Each test performs a [setup](#setup-cassandra), [execute](#execute-test), and
 [teardown](#teardown-cassandra). This ensures that each test has a clean and
