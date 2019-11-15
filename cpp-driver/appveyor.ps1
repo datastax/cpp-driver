@@ -183,7 +183,8 @@ Function Initialize-Build-Environment {
 
   # Generate the Kerberos environment variables
   $Env:KERBEROS_DOWNLOAD_URL = "$($download_url_prefix)/kerberos/$($kerberos_version)/$($Env:KERBEROS_ARCHIVE)"
-  $Env:KERBEROS_ROOT_DIR = "$($libs_location_prefix)/$($Env:Platform)/100/kfw-$($kerberos_version)"
+  $Env:KERBEROS_EXTRACT_DIR = "$($libs_location_prefix)/$($Env:Platform)/100/kfw-$($kerberos_version)"
+  $Env:KERBEROS_ROOT_DIR = "$($Env:KERBEROS_EXTRACT_DIR)/MIT/Kerberos"
 
   # Generate the default libssh2 environment variables
   $Env:LIBSSH2_ROOT_DIR = "$($dependencies_location_prefix)/libssh2-$($libssh2_version)"
@@ -212,7 +213,7 @@ Function Initialize-Build-Environment {
   $Env:PERL_ROOT_DIR = "$($bin_location_prefix)/perl-$($perl_version)"
 
   # Update the PATH to include the third party build requirement tools (prepend)
-  $Env:PATH = "$($Env:BISON_ROOT_DIR)/bin;$($Env:PERL_ROOT_DIR)\perl\site\bin;$($Env:PERL_ROOT_DIR)\perl\bin;$($Env:PERL_ROOT_DIR)\c\bin;$($Env:KERBEROS_ROOT_DIR)/bin;$($Env:LIBUV_ROOT_DIR)/bin;$($Env:OPENSSL_ROOT_DIR)/bin;$($Env:PATH)"
+  $Env:PATH = "$($Env:BISON_ROOT_DIR)/bin;$($Env:PERL_ROOT_DIR)/perl/site/bin;$($Env:PERL_ROOT_DIR)/perl/bin;$($Env:PERL_ROOT_DIR)/c/bin;$($Env:KERBEROS_ROOT_DIR)/bin;$($Env:LIBUV_ROOT_DIR)/bin;$($Env:OPENSSL_ROOT_DIR)/bin;$($Env:PATH)"
 }
 
 Function Install-Driver-Environment {
@@ -483,18 +484,18 @@ add_dependencies(`${PROJECT_NAME} `${ZLIB_LIBRARY_NAME})
         curl.exe -o "$($Env:KERBEROS_ARCHIVE)" "$($Env:KERBEROS_DOWNLOAD_URL)"
       }
       $argument_list = @"
--o"$($Env:KERBEROS_ROOT_DIR)" x "$($Env:KERBEROS_ARCHIVE)"
+-o"$($Env:KERBEROS_EXTRACT_DIR)" x "$($Env:KERBEROS_ARCHIVE)"
 "@
       $process = Start-Process -FilePath 7z -ArgumentList $argument_list -PassThru -Wait -NoNewWindow
       If ($process.ExitCode -ne 0) {
-        Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_ROOT_DIR)"
+        Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_EXTRACT_DIR)"
         Throw "Failed to extract Kerberos"
       }
 
       # Delete the binary archive
       Remove-Item $Env:KERBEROS_ARCHIVE
     } catch {
-      Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_ROOT_DIR)"
+      Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_EXTRACT_DIR)"
       Throw $PSItem
     }
   }
@@ -603,7 +604,7 @@ Function Build-Driver {
 
 Function Execute-Driver-Unit-Tests {
   # Update the PATH for the test executables to run with output
-  $Env:PATH = "$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests;$($Env:PATH)"
+  $Env:PATH = "$($Env:DRIVER_ARTIFACTS_DIR)/bin/tests;$($Env:PATH)"
 
   # Execute the unit tests
   $is_failure = $False
