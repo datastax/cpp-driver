@@ -24,10 +24,6 @@
 using namespace datastax;
 using namespace datastax::internal::enterprise;
 
-static void dse_gssapi_authenticator_cleanup(void* data) {
-  delete static_cast<GssapiAuthenticatorData*>(data);
-}
-
 extern "C" {
 
 CassCluster* cass_cluster_new_dse() {
@@ -93,20 +89,10 @@ CassError cass_cluster_set_dse_gssapi_authenticator_proxy(CassCluster* cluster, 
 CassError cass_cluster_set_dse_gssapi_authenticator_proxy_n(
     CassCluster* cluster, const char* service, size_t service_length, const char* principal,
     size_t principal_length, const char* authorization_id, size_t authorization_id_length) {
-  CassError rc = cass_cluster_set_authenticator_callbacks(
-      cluster, GssapiAuthenticatorData::callbacks(), dse_gssapi_authenticator_cleanup,
-      new GssapiAuthenticatorData(String(service, service_length),
-                                  String(principal, principal_length),
-                                  String(authorization_id, authorization_id_length)));
-  if (rc == CASS_OK) {
-    String name = "DSEGSSAPIAuthProvider";
-    if (authorization_id_length > 0) {
-      name.append(" (Proxy)");
-    }
-    cluster->config().auth_provider()->set_name(name);
-  }
-
-  return rc;
+  cluster->config().set_auth_provider(internal::core::AuthProvider::Ptr(new DseGssapiAuthProvider(
+      String(service, service_length), String(principal, principal_length),
+      String(authorization_id, authorization_id_length))));
+  return CASS_OK;
 }
 
 void cass_cluster_set_application_name(CassCluster* cluster, const char* application_name) {

@@ -18,6 +18,7 @@
 #define DATASTAX_ENTERPRISE_INTERNAL_AUTH_HPP
 
 #include "allocated.hpp"
+#include "auth.hpp"
 #include "dse.h"
 #include "string.hpp"
 
@@ -25,20 +26,62 @@
 
 namespace datastax { namespace internal { namespace enterprise {
 
-class GssapiAuthenticatorData : public Allocated {
+class DsePlainTextAuthenticator : public core::Authenticator {
 public:
-  GssapiAuthenticatorData(const datastax::String& service, const datastax::String& principal,
-                          const datastax::String& authorization_id)
-      : service_(service)
-      , principal_(principal)
+  DsePlainTextAuthenticator(const String& class_name, const String& username,
+                            const String& password, const String& authorization_id)
+      : class_name_(class_name)
+      , username_(username)
+      , password_(password)
       , authorization_id_(authorization_id) {}
 
-  static const CassAuthenticatorCallbacks* callbacks() { return &callbacks_; }
+  virtual bool initial_response(String* response);
+  virtual bool evaluate_challenge(const String& token, String* response);
+  virtual bool success(const String& token);
 
-  const datastax::String& service() const { return service_; }
-  const datastax::String& principal() const { return principal_; }
-  const datastax::String& authorization_id() const { return authorization_id_; }
+private:
+  String class_name_;
+  String username_;
+  String password_;
+  String authorization_id_;
+};
 
+class DsePlainTextAuthProvider : public core::AuthProvider {
+public:
+  DsePlainTextAuthProvider(const String& username, const String& password,
+                           const String& authorization_id)
+      : AuthProvider(String("DsePlainTextAuthProvider") +
+                     (authorization_id.empty() ? "" : " (Proxy)"))
+      , username_(username)
+      , password_(password)
+      , authorization_id_(authorization_id) {}
+
+  virtual core::Authenticator::Ptr new_authenticator(const core::Address& address,
+                                                     const String& hostname,
+                                                     const String& class_name) const {
+    return core::Authenticator::Ptr(
+        new DsePlainTextAuthenticator(class_name, username_, password_, authorization_id_));
+  }
+
+private:
+  String username_;
+  String password_;
+  String authorization_id_;
+};
+
+class GssapiAuthenticatorImpl;
+
+class DseGssapiAuthenticator : public core::Authenticator {
+public:
+  DseGssapiAuthenticator(const core::Address& address, const String& hostname,
+                         const String& class_name, const String& service, const String& principal,
+                         const String& authorization_id);
+
+  virtual bool initial_response(String* response);
+  virtual bool evaluate_challenge(const String& token, String* response);
+  virtual bool success(const String& token);
+
+public:
   static CassError set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
                                       DseGssapiAuthenticatorUnlockCallback unlock_callback,
                                       void* data);
@@ -47,23 +90,40 @@ public:
   static void unlock() { unlock_callback_(data_); }
 
 private:
-  static void on_initial(CassAuthenticator* auth, void* data);
-
-  static void on_challenge(CassAuthenticator* auth, void* data, const char* token,
-                           size_t token_size);
-
-  static void on_cleanup(CassAuthenticator* auth, void* data);
-
-private:
-  static CassAuthenticatorCallbacks callbacks_;
   static DseGssapiAuthenticatorLockCallback lock_callback_;
   static DseGssapiAuthenticatorUnlockCallback unlock_callback_;
   static void* data_;
 
 private:
-  datastax::String service_;
-  datastax::String principal_;
-  datastax::String authorization_id_;
+  core::Address address_;
+  String hostname_;
+  String class_name_;
+  String service_;
+  String principal_;
+  String authorization_id_;
+  ScopedPtr<GssapiAuthenticatorImpl> impl_;
+};
+
+class DseGssapiAuthProvider : public core::AuthProvider {
+public:
+  DseGssapiAuthProvider(const String& service, const String& principal,
+                        const String& authorization_id)
+      : AuthProvider(String("DseGssapiAuthProvider") + (authorization_id.empty() ? "" : " (Proxy)"))
+      , service_(service)
+      , principal_(principal)
+      , authorization_id_(authorization_id) {}
+
+  virtual core::Authenticator::Ptr new_authenticator(const core::Address& address,
+                                                     const String& hostname,
+                                                     const String& class_name) const {
+    return core::Authenticator::Ptr(new DseGssapiAuthenticator(
+        address, hostname, class_name, service_, principal_, authorization_id_));
+  }
+
+private:
+  String service_;
+  String principal_;
+  String authorization_id_;
 };
 
 }}} // namespace datastax::internal::enterprise

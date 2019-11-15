@@ -24,6 +24,7 @@
 #include "cluster_connector.hpp"
 #include "cluster_metadata_resolver.hpp"
 #include "config.hpp"
+#include "dse_auth.hpp"
 #include "http_client.hpp"
 #include "json.hpp"
 #include "string.hpp"
