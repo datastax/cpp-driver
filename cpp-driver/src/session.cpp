@@ -167,6 +167,8 @@ void cass_session_get_speculative_execution_metrics(const CassSession* session,
   metrics->percentage = internal_metrics->request_rates.speculative_request_percent();
 }
 
+CassUuid cass_session_get_client_id(CassSession* session) { return session->client_id(); }
+
 } // extern "C"
 
 static inline bool least_busy_comp(const RequestProcessor::Ptr& a, const RequestProcessor::Ptr& b) {
