@@ -66,7 +66,7 @@ Integration::Integration()
     , is_keyspace_change_requested_(true)
     , is_test_chaotic_(false)
     , is_beta_protocol_(Options::is_beta_protocol())
-    , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
+    , protocol_version_(CASS_PROTOCOL_VERSION_V4)
     , create_keyspace_query_("")
     , start_time_(0ull) {
   // Determine if the schema keyspaces table should be updated
@@ -373,7 +373,7 @@ test::driver::Cluster Integration::default_cluster(bool is_with_default_contact_
   if (is_with_default_contact_points) {
     cluster.with_contact_points(contact_points_);
   }
-  if (server_version_ >= "3.10" && protocol_version_ == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
+  if (server_version_ >= "4.0" && protocol_version_ == CASS_PROTOCOL_VERSION_V4) {
     cluster.with_beta_protocol(is_beta_protocol_);
   } else {
     cluster.with_protocol_version(protocol_version_);

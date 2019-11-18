@@ -26,7 +26,7 @@
 #include <gtest/gtest.h>
 #include <uv.h>
 
-#define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
+#define PROTOCOL_VERSION CASS_PROTOCOL_VERSION_V4
 #define PORT 9042
 #define WAIT_FOR_TIME 5 * 1000 * 1000 // 5 seconds
 #define DEFAULT_NUM_NODES 1

@@ -65,3 +65,33 @@ CASSANDRA_INTEGRATION_TEST_F(ClusterTests, SecureConnectionBundleBadParameters) 
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_cloud_secure_connection_bundle_n(
                                            cluster.get(), "invalid_filename", 16));
 }
+
+/**
+ * Verify invalid protocol versions return an error.
+ *
+ * @expected_result CASS_ERROR_LIB_BAD_PARAMS
+ */
+CASSANDRA_INTEGRATION_TEST_F(ClusterTests, InvalidProtocolVersions) {
+  { // Too low
+    test::driver::Cluster cluster;
+    EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+              cass_cluster_set_protocol_version(cluster.get(), CASS_PROTOCOL_VERSION_V1));
+    EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+              cass_cluster_set_protocol_version(cluster.get(), CASS_PROTOCOL_VERSION_V2));
+  }
+
+  { // Too high
+    test::driver::Cluster cluster;
+    EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+              cass_cluster_set_protocol_version(cluster.get(), CASS_PROTOCOL_VERSION_V5));
+    EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+              cass_cluster_set_protocol_version(cluster.get(), CASS_PROTOCOL_VERSION_DSEV2 + 1));
+  }
+
+  { // Try to set valid after setting the beta protocol version
+    test::driver::Cluster cluster;
+    EXPECT_EQ(CASS_OK, cass_cluster_set_use_beta_protocol_version(cluster.get(), cass_true));
+    EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+              cass_cluster_set_protocol_version(cluster.get(), CASS_PROTOCOL_VERSION_V4));
+  }
+}

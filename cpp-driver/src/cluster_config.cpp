@@ -52,7 +52,17 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster, int protocol_v
     return CASS_ERROR_LIB_BAD_PARAMS;
   } else {
     ProtocolVersion version(protocol_version);
-    if (!version.is_valid()) {
+    if (version < ProtocolVersion::lowest_supported()) {
+      LOG_ERROR("Protocol version %s is lower than the lowest supported "
+                "protocol version %s",
+                version.to_string().c_str(),
+                ProtocolVersion::lowest_supported().to_string().c_str());
+      return CASS_ERROR_LIB_BAD_PARAMS;
+    } else if (version > ProtocolVersion::highest_supported(version.is_dse())) {
+      LOG_ERROR("Protocol version %s is higher than the highest supported "
+                "protocol version %s (consider using the newest beta protocol version).",
+                version.to_string().c_str(),
+                ProtocolVersion::highest_supported(version.is_dse()).to_string().c_str());
       return CASS_ERROR_LIB_BAD_PARAMS;
     }
     cluster->config().set_protocol_version(version);

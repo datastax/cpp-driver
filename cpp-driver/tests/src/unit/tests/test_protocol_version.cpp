@@ -30,11 +30,11 @@ TEST_F(ProtocolVersionUnitTest, LowestSupported) {
 }
 
 TEST_F(ProtocolVersionUnitTest, HighestSupported) {
-  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV1), ProtocolVersion::highest_supported());
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV2), ProtocolVersion::highest_supported());
 }
 
 TEST_F(ProtocolVersionUnitTest, NewestBeta) {
-  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV2), ProtocolVersion::newest_beta());
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V5), ProtocolVersion::newest_beta());
 }
 
 TEST_F(ProtocolVersionUnitTest, IsValid) {
@@ -78,9 +78,9 @@ TEST_F(ProtocolVersionUnitTest, IsValid) {
     EXPECT_TRUE(vDSE1.is_valid());
   }
 
-  { // Invalid (beta version)
+  { // Valid (Latest DSE protocol version)
     ProtocolVersion vDSE2(CASS_PROTOCOL_VERSION_DSEV2);
-    EXPECT_FALSE(vDSE2.is_valid());
+    EXPECT_TRUE(vDSE2.is_valid());
   }
 }
 
@@ -90,14 +90,14 @@ TEST_F(ProtocolVersionUnitTest, IsBeta) {
     EXPECT_FALSE(invalid.is_beta());
   }
 
-  { // Valid beta (DSE version)
+  { // Invalid beta (Latest DSE protocol version)
     ProtocolVersion vDSE2(CASS_PROTOCOL_VERSION_DSEV2);
-    EXPECT_TRUE(vDSE2.is_beta());
+    EXPECT_FALSE(vDSE2.is_beta());
   }
 
-  { // Invalid beta
+  { // Valid beta
     ProtocolVersion v5(CASS_PROTOCOL_VERSION_V5);
-    EXPECT_FALSE(v5.is_beta());
+    EXPECT_TRUE(v5.is_beta());
   }
 }
 
@@ -127,16 +127,16 @@ TEST_F(ProtocolVersionUnitTest, AttemptLowerSupported) {
   ProtocolVersion version(CASS_PROTOCOL_VERSION_DSEV2);
   EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV2), version);
 
-  EXPECT_TRUE(version.attempt_lower_supported("127.0.0.1"));
+  EXPECT_TRUE((version = version.previous()).is_valid());
   EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_DSEV1), version);
 
-  EXPECT_TRUE(version.attempt_lower_supported("127.0.0.1"));
+  EXPECT_TRUE((version = version.previous()).is_valid());
   EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V4), version);
 
-  EXPECT_TRUE(version.attempt_lower_supported("127.0.0.1"));
+  EXPECT_TRUE((version = version.previous()).is_valid());
   EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V3), version);
 
-  EXPECT_FALSE(version.attempt_lower_supported("127.0.0.1")); // Can't go any lower
+  EXPECT_FALSE(version.previous().is_valid()); // Can't go any lower
   EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V3), version);
 }
 

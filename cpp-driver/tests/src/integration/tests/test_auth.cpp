@@ -16,6 +16,9 @@
 
 #include "integration.hpp"
 
+#define CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION CASS_PROTOCOL_VERSION_V3
+#define CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION CASS_PROTOCOL_VERSION_V4
+
 /**
  * Authentication integration tests
  */
