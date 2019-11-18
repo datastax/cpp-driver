@@ -432,101 +432,6 @@ cass_cluster_set_dse_plaintext_authenticator_proxy_n(CassCluster* cluster,
                                                      const char* authorization_id,
                                                      size_t authorization_id_length);
 
-/**
- * Set the application name.
- *
- * This is optional; however it provides the server with the application name
- * that can aid in debugging issues with larger clusters where there are a lot
- * of client (or application) connections.
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] application_name
- */
-CASS_EXPORT void
-cass_cluster_set_application_name(CassCluster* cluster,
-                                  const char* application_name);
-
-/**
- * Same as cass_cluster_set_application_name(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] application_name
- * @param[in] application_name_length
- */
-CASS_EXPORT void
-cass_cluster_set_application_name_n(CassCluster* cluster,
-                                    const char* application_name,
-                                    size_t application_name_length);
-
-/**
- * Set the application version.
- *
- * This is optional; however it provides the server with the application
- * version that can aid in debugging issues with large clusters where there are
- * a lot of client (or application) connections that may have different
- * versions in use.
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] application_version
- */
-
-CASS_EXPORT void
-cass_cluster_set_application_version(CassCluster* cluster,
-                                     const char* application_version);
-
-/**
- * Same as cass_cluster_set_application_version(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] application_version
- * @param[in] application_version_length
- */
-CASS_EXPORT void
-cass_cluster_set_application_version_n(CassCluster* cluster,
-                                       const char* application_version,
-                                       size_t application_version_length);
-
-/**
- * Set the client id.
- *
- * This is optional; however it provides the server with the client ID that can
- * aid in debugging issues with large clusters where there are a lot of client
- * connections.
- *
- * Default: UUID v4 generated (@see cass_session_get_client_id())
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] client_id
- */
-CASS_EXPORT void
-cass_cluster_set_client_id(CassCluster* cluster, CassUuid client_id);
-
-/**
- * Sets the amount of time between monitor reporting event messages.
- *
- * <b>Default:</b> 300 seconds.
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] interval_secs Use 0 to disable monitor reporting event messages.
- */
-CASS_EXPORT void
-cass_cluster_set_monitor_reporting_interval(CassCluster* cluster,
-                                            unsigned interval_secs);
-
 /***********************************************************************************
  *
  * Session
@@ -547,17 +452,6 @@ cass_cluster_set_monitor_reporting_interval(CassCluster* cluster,
 DSE_EXPORT CassFuture*
 cass_session_execute_dse_graph(CassSession* session,
                                const DseGraphStatement* statement);
-
-/**
- * Get the client id.
- *
- * @public @memberof CassSession
- *
- * @param[in] session
- * @return Client id.
- */
-CASS_EXPORT CassUuid
-cass_session_get_client_id(CassSession* session);
 
 /***********************************************************************************
  *
