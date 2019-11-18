@@ -21,11 +21,11 @@
 #include "get_time.hpp"
 #include "logger.hpp"
 #include "session.hpp"
+#include "ssl.hpp"
 #include "string.hpp"
 #include "utils.hpp"
 
 #include <cassert>
-#include <openssl/ssl.h>
 #include <uv.h>
 
 #ifdef _WIN32
