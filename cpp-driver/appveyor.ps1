@@ -573,7 +573,7 @@ Function Build-Driver {
   New-Item -ItemType Directory -Force -Path "$($Env:APPVEYOR_BUILD_FOLDER)/build"
   Push-Location "$($Env:APPVEYOR_BUILD_FOLDER)/build"
   Write-Host "Configuring DataStax C/C++ $($driver_type) Driver"
-  cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-D$($Env:DRIVER_TYPE)_MULTICORE_COMPILATION=On" "-D$($Env:DRIVER_TYPE)_USE_OPENSSL=On" "-D$($Env:DRIVER_TYPE)_USE_ZLIB=On" "-D$($Env:DRIVER_TYPE)_USE_BOOST_ATOMIC=$($use_boost_atomic)" "-D$($Env:DRIVER_TYPE)_BUILD_EXAMPLES=On" "-D$($Env:DRIVER_TYPE)_BUILD_TESTS=On" "-D$($Env:DRIVER_TYPE)_USE_LIBSSH2=On" "-DCMAKE_INSTALL_PREFIX=`"$($Env:DRIVER_INSTALL_DIR)`"" ..
+  cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-D$($Env:DRIVER_TYPE)_MULTICORE_COMPILATION=On" "-D$($Env:DRIVER_TYPE)_USE_KERBEROS=On" "-D$($Env:DRIVER_TYPE)_USE_OPENSSL=On" "-D$($Env:DRIVER_TYPE)_USE_ZLIB=On" "-D$($Env:DRIVER_TYPE)_USE_BOOST_ATOMIC=$($use_boost_atomic)" "-D$($Env:DRIVER_TYPE)_BUILD_EXAMPLES=On" "-D$($Env:DRIVER_TYPE)_BUILD_TESTS=On" "-D$($Env:DRIVER_TYPE)_USE_LIBSSH2=On" "-DCMAKE_INSTALL_PREFIX=`"$($Env:DRIVER_INSTALL_DIR)`"" ..
   If ($LastExitCode -ne 0) {
     Pop-Location
     Throw "Failed to configure DataStax C/C++ $($driver_type) Driver for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"

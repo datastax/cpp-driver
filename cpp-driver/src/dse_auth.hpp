@@ -19,10 +19,7 @@
 
 #include "allocated.hpp"
 #include "auth.hpp"
-#include "dse.h"
 #include "string.hpp"
-
-#include <uv.h>
 
 namespace datastax { namespace internal { namespace enterprise {
 
@@ -69,63 +66,10 @@ private:
   String authorization_id_;
 };
 
-class GssapiAuthenticatorImpl;
-
-class DseGssapiAuthenticator : public core::Authenticator {
-public:
-  DseGssapiAuthenticator(const core::Address& address, const String& hostname,
-                         const String& class_name, const String& service, const String& principal,
-                         const String& authorization_id);
-
-  virtual bool initial_response(String* response);
-  virtual bool evaluate_challenge(const String& token, String* response);
-  virtual bool success(const String& token);
-
-public:
-  static CassError set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
-                                      DseGssapiAuthenticatorUnlockCallback unlock_callback,
-                                      void* data);
-
-  static void lock() { lock_callback_(data_); }
-  static void unlock() { unlock_callback_(data_); }
-
-private:
-  static DseGssapiAuthenticatorLockCallback lock_callback_;
-  static DseGssapiAuthenticatorUnlockCallback unlock_callback_;
-  static void* data_;
-
-private:
-  core::Address address_;
-  String hostname_;
-  String class_name_;
-  String service_;
-  String principal_;
-  String authorization_id_;
-  ScopedPtr<GssapiAuthenticatorImpl> impl_;
-};
-
-class DseGssapiAuthProvider : public core::AuthProvider {
-public:
-  DseGssapiAuthProvider(const String& service, const String& principal,
-                        const String& authorization_id)
-      : AuthProvider(String("DseGssapiAuthProvider") + (authorization_id.empty() ? "" : " (Proxy)"))
-      , service_(service)
-      , principal_(principal)
-      , authorization_id_(authorization_id) {}
-
-  virtual core::Authenticator::Ptr new_authenticator(const core::Address& address,
-                                                     const String& hostname,
-                                                     const String& class_name) const {
-    return core::Authenticator::Ptr(new DseGssapiAuthenticator(
-        address, hostname, class_name, service_, principal_, authorization_id_));
-  }
-
-private:
-  String service_;
-  String principal_;
-  String authorization_id_;
-};
-
 }}} // namespace datastax::internal::enterprise
+
+#ifdef HAVE_KERBEROS
+#include "gssapi/dse_auth_gssapi.hpp"
+#endif
 
 #endif

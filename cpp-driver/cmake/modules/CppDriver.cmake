@@ -98,6 +98,11 @@ macro(CassOptionalDependencies)
     CassUseBoost()
   endif()
 
+  # Kerberos
+  if(CASS_USE_KERBEROS)
+    CassUseKerberos()
+  endif()
+
   # OpenSSL
   if(CASS_USE_OPENSSL)
     CassUseOpenSSL()
@@ -561,6 +566,21 @@ macro(CassUseBoost)
 endmacro()
 
 #------------------------
+# CassUseKerberos
+#
+# Add includes and libraries required for using Kerberos if found.
+#
+# Input: CASS_INCLUDES and CASS_LIBS
+# Output: CASS_INCLUDES and CASS_LIBS
+#------------------------
+macro(CassUseKerberos)
+  # Discover Kerberos and assign Kerberos include and libraries
+  find_package(Kerberos REQUIRED)
+  set(CASS_INCLUDES ${CASS_INCLUDES} ${KERBEROS_INCLUDE_DIR})
+  set(CASS_LIBS ${CASS_LIBS} ${KERBEROS_LIBRARIES})
+endmacro()
+
+#------------------------
 # CassUseOpenSSL
 #
 # Add includes and libraries required for using OpenSSL if found or if Windows
@@ -950,6 +970,15 @@ macro(CassFindSourceFiles)
 
   set(CASS_SRC_FILES ${CASS_SRC_FILES}
     ${CASS_SRC_DIR}/third_party/curl/hostcheck.cpp)
+
+  # Determine if Kerberos should be compiled in (or not)
+  if(CASS_USE_KERBEROS)
+    set(CASS_INC_FILES ${CASS_INC_FILES}
+      ${CASS_SRC_DIR}/gssapi/dse_auth_gssapi.hpp)
+    set(CASS_SRC_FILES ${CASS_SRC_FILES}
+      ${CASS_SRC_DIR}/gssapi/dse_auth_gssapi.cpp)
+    set(HAVE_KERBEROS 1)
+  endif()
 
   # Determine if OpenSSL should be compiled in (or not)
   if(CASS_USE_OPENSSL)

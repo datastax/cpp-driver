@@ -38,6 +38,7 @@ option(CASS_INSTALL_HEADER_IN_SUBDIR "Install header file under 'include/cassand
 option(CASS_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
 option(CASS_MULTICORE_COMPILATION "Enable multicore compilation" ON)
 option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
+option(CASS_USE_KERBEROS "Use Kerberos" OFF)
 option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
@@ -53,12 +54,10 @@ if(CASS_BUILD_TESTS)
   set(CASS_BUILD_UNIT_TESTS ON)
 endif()
 
-if(CASS_BUILD_INTEGRATION_TESTS)
-  set(CASS_USE_OPENSSL ON) # Required for integration tests
-endif()
-
 if(CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
   set(CASS_BUILD_STATIC ON) # Required for tests
+  set(CASS_USE_OPENSSL ON) # Required for tests
+  set(CASS_USE_KERBEROS ON) # Required for tests
 endif()
 
 # Determine which driver target should be used as a dependency
@@ -107,11 +106,6 @@ CassSetCompilerFlags()
 CassAddIncludes()
 CassFindSourceFiles()
 CassConfigure()
-
-# Kerberos
-find_package(Kerberos REQUIRED)
-set(CASS_INCLUDES ${CASS_INCLUDES} ${KERBEROS_INCLUDE_DIR})
-set(CASS_LIBS ${CASS_LIBS} ${KERBEROS_LIBRARIES})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})

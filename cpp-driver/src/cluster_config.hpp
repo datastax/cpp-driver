@@ -21,8 +21,6 @@
 #include "config.hpp"
 #include "external.hpp"
 
-#include "uv.h"
-
 namespace datastax { namespace internal { namespace core {
 
 class ClusterConfig : public Allocated {

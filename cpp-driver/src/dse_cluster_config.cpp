@@ -16,12 +16,11 @@
 
 #include "dse.h"
 
-#include "auth.hpp"
 #include "cluster_config.hpp"
 #include "dse_auth.hpp"
-#include "string.hpp"
 
 using namespace datastax;
+using namespace datastax::internal::core;
 using namespace datastax::internal::enterprise;
 
 extern "C" {
@@ -58,10 +57,9 @@ CassError cass_cluster_set_dse_plaintext_authenticator_proxy(CassCluster* cluste
 CassError cass_cluster_set_dse_plaintext_authenticator_proxy_n(
     CassCluster* cluster, const char* username, size_t username_length, const char* password,
     size_t password_length, const char* authorization_id, size_t authorization_id_length) {
-  cluster->config().set_auth_provider(internal::core::AuthProvider::Ptr(
-      new DsePlainTextAuthProvider(String(username, username_length),
-                                   String(password, password_length),
-                                   String(authorization_id, authorization_id_length))));
+  cluster->config().set_auth_provider(AuthProvider::Ptr(new DsePlainTextAuthProvider(
+      String(username, username_length), String(password, password_length),
+      String(authorization_id, authorization_id_length))));
   return CASS_OK;
 }
 
@@ -89,10 +87,14 @@ CassError cass_cluster_set_dse_gssapi_authenticator_proxy(CassCluster* cluster, 
 CassError cass_cluster_set_dse_gssapi_authenticator_proxy_n(
     CassCluster* cluster, const char* service, size_t service_length, const char* principal,
     size_t principal_length, const char* authorization_id, size_t authorization_id_length) {
-  cluster->config().set_auth_provider(internal::core::AuthProvider::Ptr(new DseGssapiAuthProvider(
+#ifdef HAVE_KERBEROS
+  cluster->config().set_auth_provider(AuthProvider::Ptr(new DseGssapiAuthProvider(
       String(service, service_length), String(principal, principal_length),
       String(authorization_id, authorization_id_length))));
   return CASS_OK;
+#else
+  return CASS_ERROR_LIB_NOT_IMPLEMENTED;
+#endif
 }
 
 } // extern "C"
