@@ -330,15 +330,13 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(load_balancing.HasMember("options"));
     const json::Value& options = load_balancing["options"];
     ASSERT_TRUE(options.IsObject());
-    ASSERT_EQ(5u, options.MemberCount());
+    ASSERT_EQ(4u, options.MemberCount());
     ASSERT_TRUE(options.HasMember("localDc"));
     ASSERT_TRUE(options["localDc"].IsNull());
     ASSERT_TRUE(options.HasMember("usedHostsPerRemoteDc"));
     ASSERT_EQ(0u, options["usedHostsPerRemoteDc"].GetUint());
     ASSERT_TRUE(options.HasMember("allowRemoteDcsForLocalCl"));
     ASSERT_FALSE(options["allowRemoteDcsForLocalCl"].GetBool());
-    ASSERT_TRUE(options.HasMember("hostTargeting"));
-    ASSERT_FALSE(options["hostTargeting"].GetBool());
     ASSERT_TRUE(options.HasMember("tokenAwareRouting"));
     const json::Value& token_aware_routing = options["tokenAwareRouting"];
     ASSERT_TRUE(token_aware_routing.IsObject());
@@ -568,7 +566,6 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
   round_robin_profile.set_latency_aware_routing_settings(latency_aware_settings);
   round_robin_profile.set_retry_policy(profile_retry_policy.get());
   config_.set_load_balancing_policy(dc_aware.get());
-  config_.set_host_targeting(true);
   config_.set_token_aware_routing_shuffle_replicas(false);
   config_.set_execution_profile("quorum", &quorum_profile);
   config_.set_execution_profile("round_robin", &round_robin_profile);
@@ -597,7 +594,6 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
     ASSERT_STREQ("dc1", options["localDc"].GetString());
     ASSERT_EQ(1u, options["usedHostsPerRemoteDc"].GetUint());
     ASSERT_FALSE(options["allowRemoteDcsForLocalCl"].GetBool());
-    ASSERT_TRUE(options["hostTargeting"].GetBool());
     ASSERT_TRUE(options.HasMember("tokenAwareRouting"));
     ASSERT_FALSE(options["tokenAwareRouting"]["shuffleReplicas"].GetBool());
   }
@@ -619,7 +615,6 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
     const json::Value& load_balancing = execution_profile["loadBalancing"];
     ASSERT_STREQ("RoundRobinPolicy", load_balancing["type"].GetString());
     const json::Value& options = load_balancing["options"];
-    ASSERT_TRUE(options["hostTargeting"].GetBool());
     const json::Value& latency_aware_routing = options["latencyAwareRouting"];
     ASSERT_EQ(latency_aware_settings.exclusion_threshold,
               latency_aware_routing["exclusionThreshold"].GetDouble());
@@ -914,8 +909,7 @@ TEST_F(ClientInsightsUnitTest, StatusDataInFlightQueries) {
   connect();
 
   for (int i = 0; i < 37; ++i) {
-    SharedRefPtr<QueryRequest> request(new QueryRequest("wait", 0));
-    session_.execute(request, NULL);
+    session_.execute(Request::ConstPtr(new QueryRequest("wait", 0)));
   }
 
   OStringStream ip_with_port;

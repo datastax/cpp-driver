@@ -129,10 +129,6 @@ public:
         << "Unable to Get DSE Point: Invalid error code returned";
   }
 
-  void initialize(const ::DseGraphResult* result) {
-    ASSERT_EQ(CASS_OK, dse_graph_result_as_point(result, &point_.x, &point_.y));
-  }
-
   void set(Tuple tuple, size_t index) {
     ASSERT_EQ(CASS_OK, cass_tuple_set_dse_point(tuple.get(), index, point_.x, point_.y));
   }

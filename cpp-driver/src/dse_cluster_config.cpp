@@ -25,12 +25,6 @@ using namespace datastax::internal::enterprise;
 
 extern "C" {
 
-CassCluster* cass_cluster_new_dse() {
-  CassCluster* cluster = cass_cluster_new();
-  cluster->config().set_host_targeting(true);
-  return cluster;
-}
-
 CassError cass_cluster_set_dse_plaintext_authenticator(CassCluster* cluster, const char* username,
                                                        const char* password) {
   return cass_cluster_set_dse_plaintext_authenticator_n(cluster, username, SAFE_STRLEN(username),

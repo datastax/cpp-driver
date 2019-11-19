@@ -319,11 +319,10 @@ Future::Ptr Session::prepare(const Statement* statement) {
   return future;
 }
 
-Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* preferred_address) {
+Future::Ptr Session::execute(const Request::ConstPtr& request) {
   ResponseFuture::Ptr future(new ResponseFuture());
 
-  RequestHandler::Ptr request_handler(
-      new RequestHandler(request, future, metrics(), preferred_address));
+  RequestHandler::Ptr request_handler(new RequestHandler(request, future, metrics()));
 
   if (request_handler->request()->opcode() == CQL_OPCODE_EXECUTE) {
     const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request_handler->request());

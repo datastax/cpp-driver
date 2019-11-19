@@ -68,8 +68,8 @@ public:
   }
 
   Map<String, String> client_options() {
-    SharedRefPtr<QueryRequest> request(new QueryRequest(CLIENT_OPTIONS_QUERY, 0));
-    ResponseFuture::Ptr future = static_cast<ResponseFuture::Ptr>(session_.execute(request, NULL));
+    Request::ConstPtr request(new QueryRequest(CLIENT_OPTIONS_QUERY, 0));
+    ResponseFuture::Ptr future = static_cast<ResponseFuture::Ptr>(session_.execute(request));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
     EXPECT_FALSE(future->error()) << cass_error_desc(future->error()->code) << ": "
                                   << future->error()->message;

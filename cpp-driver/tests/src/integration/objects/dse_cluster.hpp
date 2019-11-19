@@ -31,7 +31,7 @@ public:
    * Create the DSE cluster for the builder object
    */
   Cluster()
-      : driver::Cluster(cass_cluster_new_dse()){};
+      : driver::Cluster(cass_cluster_new()){};
 
   /**
    * Create the DSE cluster for the builder object

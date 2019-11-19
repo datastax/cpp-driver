@@ -137,7 +137,7 @@ public:
   typedef SharedRefPtr<RequestHandler> Ptr;
 
   RequestHandler(const Request::ConstPtr& request, const ResponseFuture::Ptr& future,
-                 Metrics* metrics = NULL, const Address* preferred_address = NULL);
+                 Metrics* metrics = NULL);
 
   void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
 
@@ -150,7 +150,6 @@ public:
   const RequestWrapper& wrapper() const { return wrapper_; }
   const Request* request() const { return wrapper_.request().get(); }
   CassConsistency consistency() const { return wrapper_.consistency(); }
-  const Address& preferred_address() const { return preferred_address_; }
 
 public:
   class Protected {
@@ -211,7 +210,6 @@ private:
   ConnectionPoolManager* manager_;
 
   Metrics* const metrics_;
-  const Address preferred_address_;
 };
 
 class KeyspaceChangedResponse {

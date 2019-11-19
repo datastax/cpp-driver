@@ -59,7 +59,6 @@ provided with the distribution:
     * LDAP
     * GSSAPI (Kerberos)
   * [DSE geospatial types]
-  * [DSE graph integration]
   * DSE [proxy authentication][DSE Proxy Authentication] and [proxy execution][DSE Proxy Execution]
   * [DSE DateRange]
 * Support for [DataStax Constellation] Cloud Data Platform
@@ -236,7 +235,6 @@ specific language governing permissions and limitations under the License.
 [Speculative execution]: http://datastax.github.io/cpp-driver/topics/configuration/#speculative-execution
 [DSE authentication]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication
 [DSE geospatial types]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/geotypes
-[DSE graph integration]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/graph
 [DSE Proxy Authentication]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication/#proxy-authentication
 [DSE Proxy Execution]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication/#proxy-execution
 [DSE DateRange]: https://github.com/datastax/cpp-driver/blob/master/examples/dse/date_range/date_range.c

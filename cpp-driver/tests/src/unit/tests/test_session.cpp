@@ -97,7 +97,7 @@ public:
     QueryRequest::Ptr request(new QueryRequest("blah", 0));
     request->set_is_idempotent(true);
 
-    Future::Ptr future = session->execute(request, NULL);
+    Future::Ptr future = session->execute(Request::ConstPtr(request));
     ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
     if (future->error()) fprintf(stderr, "%s\n", cass_error_desc(future->error()->code));
     if (is_chaotic) {
@@ -276,10 +276,8 @@ public:
 };
 
 TEST_F(SessionUnitTest, ExecuteQueryNotConnected) {
-  QueryRequest::Ptr request(new QueryRequest("blah", 0));
-
   Session session;
-  Future::Ptr future = session.execute(request, NULL);
+  Future::Ptr future = session.execute(Request::ConstPtr(new QueryRequest("blah", 0)));
   ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, future->error()->code);
 }
 
@@ -404,8 +402,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutage) {
 
   // Full outage
   cluster.stop_all();
-  QueryRequest::Ptr request(new QueryRequest("blah", 0));
-  Future::Ptr future = session.execute(request, NULL);
+  Future::Ptr future = session.execute(Request::ConstPtr(new QueryRequest("blah", 0)));
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(future->error());
   EXPECT_TRUE(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE == future->error()->code ||
@@ -435,8 +432,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutageSpinDown) {
   cluster.stop(2);
 
   // Full outage
-  QueryRequest::Ptr request(new QueryRequest("blah", 0));
-  Future::Ptr future = session.execute(request, NULL);
+  Future::Ptr future = session.execute(Request::ConstPtr(new QueryRequest("blah", 0)));
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
   EXPECT_TRUE(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE == future->error()->code ||
               CASS_ERROR_LIB_REQUEST_TIMED_OUT == future->error()->code);
@@ -712,9 +708,7 @@ TEST_F(SessionUnitTest, LocalDcUpdatedOnPolicy) {
   }
 
   for (int i = 0; i < 20; ++i) { // Validate the request processors are using DC2 only
-    QueryRequest::Ptr request(new QueryRequest("blah", 0));
-
-    ResponseFuture::Ptr future = session.execute(request, NULL);
+    ResponseFuture::Ptr future = session.execute(Request::ConstPtr(new QueryRequest("blah", 0)));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
     EXPECT_FALSE(future->error());
     EXPECT_EQ("127.0.0.4", future->address().to_string());
@@ -749,9 +743,7 @@ TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicy) {
   }
 
   for (int i = 0; i < 20; ++i) { // Validate the request processors are using DC1 only
-    QueryRequest::Ptr request(new QueryRequest("blah", 0));
-
-    ResponseFuture::Ptr future = session.execute(request, NULL);
+    ResponseFuture::Ptr future = session.execute(Request::ConstPtr(new QueryRequest("blah", 0)));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
     EXPECT_FALSE(future->error());
     EXPECT_EQ("127.0.0.1", future->address().to_string());
@@ -791,9 +783,7 @@ TEST_F(SessionUnitTest, LocalDcOverriddenOnPolicyUsingExecutionProfiles) {
   }
 
   for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC2 only
-    QueryRequest::Ptr request(new QueryRequest("blah", 0));
-
-    ResponseFuture::Ptr future = session.execute(request, NULL);
+    ResponseFuture::Ptr future = session.execute(Request::ConstPtr(new QueryRequest("blah", 0)));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
     EXPECT_FALSE(future->error());
     EXPECT_EQ("127.0.0.4", future->address().to_string());
@@ -803,7 +793,7 @@ TEST_F(SessionUnitTest, LocalDcOverriddenOnPolicyUsingExecutionProfiles) {
     QueryRequest::Ptr request(new QueryRequest("blah", 0));
     request->set_execution_profile_name("use_propagated_local_dc");
 
-    ResponseFuture::Ptr future = session.execute(request, NULL);
+    ResponseFuture::Ptr future = session.execute(Request::ConstPtr(request));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
     EXPECT_FALSE(future->error());
     EXPECT_EQ("127.0.0.4", future->address().to_string());
@@ -855,9 +845,7 @@ TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicyUsingExecutionProfiles) {
   }
 
   for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC2 only
-    QueryRequest::Ptr request(new QueryRequest("blah", 0));
-
-    ResponseFuture::Ptr future = session.execute(request, NULL);
+    ResponseFuture::Ptr future = session.execute(Request::ConstPtr(new QueryRequest("blah", 0)));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
     EXPECT_FALSE(future->error());
     EXPECT_EQ("127.0.0.4", future->address().to_string());
@@ -867,7 +855,7 @@ TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicyUsingExecutionProfiles) {
     QueryRequest::Ptr request(new QueryRequest("blah", 0));
     request->set_execution_profile_name("use_dc1");
 
-    ResponseFuture::Ptr future = session.execute(request, NULL);
+    ResponseFuture::Ptr future = session.execute(Request::ConstPtr(request));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
     EXPECT_FALSE(future->error());
     EXPECT_NE("127.0.0.4", future->address().to_string());

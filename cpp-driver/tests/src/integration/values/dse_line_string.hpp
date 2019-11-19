@@ -121,13 +121,6 @@ public:
     assign_points(iterator);
   }
 
-  void initialize(const ::DseGraphResult* result) {
-    // Get the line string iterator from the result and assign the points
-    Iterator iterator(dse_line_string_iterator_new());
-    ASSERT_EQ(CASS_OK, dse_graph_result_as_line_string(result, iterator.get()));
-    assign_points(iterator);
-  }
-
   void set(Tuple tuple, size_t index) {
     Native line_string = to_native();
     ASSERT_EQ(CASS_OK, cass_tuple_set_dse_line_string(tuple.get(), index, line_string.get()));

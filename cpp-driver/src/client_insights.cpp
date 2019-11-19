@@ -751,8 +751,6 @@ private:
         writer.Key("allowRemoteDcsForLocalCl");
         writer.Bool(!dc_lbp->skip_remote_dcs_for_local_cl());
       }
-      writer.Key("hostTargeting");
-      writer.Bool(profile.host_targeting());
       if (!profile.blacklist().empty()) {
         writer.Key("blacklist");
         writer.String(implode(profile.blacklist()).c_str());

@@ -18,8 +18,6 @@
 #define __TEST_DSE_SESSION_HPP__
 #include "objects/dse_cluster.hpp"
 
-#include "objects/dse_graph_result_set.hpp"
-#include "objects/dse_graph_statement.hpp"
 #include "objects/dse_statement.hpp"
 
 namespace test { namespace driver { namespace dse {
@@ -104,41 +102,6 @@ public:
   Result execute(const std::string& query, CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
                  bool is_idempotent = false, bool assert_ok = true) {
     return driver::Session::execute(query, consistency, is_idempotent, assert_ok);
-  }
-
-  /**
-   * Execute a graph statement synchronously
-   *
-   * @param graph Graph statement to execute
-   * @param assert_ok True if error code for future should be asserted
-   *                  CASS_OK; false otherwise (default: true)
-   * @return DSE graph result object
-   */
-  GraphResultSet execute(GraphStatement graph, bool assert_ok = true) {
-    Future future(execute_async(graph));
-    future.wait(assert_ok);
-    return GraphResultSet(future);
-  }
-
-  /**
-   * Execute a graph query synchronously
-   *
-   * @param query Query to execute as a graph statement
-   * @param options Graph options to apply to the graph statement
-   * @param assert_ok True if error code for future should be asserted
-   *                  CASS_OK; false otherwise (default: true)
-   * @return DSE graph result object
-   */
-  GraphResultSet execute(const std::string& query, GraphOptions options, bool assert_ok = true) {
-    // Allow for NULL graph options without throwing an exception
-    DseGraphOptions* graph_options = NULL;
-    if (options) {
-      graph_options = options.get();
-    }
-
-    // Create and execute the graph statement
-    GraphStatement statement(dse_graph_statement_new(query.c_str(), graph_options));
-    return execute(statement, assert_ok);
   }
 
   /**
@@ -254,28 +217,6 @@ public:
                        CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
                        bool is_idempotent = false) {
     return driver::Session::execute_async(query, consistency, is_idempotent);
-  }
-
-  /**
-   * Execute a graph statement asynchronously
-   *
-   * @param graph Graph statement to execute
-   * @return Future object
-   */
-  Future execute_async(GraphStatement graph) {
-    return Future(cass_session_execute_dse_graph(get(), graph.get()));
-  }
-
-  /**
-   * Execute a graph query asynchronously
-   *
-   * @param query Query to execute as a graph statement
-   * @param options Graph options to apply to the graph statement
-   * @return Future object
-   */
-  Future execute_async(const std::string& query, GraphOptions options) {
-    GraphStatement statement(dse_graph_statement_new(query.c_str(), options.get()));
-    return execute_async(statement);
   }
 
   /**

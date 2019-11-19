@@ -106,13 +106,6 @@ public:
     assign_line_strings(iterator);
   }
 
-  void initialize(const ::DseGraphResult* result) {
-    // Get the polygon iterator from the result and assign the line strings
-    Iterator iterator(dse_polygon_iterator_new());
-    ASSERT_EQ(CASS_OK, dse_graph_result_as_polygon(result, iterator.get()));
-    assign_line_strings(iterator);
-  }
-
   void set(Tuple tuple, size_t index) {
     Native polygon = to_native();
     ASSERT_EQ(CASS_OK, cass_tuple_set_dse_polygon(tuple.get(), index, polygon.get()));

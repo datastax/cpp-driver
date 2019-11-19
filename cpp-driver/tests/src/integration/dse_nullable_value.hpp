@@ -62,23 +62,6 @@ public:
       : driver::NullableValue<T>(value) {}
 
   /**
-   * Constructor for a nullable value using the drivers graph result
-   *
-   * @param result DseGraphResult from driver query
-   */
-  explicit NullableValue(const DseGraphResult* result) {
-    this->is_null_ = false;
-    initialize(result);
-  }
-
-  /**
-   * Initialize the wrapped value from the CassValue
-   *
-   * @param value CassValue to initialize wrapped value from
-   */
-  void initialize(const DseGraphResult* result) { this->value_.initialize(result); }
-
-  /**
    * Generate the native driver object from the wrapped type
    *
    * @return Generated native reference object; may be empty
