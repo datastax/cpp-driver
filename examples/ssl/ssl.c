@@ -26,8 +26,8 @@
 */
 
 #include <cassandra.h>
-#include <openssl/ssl.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   CassError rc;

@@ -54,9 +54,11 @@ public:
   /**
    * Returns the highest supported protocol version.
    *
+   * @param is_dse If true the highest DSE protocol version is returned; otherwise the highest
+   * Apache Cassandra version is returned.
    * @return The highest protocol version.
    */
-  static ProtocolVersion highest_supported();
+  static ProtocolVersion highest_supported(bool is_dse = true);
 
   /**
    * Returns the newest supported beta protocol version.
@@ -105,13 +107,12 @@ public:
   String to_string() const;
 
   /**
-   * Attempt to lower the protocol version. If a lower version is supported
-   * the internal value will be lowered and true is returned.
+   * Attempt to lower the protocol version.
    *
-   * @param host A host string to be included in logging messages.
-   * @return true if the version could be lowered, otherwise false.
+   * @return The previous protocol version if valid; otherwise an invalid protocol object (Use:
+   * is_valid())
    */
-  bool attempt_lower_supported(const String& host);
+  ProtocolVersion previous() const;
 
 public:
   /**

@@ -16,10 +16,10 @@
 
 #include "cloud_secure_connection_config.hpp"
 
-#include "auth.hpp"
 #include "cluster.hpp"
 #include "cluster_metadata_resolver.hpp"
 #include "config.hpp"
+#include "dse_auth.hpp"
 #include "http_client.hpp"
 #include "json.hpp"
 #include "logger.hpp"

@@ -52,7 +52,17 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster, int protocol_v
     return CASS_ERROR_LIB_BAD_PARAMS;
   } else {
     ProtocolVersion version(protocol_version);
-    if (!version.is_valid()) {
+    if (version < ProtocolVersion::lowest_supported()) {
+      LOG_ERROR("Protocol version %s is lower than the lowest supported "
+                "protocol version %s",
+                version.to_string().c_str(),
+                ProtocolVersion::lowest_supported().to_string().c_str());
+      return CASS_ERROR_LIB_BAD_PARAMS;
+    } else if (version > ProtocolVersion::highest_supported(version.is_dse())) {
+      LOG_ERROR("Protocol version %s is higher than the highest supported "
+                "protocol version %s (consider using the newest beta protocol version).",
+                version.to_string().c_str(),
+                ProtocolVersion::highest_supported(version.is_dse()).to_string().c_str());
       return CASS_ERROR_LIB_BAD_PARAMS;
     }
     cluster->config().set_protocol_version(version);
@@ -537,6 +547,34 @@ CassError cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(Cass
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   return CASS_OK;
+}
+
+void cass_cluster_set_application_name(CassCluster* cluster, const char* application_name) {
+  cass_cluster_set_application_name_n(cluster, application_name, SAFE_STRLEN(application_name));
+}
+
+void cass_cluster_set_application_name_n(CassCluster* cluster, const char* application_name,
+                                         size_t application_name_length) {
+  cluster->config().set_application_name(String(application_name, application_name_length));
+}
+
+void cass_cluster_set_application_version(CassCluster* cluster, const char* application_version) {
+  cass_cluster_set_application_version_n(cluster, application_version,
+                                         SAFE_STRLEN(application_version));
+}
+
+void cass_cluster_set_application_version_n(CassCluster* cluster, const char* application_version,
+                                            size_t application_version_length) {
+  cluster->config().set_application_version(
+      String(application_version, application_version_length));
+}
+
+void cass_cluster_set_client_id(CassCluster* cluster, CassUuid client_id) {
+  cluster->config().set_client_id(client_id);
+}
+
+void cass_cluster_set_monitor_reporting_interval(CassCluster* cluster, unsigned interval_secs) {
+  cluster->config().set_monitor_reporting_interval_secs(interval_secs);
 }
 
 void cass_cluster_free(CassCluster* cluster) { delete cluster->from(); }

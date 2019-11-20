@@ -1,25 +1,53 @@
+2.15.0
+===========
+
+Features
+--------
+* [CPP-865] Unified driver
+  * We have open sourced and merged DataStax Enterprise (DSE) driver features
+    into a single, open source driver that supports both Apache Cassandra and
+    DataStax products. *Note:* DSE-specific driver features still require DSE.
+    * Support for the DSE authentication mechanisms including plaintext and LDAP
+      (via GSSAPI)
+    * Support for geospatial types including `POINT`, `LINESTRING`, and `POLYGON`
+  * Supporting JIRA issues
+    * [CPP-864] Merge DSE into core driver 
+    * [CPP-867] Merge DSE docs into core driver
+    * [CPP-866] Move DSE uses of external authentication provider to internal interfaces
+    * [CPP-861] Add `CASS_USE_KERBEROS` option and return errors from dependent auth API functions
+
+Bug Fixes
+--------
+* [CPP-871] Fix SSL cleanup on error conditions in mockssandra
+* [CPP-855] Fix C\*/DSE protocol lowering attempts when `cass_cluster_set_use_beta_protocol_version()` is true
+
+Other
+--------
+* [CPP-220] Remove use of external Boost from unit and integration tests
+
+
 2.14.0
 ===========
 
 Bug Fixes
 --------
-* [CPP-819] - Ensure port is updated on already assigned contact points
-* [CPP-825] - Cloud should be verifying the peer certificates CN
+* [CPP-819] Ensure port is updated on already assigned contact points
+* [CPP-825] Cloud should be verifying the peer certificates CN
 
 2.14.0-alpha2
 ===========
 
 Features
 --------
-* [CPP-812] - Enable warnings for implicit casts and fix problems
-* [CPP-813] - Detect CaaS and change consistency default
-* [CPP-817] - Provide error if mixed usage of secure connect bundle and contact points/ssl context
+* [CPP-812] Enable warnings for implicit casts and fix problems
+* [CPP-813] Detect CaaS and change consistency default
+* [CPP-817] Provide error if mixed usage of secure connect bundle and contact points/ssl context
 
 Bug Fixes
 --------
-* [CPP-802] - Handle prepared id mismatch when repreparing on the fly
-* [CPP-815] - Schema agreement fails with SNI
-* [CPP-811] - Requests won't complete if they exceed the number of streams on a connection
+* [CPP-802] Handle prepared id mismatch when repreparing on the fly
+* [CPP-815] Schema agreement fails with SNI
+* [CPP-811] Requests won't complete if they exceed the number of streams on a connection
 
 2.14.0-alpha
 ===========

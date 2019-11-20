@@ -274,11 +274,19 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
 
     maybe_finish();
   } else if (connector->is_invalid_protocol()) {
-    ProtocolVersion lower_version(connector->protocol_version());
-    if (!lower_version.attempt_lower_supported(connector->address().to_string())) {
+    ProtocolVersion lower_version(connector->protocol_version().previous());
+    if (!lower_version.is_valid()) {
+      LOG_ERROR(
+          "Host %s does not support any valid protocol version (lowest supported version is %s)",
+          connector->address().to_string().c_str(),
+          ProtocolVersion::lowest_supported().to_string().c_str());
       on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Unable to find supported protocol version");
       return;
     }
+    LOG_WARN("Host %s does not support protocol version %s. "
+             "Trying protocol version %s...",
+             connector->address().to_string().c_str(),
+             connector->protocol_version().to_string().c_str(), lower_version.to_string().c_str());
     internal_connect(connector->address(), lower_version);
   } else if (connector->is_ssl_error()) {
     ssl_error_code_ = connector->ssl_error_code();

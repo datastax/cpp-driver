@@ -1,12 +1,7 @@
 # Testing
 Before proceeding ensure the tests were built using the [build procedures].
 
-Both unit and integration tests use [Boost.Test](http://www.boost.org/doc/libs/1_62_0/libs/test/doc/html/index.html).
-
-Integration tests rely on [Cassandra Cluster Manager (CCM)](ccm) to be installed and a [configuration file](configuration)
-in the working directory where tests are executed.
-
-Details for running unit and integration tests can be found [here](running).
+Integration tests rely on [Cassandra Cluster Manager (CCM)](ccm) to be installed.
 
 Each test performs a [setup](#setup-cassandra), [execute](#execute-test), and
 [teardown](#teardown-cassandra). This ensures that each test has a clean and
@@ -118,7 +113,6 @@ cluster may be as large as nine nodes depending on the test being performed.
 Here are some of the items being scheduled for future enhancements.
 
 - Incorporate integration tests into Jenkins environment
-- Remove Boost Test Framework in Favor of Google Test Framework
 - Updates to CCM Bridge
  - Allow files to be copied over SSH established connection
 

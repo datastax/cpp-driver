@@ -247,10 +247,6 @@ public:
     default_profile_.set_latency_aware_routing(is_latency_aware);
   }
 
-  void set_host_targeting(bool is_host_targeting) {
-    default_profile_.set_host_targeting(is_host_targeting);
-  }
-
   void set_latency_aware_routing_settings(const LatencyAwarePolicy::Settings& settings) {
     default_profile_.set_latency_aware_routing_settings(settings);
   }
@@ -313,10 +309,7 @@ public:
   const ExecutionProfile::Map& profiles() const { return profiles_; }
 
   void set_execution_profile(const String& name, const ExecutionProfile* profile) {
-    // Assign the host targeting profile based on the cluster profile
-    // This is required as their is no exposed API to set this chained policy
     ExecutionProfile copy = *profile;
-    copy.set_host_targeting(default_profile_.host_targeting());
     copy.build_load_balancing_policy();
     profiles_[name] = copy;
   }

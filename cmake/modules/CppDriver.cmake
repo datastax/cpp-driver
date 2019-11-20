@@ -88,14 +88,19 @@ endmacro()
 # CassOptionalDependencies
 #
 # Configure enabled optional dependencies if found or if Windows use an
-# external project to build Boost, OpenSSL, zlib.
+# external project to build OpenSSL and zlib.
 #
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
 macro(CassOptionalDependencies)
   # Boost
-  if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS)
+  if(CASS_USE_BOOST_ATOMIC)
     CassUseBoost()
+  endif()
+
+  # Kerberos
+  if(CASS_USE_KERBEROS)
+    CassUseKerberos()
   endif()
 
   # OpenSSL
@@ -217,7 +222,7 @@ endmacro()
 # Arguments:
 #    examples_dir - directory containing all example sub-directories.
 macro(CassBuildExamples examples_dir)
-  file(GLOB EXAMPLES_TO_BUILD "${examples_dir}/*/CMakeLists.txt")
+  file(GLOB_RECURSE EXAMPLES_TO_BUILD "${examples_dir}/*/CMakeLists.txt")
   foreach(example ${EXAMPLES_TO_BUILD})
     get_filename_component(exdir ${example} PATH)
     add_subdirectory(${exdir})
@@ -383,15 +388,8 @@ endmacro()
 # Input: CASS_BUILD_INTEGRATION_TESTS, CASS_BUILD_UNIT_TESTS, CASS_ROOT_DIR
 #------------------------
 macro(CassConfigureTests)
-  if(CASS_BUILD_INTEGRATION_TESTS)
-    # Add CCM bridge as a dependency for integration tests
-    set(CCM_BRIDGE_INCLUDES "${CASS_ROOT_DIR}/test/ccm_bridge/src")
-    add_subdirectory(${CASS_ROOT_DIR}/test/ccm_bridge)
-    add_subdirectory(${CASS_ROOT_DIR}/test/integration_tests)
-  endif()
-
   if (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
-    add_subdirectory(${CASS_ROOT_DIR}/gtests)
+    add_subdirectory(${CASS_ROOT_DIR}/tests)
   endif()
 endmacro()
 
@@ -441,6 +439,12 @@ macro(CassUseLibuv)
   # Assign libuv include and libraries
   set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIRS})
   set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARIES})
+
+  # libuv and gtests require thread library
+  set (THREADS_PREFER_PTHREAD_FLAG 1)
+  find_package(Threads REQUIRED)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
 endmacro()
 
 #------------------------
@@ -516,37 +520,12 @@ macro(CassHttpParser)
 endmacro()
 
 #------------------------
-# CassSimulacron
-#
-# Set up Simulacron for use in tests.
-#
-# Input: TESTS_SIMULACRON_SERVER_DIR
-# Output: SIMULACRON_SERVER_JAR
-#------------------------
-macro(CassSimulacron)
-  # Determine if Simulacron server can be executed (Java runtime is available)
-  find_package(Java COMPONENTS Runtime)
-  if(Java_Runtime_FOUND)
-    # Determine the Simulacron jar file
-    file(GLOB SIMULACRON_SERVER_JAR
-      ${TESTS_SIMULACRON_SERVER_DIR}/simulacron-standalone-*.jar)
-  endif()
-
-  # Determine if the Simulacron server will be available for the tests
-  if(NOT EXISTS ${SIMULACRON_SERVER_JAR})
-    message(WARNING "Simulacron Not Found: Simulacron support will be disabled")
-  endif()
-endmacro()
-
-
-#------------------------
 # CassUseBoost
 #
-# Add includes, libraries, define flags required for using Boost if found or if
-# Windows use an external project to build Boost.
+# Add includes and define flags required for using Boost if found.
 #
-# Input: CASS_USE_STATIC_LIBS, CASS_USE_BOOST_ATOMIC, CASS_INCLUDES, CASS_LIBS
-# Output: CASS_INCLUDES and CASS_LIBS
+# Input: CASS_USE_BOOST_ATOMIC, CASS_INCLUDES
+# Output: CASS_INCLUDES
 #------------------------
 macro(CassUseBoost)
   # Allow for boost directory to be specified on the command line
@@ -568,64 +547,15 @@ macro(CassUseBoost)
     add_definitions(-DBOOST_ALL_NO_LIB)
   endif()
 
-  # Determine if shared or static boost libraries should be used
-  if(CASS_USE_STATIC_LIBS OR
-     (WIN32 AND CASS_BUILD_INTEGRATION_TESTS)) # Force the use of Boost static libraries for Windows (e.g. executables)
-    set(Boost_USE_STATIC_LIBS ON)
-  else()
-    set(Boost_USE_STATIC_LIBS OFF)
-    add_definitions(-DBOOST_ALL_DYN_LINK)
-  endif()
-  set(Boost_USE_STATIC_RUNTIME OFF)
-  set(Boost_USE_MULTITHREADED ON)
-  add_definitions(-DBOOST_THREAD_USES_MOVE)
-
   # Check for general Boost availability
   find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} QUIET)
-  if ((WIN32 AND NOT Boost_FOUND) AND
-      (CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS))
-    message(STATUS "Unable to Locate Boost: Third party build step will be performed")
-    include(ExternalProject-Boost)
-  else()
-    message(STATUS "Boost version: v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-    # Ensure the driver components exist (optional)
-    if(CASS_USE_BOOST_ATOMIC)
-      if(NOT Boost_INCLUDE_DIRS)
-        message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
-      endif()
-
-      # Assign Boost include for atomics
-      set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
+  if(CASS_USE_BOOST_ATOMIC)
+    if(NOT Boost_INCLUDE_DIRS)
+      message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
     endif()
 
-    # Determine if Boost components are available for test executables
-    if(CASS_BUILD_INTEGRATION_TESTS)
-      # Handle new required version of CMake for Boost v1.66.0 (Windows only)
-      if(WIN32)
-        if(Boost_FOUND)
-          if(Boost_VERSION GREATER 106600 OR Boost_VERSION EQUAL 106600)
-            # Ensure CMake version is v3.11.0+
-            if(CMAKE_VERSION VERSION_LESS 3.11.0)
-              message(FATAL_ERROR "Boost v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} requires CMake v3.11.0+."
-                "Updgrade CMake or downgrade Boost to v${CASS_MINIMUM_BOOST_VERSION} - v1.65.1.")
-            endif()
-          endif()
-        endif()
-      endif()
-
-      # Ensure Boost components are available
-      find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono system thread unit_test_framework)
-      if(NOT Boost_FOUND)
-        # Ensure Boost was not found due to minimum version requirement
-        set(CASS_FOUND_BOOST_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-        if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "${CASS_MINIMUM_BOOST_VERSION}")
-          OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "${CASS_MINIMUM_BOOST_VERSION}"))
-          message(FATAL_ERROR "Boost [chrono, system, thread, and unit_test_framework] are required to build tests")
-        else()
-          message(FATAL_ERROR "Boost v${CASS_FOUND_BOOST_VERSION} Found: v${CASS_MINIMUM_BOOST_VERSION} or greater required")
-        endif()
-      endif()
-    endif()
+    # Assign Boost include for atomics
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
   endif()
 
   # Determine if additional Boost definitions are required for driver/executables
@@ -633,6 +563,21 @@ macro(CassUseBoost)
     # Handle explicit initialization warning in atomic/details/casts
     add_definitions(-Wno-missing-field-initializers)
   endif()
+endmacro()
+
+#------------------------
+# CassUseKerberos
+#
+# Add includes and libraries required for using Kerberos if found.
+#
+# Input: CASS_INCLUDES and CASS_LIBS
+# Output: CASS_INCLUDES and CASS_LIBS
+#------------------------
+macro(CassUseKerberos)
+  # Discover Kerberos and assign Kerberos include and libraries
+  find_package(Kerberos REQUIRED)
+  set(CASS_INCLUDES ${CASS_INCLUDES} ${KERBEROS_INCLUDE_DIR})
+  set(CASS_LIBS ${CASS_LIBS} ${KERBEROS_LIBRARIES})
 endmacro()
 
 #------------------------
@@ -899,7 +844,7 @@ macro(CassSetCompilerFlags)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 
     # Assign additional library requirements for Windows
-    set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv)
+    set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv version)
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # GCC specific compiler options
     # I disabled long-long warning because boost generates about 50 such warnings
@@ -1025,6 +970,15 @@ macro(CassFindSourceFiles)
 
   set(CASS_SRC_FILES ${CASS_SRC_FILES}
     ${CASS_SRC_DIR}/third_party/curl/hostcheck.cpp)
+
+  # Determine if Kerberos should be compiled in (or not)
+  if(CASS_USE_KERBEROS)
+    set(CASS_INC_FILES ${CASS_INC_FILES}
+      ${CASS_SRC_DIR}/gssapi/dse_auth_gssapi.hpp)
+    set(CASS_SRC_FILES ${CASS_SRC_FILES}
+      ${CASS_SRC_DIR}/gssapi/dse_auth_gssapi.cpp)
+    set(HAVE_KERBEROS 1)
+  endif()
 
   # Determine if OpenSSL should be compiled in (or not)
   if(CASS_USE_OPENSSL)

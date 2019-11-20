@@ -17,7 +17,7 @@ export SOVER ?= $(shell dpkg-parsechangelog \
 export SONAME=libcassandra.so.$(SOVER)
 
 %:
-	dh $@ 
+	dh $@
 
 override_dh_auto_install:
 	dh_auto_install

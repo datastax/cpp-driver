@@ -6,7 +6,7 @@ Name:    cassandra-cpp-driver
 Epoch:   1
 Version: %{driver_version}
 Release: 1%{?dist}
-Summary: DataStax C/C++ Driver for Apache Cassandra
+Summary: DataStax C/C++ Driver for Apache Cassandra and DataStax Products
 
 Group: Development/Tools
 License: Apache 2.0
@@ -27,8 +27,8 @@ BuildRequires: openssl-devel >= 0.9.8e
 
 %description
 A modern, feature-rich, and highly tunable C/C++ client library for Apache
-Cassandra using exclusively Cassandra's native protocol and Cassandra Query
-Language.
+Cassandra and DataStax Products using Cassandra's native protocol and Cassandra
+Query Language along with extensions for DataStax Products.
 
 %package devel
 Summary: Development libraries for ${name}
@@ -36,6 +36,7 @@ Group: Development/Tools
 Requires: %{name} = %{epoch}:%{version}-%{release}
 Requires: libuv >= %{libuv_version}
 Requires: openssl >= 0.9.8e
+Requires: krb5-libs
 Requires: pkgconfig
 
 %description devel
