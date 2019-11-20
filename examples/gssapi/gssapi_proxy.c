@@ -121,7 +121,6 @@ void connect_and_run(const char* hosts, const char* proxy_user) {
 
 int main(int argc, char* argv[]) {
   /* Setup and connect to cluster */
-  CassFuture* connect_future = NULL;
   char* hosts = "127.0.0.1";
   if (argc > 1) {
     hosts = argv[1];

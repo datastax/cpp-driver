@@ -296,15 +296,12 @@ void select_line_string(CassSession* session, const char* key) {
   if (cass_future_error_code(future) == CASS_OK) {
     const CassResult* result = cass_future_get_result(future);
     if (result && cass_result_row_count(result) > 0) {
-      cass_uint32_t i, num_points;
       const CassRow* row = cass_result_first_row(result);
       const CassValue* value = cass_row_get_column_by_name(row, "linestring");
 
       DseLineStringIterator* iterator = dse_line_string_iterator_new();
 
       dse_line_string_iterator_reset(iterator, value);
-
-      num_points = dse_line_string_iterator_num_points(iterator);
 
       printf("%s: ", key);
       print_line_string(iterator);
