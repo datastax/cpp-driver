@@ -78,8 +78,10 @@ public:
    * is stopped.
    *
    * @param node Node that should be stopped
+   * @param is_kill True if forced termination requested; false otherwise
+   *                (default: false)
    */
-  bool stop_node(unsigned int node) {
+  bool stop_node(unsigned int node, bool is_kill = false) {
     // Determine if schema operations should be triggered across cluster nodes
     if (!propagate_schema_) {
       TEST_LOG("Performing Graph Query to Propagate Schema Across Cluster: "
@@ -90,7 +92,7 @@ public:
     }
 
     // Stop the requested node
-    return DseIntegration::stop_node(node);
+    return DseIntegration::stop_node(node, is_kill);
   }
 
   /**

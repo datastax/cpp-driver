@@ -837,5 +837,6 @@ TEST_F(PoolUnitTest, NoAvailableStreams) {
   initializer->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(status.count(RequestStatus::SUCCESS), CASS_MAX_STREAMS) << status.results();
+  EXPECT_EQ(status.count(RequestStatus::SUCCESS), static_cast<size_t>(CASS_MAX_STREAMS))
+      << status.results();
 }

@@ -126,7 +126,7 @@ TEST_F(HttpClientUnitTest, CancelTimeout) {
     const HttpClient::Ptr& client(*it);
     if (!client->is_canceled()) {
       EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_TIMEOUT);
-      EXPECT_EQ(client->status_code(), 404);
+      EXPECT_EQ(client->status_code(), 404u);
     }
   }
 }
@@ -166,7 +166,7 @@ TEST_F(HttpClientUnitTest, InvalidPath) {
   uv_run(loop(), UV_RUN_DEFAULT);
   EXPECT_TRUE(is_failed);
   EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_HTTP_STATUS);
-  EXPECT_EQ(client->status_code(), 404);
+  EXPECT_EQ(client->status_code(), 404u);
 
   stop_http_server();
 }
@@ -184,7 +184,7 @@ TEST_F(HttpClientUnitTest, Timeout) {
   uv_run(loop(), UV_RUN_DEFAULT);
   EXPECT_TRUE(is_failed);
   EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_TIMEOUT);
-  EXPECT_EQ(client->status_code(), 404);
+  EXPECT_EQ(client->status_code(), 404u);
 
   stop_http_server();
 }

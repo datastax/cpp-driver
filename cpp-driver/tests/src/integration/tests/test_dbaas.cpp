@@ -161,7 +161,7 @@ public:
     return ccm_execute(args);
   }
 
-  bool start_node(int node) {
+  bool start_node(unsigned int node) {
     Process::Args args;
     args.push_back(node_name(node));
     args.push_back("start");
@@ -171,10 +171,13 @@ public:
     return ccm_execute(args);
   }
 
-  bool stop_node(int node) {
+  bool stop_node(unsigned int node, bool is_kill = false) {
     Process::Args args;
     args.push_back(node_name(node));
     args.push_back("stop");
+    if (is_kill) {
+      args.push_back("--not-gently");
+    }
     return ccm_execute(args);
   }
 
@@ -411,7 +414,6 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, SchemaMetadata) {
     EXPECT_EQ("average", std::string(data, length));
     cass_aggregate_meta_full_name(aggregate_meta, &data, &length);
     EXPECT_EQ("average(int)", std::string(data, length));
-    size_t count = cass_aggregate_meta_argument_count(aggregate_meta);
     ASSERT_EQ(1u, cass_aggregate_meta_argument_count(aggregate_meta));
     datatype = cass_aggregate_meta_argument_type(aggregate_meta, 0);
     EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));

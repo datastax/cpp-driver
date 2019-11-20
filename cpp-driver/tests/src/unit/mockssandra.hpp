@@ -143,7 +143,6 @@ private:
   SSL* ssl_;
   BIO* incoming_bio_;
   BIO* outgoing_bio_;
-  SslHandshakeState handshake_state_;
 };
 
 class ClientConnectionFactory {
