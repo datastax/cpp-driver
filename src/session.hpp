@@ -42,7 +42,7 @@ public:
 
   Future::Ptr prepare(const Statement* statement);
 
-  Future::Ptr execute(const Request::ConstPtr& request, const Address* preferred_address = NULL);
+  Future::Ptr execute(const Request::ConstPtr& request);
 
 private:
   void execute(const RequestHandler::Ptr& request_handler);

@@ -1,8 +1,17 @@
 /*
   Copyright (c) DataStax, Inc.
 
-  This software can be used solely with DataStax Enterprise. Please consult the
-  license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 */
 
 #ifndef DATASTAX_INTERNAL_EXECUTION_PROFILE_HPP
@@ -15,8 +24,8 @@
 #include "constants.hpp"
 #include "dc_aware_policy.hpp"
 #include "dense_hash_map.hpp"
-#include "host_targeting_policy.hpp"
 #include "latency_aware_policy.hpp"
+#include "speculative_execution.hpp"
 #include "string.hpp"
 #include "token_aware_policy.hpp"
 #include "utils.hpp"
@@ -33,7 +42,6 @@ public:
       : request_timeout_ms_(CASS_UINT64_MAX)
       , consistency_(CASS_CONSISTENCY_UNKNOWN)
       , serial_consistency_(CASS_CONSISTENCY_UNKNOWN)
-      , host_targeting_(false)
       , latency_aware_routing_(false)
       , token_aware_routing_(true)
       , token_aware_routing_shuffle_replicas_(true)
@@ -59,10 +67,6 @@ public:
 
   DcList& blacklist_dc() { return blacklist_dc_; }
   const DcList& blacklist_dc() const { return blacklist_dc_; }
-
-  bool host_targeting() const { return host_targeting_; }
-
-  void set_host_targeting(bool is_host_targeting) { host_targeting_ = is_host_targeting; }
 
   bool latency_aware() const { return latency_aware_routing_; }
 
@@ -124,9 +128,6 @@ public:
       if (latency_aware()) {
         chain = new LatencyAwarePolicy(chain, latency_aware_routing_settings_);
       }
-      if (host_targeting()) {
-        chain = new HostTargetingPolicy(chain);
-      }
 
       load_balancing_policy_.reset(chain);
     }
@@ -151,7 +152,6 @@ private:
   CassConsistency serial_consistency_;
   ContactPointList blacklist_;
   DcList blacklist_dc_;
-  bool host_targeting_;
   bool latency_aware_routing_;
   LatencyAwarePolicy::Settings latency_aware_routing_settings_;
   bool token_aware_routing_;

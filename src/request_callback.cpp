@@ -57,7 +57,7 @@ bool RequestCallback::skip_metadata() const {
 
 int32_t RequestCallback::encode(BufferVec* bufs) {
   const ProtocolVersion version = protocol_version_;
-  if (version < CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
+  if (version < ProtocolVersion::lowest_supported()) {
     on_error(CASS_ERROR_LIB_MESSAGE_ENCODE, "Operation unsupported by this protocol version");
     return Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
   }

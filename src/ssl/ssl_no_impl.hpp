@@ -33,7 +33,8 @@ public:
 
 class NoSslContext : public SslContext {
 public:
-  virtual SslSession* create_session(const Address& address, const String& hostname);
+  virtual SslSession* create_session(const Address& address, const String& hostname,
+                                     const String& sni_server_name);
 
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length);
   virtual CassError set_cert(const char* cert, size_t cert_length);

@@ -157,7 +157,7 @@ public:
 static NopRequestListener nop_request_listener__;
 
 RequestHandler::RequestHandler(const Request::ConstPtr& request, const ResponseFuture::Ptr& future,
-                               Metrics* metrics, const Address* preferred_address)
+                               Metrics* metrics)
     : wrapper_(request)
     , future_(future)
     , is_done_(false)
@@ -165,8 +165,7 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request, const ResponseF
     , start_time_ns_(uv_hrtime())
     , listener_(&nop_request_listener__)
     , manager_(NULL)
-    , metrics_(metrics)
-    , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) {}
+    , metrics_(metrics) {}
 
 void RequestHandler::set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry) {
   wrapper_.set_prepared_metadata(entry);

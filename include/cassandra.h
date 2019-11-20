@@ -52,9 +52,9 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 14
+#define CASS_VERSION_MINOR 15
 #define CASS_VERSION_PATCH 0
-#define CASS_VERSION_SUFFIX ""
+#define CASS_VERSION_SUFFIX "dev"
 
 #ifdef __cplusplus
 extern "C" {
@@ -2825,6 +2825,101 @@ cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(CassCluster* c
                                                                   const char* path,
                                                                   size_t path_length);
 
+/**
+ * Set the application name.
+ *
+ * This is optional; however it provides the server with the application name
+ * that can aid in debugging issues with larger clusters where there are a lot
+ * of client (or application) connections.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] application_name
+ */
+CASS_EXPORT void
+cass_cluster_set_application_name(CassCluster* cluster,
+                                  const char* application_name);
+
+/**
+ * Same as cass_cluster_set_application_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] application_name
+ * @param[in] application_name_length
+ */
+CASS_EXPORT void
+cass_cluster_set_application_name_n(CassCluster* cluster,
+                                    const char* application_name,
+                                    size_t application_name_length);
+
+/**
+ * Set the application version.
+ *
+ * This is optional; however it provides the server with the application
+ * version that can aid in debugging issues with large clusters where there are
+ * a lot of client (or application) connections that may have different
+ * versions in use.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] application_version
+ */
+
+CASS_EXPORT void
+cass_cluster_set_application_version(CassCluster* cluster,
+                                     const char* application_version);
+
+/**
+ * Same as cass_cluster_set_application_version(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] application_version
+ * @param[in] application_version_length
+ */
+CASS_EXPORT void
+cass_cluster_set_application_version_n(CassCluster* cluster,
+                                       const char* application_version,
+                                       size_t application_version_length);
+
+/**
+ * Set the client id.
+ *
+ * This is optional; however it provides the server with the client ID that can
+ * aid in debugging issues with large clusters where there are a lot of client
+ * connections.
+ *
+ * Default: UUID v4 generated (@see cass_session_get_client_id())
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] client_id
+ */
+CASS_EXPORT void
+cass_cluster_set_client_id(CassCluster* cluster, CassUuid client_id);
+
+/**
+ * Sets the amount of time between monitor reporting event messages.
+ *
+ * <b>Default:</b> 300 seconds.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] interval_secs Use 0 to disable monitor reporting event messages.
+ */
+CASS_EXPORT void
+cass_cluster_set_monitor_reporting_interval(CassCluster* cluster,
+                                            unsigned interval_secs);
+
 /***********************************************************************************
  *
  * Session
@@ -3048,6 +3143,17 @@ cass_session_get_metrics(const CassSession* session,
 CASS_EXPORT void
 cass_session_get_speculative_execution_metrics(const CassSession* session,
                                                CassSpeculativeExecutionMetrics* output);
+
+/**
+ * Get the client id.
+ *
+ * @public @memberof CassSession
+ *
+ * @param[in] session
+ * @return Client id.
+ */
+CASS_EXPORT CassUuid
+cass_session_get_client_id(CassSession* session);
 
 /***********************************************************************************
  *

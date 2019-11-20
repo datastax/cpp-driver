@@ -63,7 +63,6 @@ Function Build-Configuration-Information {
   $output = @"
 Visual Studio: $($Env:CMAKE_GENERATOR.Split(" ")[-2]) [$($Env:CMAKE_GENERATOR.Split(" ")[-1])]
 Architecture:  $($Env:Platform)
-Boost:         v$($Env:BOOST_VERSION)
 libssh2:       v$($Env:LIBSSH2_VERSION)
 libuv:         v$($Env:LIBUV_VERSION)
 OpenSSL:       v$(Get-OpenSSL-Version)
@@ -112,7 +111,6 @@ Function Environment-Information {
 
 Function Initialize-Build-Environment {
   # Get the versions for the third party dependencies
-  $boost_version = $Env:BOOST_VERSION
   $libssh2_version = $Env:LIBSSH2_VERSION
   $libuv_version = $Env:LIBUV_VERSION
   $openssl_version = Get-OpenSSL-Version
@@ -166,31 +164,27 @@ Function Initialize-Build-Environment {
   $Env:DRIVER_ARTIFACTS_LOGS_DIR = "$($Env:DRIVER_ARTIFACTS_DIR)/logs"
 
   # Generate the environment variables for the third party archives
+  $Env:KERBEROS_ARCHIVE = "kfw-$($kerberos_version)-$($windows_architecture)-msvc100.zip"
   $Env:LIBUV_ARTIFACT_ARCHIVE = "libuv-$($libuv_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
   $Env:OPENSSL_ARTIFACT_ARCHIVE = "openssl-$($openssl_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
   $Env:ZLIB_ARTIFACT_ARCHIVE = "zlib-$($zlib_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
-  # Generate DataStax Enterprise specific environment variables
-  If ($Env:DRIVER_TYPE -Like "dse") {
-    # Generate the Kerberos environment variables
-    $Env:KERBEROS_ARCHIVE = "kfw-$($kerberos_version)-$($windows_architecture)-msvc100.zip"
-    $Env:KERBEROS_DOWNLOAD_URL = "$($download_url_prefix)/kerberos/$($kerberos_version)/$($Env:KERBEROS_ARCHIVE)"
-    $Env:KERBEROS_ROOT_DIR = "$($libs_location_prefix)/$($Env:Platform)/100/kfw-$($kerberos_version)"
-  }
-
   # Generate default environment variables for per commit builds
-  $boost_version_filename = "$($boost_version.Replace(".", "_"))"
+  If ($Env:APPVEYOR_BUILD_WORKER_IMAGE -Like "Visual Studio 2019") {
+    $boost_version_directory_suffix = "1_71_0"
+  } Else {
+    $boost_version_directory_suffix = "1_69_0"
+  }
   $visual_studio_version = "$($Env:VISUAL_STUDIO_INTERNAL_VERSION.Insert(2, "."))"
 
   # Generate the default Boost environment variables
-  $Env:BOOST_ROOT = "C:/Libraries/boost_$($boost_version_filename)"
-  $Env:BOOST_LIBRARYDIR = "$($Env:BOOST_ROOT)/$($lib_architecture)-msvc-$($visual_studio_version)"
-  If (-Not (Test-Path -Path "$($Env:BOOST_LIBRARYDIR)")) {
-    # Update the Boost environment variables for CMake to find installation
-    $Env:BOOST_ROOT = "$($libs_location_prefix)/boost-$($boost_version)"
-    $Env:BOOST_LIBRARYDIR = "$($Env:BOOST_ROOT)/$($lib_architecture)-msvc-$($visual_studio_version)"
-  }
+  $Env:BOOST_ROOT = "C:/Libraries/boost_$($boost_version_directory_suffix)"
   $Env:BOOST_INCLUDEDIR = "$($Env:BOOST_ROOT)/include"
+
+  # Generate the Kerberos environment variables
+  $Env:KERBEROS_DOWNLOAD_URL = "$($download_url_prefix)/kerberos/$($kerberos_version)/$($Env:KERBEROS_ARCHIVE)"
+  $Env:KERBEROS_EXTRACT_DIR = "$($libs_location_prefix)/$($Env:Platform)/100/kfw-$($kerberos_version)"
+  $Env:KERBEROS_ROOT_DIR = "$($Env:KERBEROS_EXTRACT_DIR)/MIT/Kerberos"
 
   # Generate the default libssh2 environment variables
   $Env:LIBSSH2_ROOT_DIR = "$($dependencies_location_prefix)/libssh2-$($libssh2_version)"
@@ -219,7 +213,7 @@ Function Initialize-Build-Environment {
   $Env:PERL_ROOT_DIR = "$($bin_location_prefix)/perl-$($perl_version)"
 
   # Update the PATH to include the third party build requirement tools (prepend)
-  $Env:PATH = "$($Env:BISON_ROOT_DIR)/bin;$($Env:PERL_ROOT_DIR)\perl\site\bin;$($Env:PERL_ROOT_DIR)\perl\bin;$($Env:PERL_ROOT_DIR)\c\bin;$($Env:KERBEROS_ROOT_DIR)/bin;$($Env:LIBUV_ROOT_DIR)/bin;$($Env:OPENSSL_ROOT_DIR)/bin;$($Env:PATH)"
+  $Env:PATH = "$($Env:BISON_ROOT_DIR)/bin;$($Env:PERL_ROOT_DIR)/perl/site/bin;$($Env:PERL_ROOT_DIR)/perl/bin;$($Env:PERL_ROOT_DIR)/c/bin;$($Env:KERBEROS_ROOT_DIR)/bin;$($Env:LIBUV_ROOT_DIR)/bin;$($Env:OPENSSL_ROOT_DIR)/bin;$($Env:PATH)"
 }
 
 Function Install-Driver-Environment {
@@ -478,84 +472,32 @@ add_dependencies(`${PROJECT_NAME} `${ZLIB_LIBRARY_NAME})
     Pop-Location
   }
 
-  # Handle installation of DataStax Enterprise dependencies
-  If ($Env:DRIVER_TYPE -Like "dse") {
-    # Determine if Kerberos for Windows should be installed (cached)
-    If (-Not (Test-Path -Path "$($Env:KERBEROS_ROOT_DIR)")) {
-      # Download and extract the dependency
-      try {
-        Write-Host "Downloading and extracting Kerberos for Windows"
-        New-Item -ItemType Directory -Force -Path "$($Env:KERBEROS_ROOT_DIR)" | Out-Null
-        If ($Env:APPVEYOR -Like "True") {
-          Start-FileDownload "$($Env:KERBEROS_DOWNLOAD_URL)" -FileName $Env:KERBEROS_ARCHIVE
-        } Else {
-          curl.exe -o "$($Env:KERBEROS_ARCHIVE)" "$($Env:KERBEROS_DOWNLOAD_URL)"
-        }
-        $argument_list = @"
--o"$($Env:KERBEROS_ROOT_DIR)" x "$($Env:KERBEROS_ARCHIVE)"
+  # Determine if Kerberos for Windows should be installed (cached)
+  If (-Not (Test-Path -Path "$($Env:KERBEROS_ROOT_DIR)")) {
+    # Download and extract the dependency
+    try {
+      Write-Host "Downloading and extracting Kerberos for Windows"
+      New-Item -ItemType Directory -Force -Path "$($Env:KERBEROS_ROOT_DIR)" | Out-Null
+      If ($Env:APPVEYOR -Like "True") {
+        Start-FileDownload "$($Env:KERBEROS_DOWNLOAD_URL)" -FileName $Env:KERBEROS_ARCHIVE
+      } Else {
+        curl.exe -o "$($Env:KERBEROS_ARCHIVE)" "$($Env:KERBEROS_DOWNLOAD_URL)"
+      }
+      $argument_list = @"
+-o"$($Env:KERBEROS_EXTRACT_DIR)" x "$($Env:KERBEROS_ARCHIVE)"
 "@
-        $process = Start-Process -FilePath 7z -ArgumentList $argument_list -PassThru -Wait -NoNewWindow
-        If ($process.ExitCode -ne 0) {
-          Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_ROOT_DIR)"
-          Throw "Failed to extract Kerberos"
-        }
-
-        # Delete the binary archive
-        Remove-Item $Env:KERBEROS_ARCHIVE
-      } catch {
-        Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_ROOT_DIR)"
-        Throw $PSItem
+      $process = Start-Process -FilePath 7z -ArgumentList $argument_list -PassThru -Wait -NoNewWindow
+      If ($process.ExitCode -ne 0) {
+        Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_EXTRACT_DIR)"
+        Throw "Failed to extract Kerberos"
       }
+
+      # Delete the binary archive
+      Remove-Item $Env:KERBEROS_ARCHIVE
+    } catch {
+      Remove-Item -Force -Recurse -Path "$($Env:KERBEROS_EXTRACT_DIR)"
+      Throw $PSItem
     }
-  }
-
-  # Handle installation of the per commit dependencies (e.g. Test builds)
-  # Determine if Boost should be installed (pre-installed or cached)
-  If (-Not (Test-Path -Path "$($Env:BOOST_LIBRARYDIR)")) {
-    New-Item -ItemType Directory -Force -Path "$($dependencies_build_location_prefix)/boost" | Out-Null
-    Push-Location -Path "$($dependencies_build_location_prefix)/boost"
-
-    $cmakelists_contents = @"
-cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
-project(Boost)
-set(PROJECT_DISPLAY_NAME "AppVeyor CI Build for Boost")
-set(PROJECT_MODULE_DIR $cmake_modules_dir)
-set(CMAKE_MODULE_PATH `${CMAKE_MODULE_PATH} `${PROJECT_MODULE_DIR})
-include(ExternalProject-boost)
-set(GENERATED_SOURCE_FILE `${CMAKE_CURRENT_BINARY_DIR}/main.cpp)
-file(REMOVE `${GENERATED_SOURCE_FILE})
-file(WRITE `${GENERATED_SOURCE_FILE} "int main () { return 0; }")
-add_executable(`${PROJECT_NAME} `${GENERATED_SOURCE_FILE})
-add_dependencies(`${PROJECT_NAME} `${BOOST_LIBRARY_NAME})
-"@
-    $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
-
-    Write-Host "Configuring Boost"
-    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-DBOOST_VERSION=$($Env:BOOST_VERSION)" "-DBOOST_INSTALL_PREFIX=$($Env:BOOST_ROOT)" .
-    If ($LastExitCode -ne 0) {
-      If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
-        Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "Boost Output Log"
-      }
-      If (Test-Path -Path "build/CMakeFiles/CMakeError.log") {
-        Push-AppveyorArtifact "build/CMakeFiles/CMakeError.log" -DeploymentName "Boost Error Log"
-      }
-      Pop-Location
-      Throw "Failed to configure Boost for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
-    }
-    Write-Host "Building and Installing Boost"
-    cmake --build . --config RelWithDebInfo
-    If ($LastExitCode -ne 0) {
-      If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
-        Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "Boost Output Log"
-      }
-      If (Test-Path -Path "build/CMakeFiles/CMakeError.log") {
-        Push-AppveyorArtifact "build/CMakeFiles/CMakeError.log" -DeploymentName "Boost Error Log"
-      }
-      Pop-Location
-      Throw "Failed to build Boost for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
-    }
-
-    Pop-Location
   }
 
   # Determine if libssh2 should be installed (cached)
@@ -624,14 +566,14 @@ Function Build-Driver {
   }
 
   # Build the driver
-  $driver_type = "Apache Cassandra"
+  $driver_type = "Apache Cassandra and DataStax Products"
   If ($Env:DRIVER_TYPE -Like "dse") {
     $driver_type = "DSE"
   }
   New-Item -ItemType Directory -Force -Path "$($Env:APPVEYOR_BUILD_FOLDER)/build"
   Push-Location "$($Env:APPVEYOR_BUILD_FOLDER)/build"
   Write-Host "Configuring DataStax C/C++ $($driver_type) Driver"
-  cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-D$($Env:DRIVER_TYPE)_MULTICORE_COMPILATION=On" "-D$($Env:DRIVER_TYPE)_USE_OPENSSL=On" "-D$($Env:DRIVER_TYPE)_USE_ZLIB=On" "-D$($Env:DRIVER_TYPE)_USE_BOOST_ATOMIC=$($use_boost_atomic)" "-D$($Env:DRIVER_TYPE)_BUILD_EXAMPLES=On" "-D$($Env:DRIVER_TYPE)_BUILD_TESTS=On" "-D$($Env:DRIVER_TYPE)_USE_LIBSSH2=On" "-DCMAKE_INSTALL_PREFIX=`"$($Env:DRIVER_INSTALL_DIR)`"" ..
+  cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-D$($Env:DRIVER_TYPE)_MULTICORE_COMPILATION=On" "-D$($Env:DRIVER_TYPE)_USE_KERBEROS=On" "-D$($Env:DRIVER_TYPE)_USE_OPENSSL=On" "-D$($Env:DRIVER_TYPE)_USE_ZLIB=On" "-D$($Env:DRIVER_TYPE)_USE_BOOST_ATOMIC=$($use_boost_atomic)" "-D$($Env:DRIVER_TYPE)_BUILD_EXAMPLES=On" "-D$($Env:DRIVER_TYPE)_BUILD_TESTS=On" "-D$($Env:DRIVER_TYPE)_USE_LIBSSH2=On" "-DCMAKE_INSTALL_PREFIX=`"$($Env:DRIVER_INSTALL_DIR)`"" ..
   If ($LastExitCode -ne 0) {
     Pop-Location
     Throw "Failed to configure DataStax C/C++ $($driver_type) Driver for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
@@ -662,25 +604,12 @@ Function Build-Driver {
 
 Function Execute-Driver-Unit-Tests {
   # Update the PATH for the test executables to run with output
-  $Env:PATH = "$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests;$($Env:PATH)"
+  $Env:PATH = "$($Env:DRIVER_ARTIFACTS_DIR)/bin/tests;$($Env:PATH)"
 
-  # Execute the Apache Cassandra unit tests
+  # Execute the unit tests
   $is_failure = $False
-  cassandra-unit-tests.exe --gtest_output=xml:"$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests\cassandra-unit-tests-gtest-results.xml"
+  cassandra-unit-tests.exe --gtest_output=xml:"$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests\unit-tests-gtest-results.xml"
   If ($LastExitCode -ne 0) {
-    $is_failure = $True
-  }
-
-  If ($Env:DRIVER_TYPE -Like "dse") {
-    # Execute the Apache Cassandra unit tests
-    dse-unit-tests.exe --gtest_output=xml:"$($Env:DRIVER_ARTIFACTS_DIR)\bin\tests\dse-unit-tests-gtest-results.xml"
-    If ($LastExitCode -ne 0) {
-      $is_failure = $True
-    }
-  }
-
-  # Check to see if there was a failure executing the tests
-  If ($is_failure) {
     Throw "Error Executing Unit tests: Check tests tab or download from the artifacts"
   }
 }
@@ -770,7 +699,7 @@ a -tzip "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:ZLIB_ARTIFACT_ARCHIVE)" -r "$($Env:
 
 Function Push-Artifacts {
   If ($Env:APPVEYOR -Like "True") {
-    $driver_type = "Apache Cassandra"
+    $driver_type = "Apache Cassandra and DataStax Products"
     If ($Env:DRIVER_TYPE -Like "dse") {
       $driver_type = "DSE"
     }

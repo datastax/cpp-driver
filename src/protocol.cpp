@@ -16,13 +16,21 @@
 
 #include "protocol.hpp"
 
-#include "logger.hpp"
+#include "cassandra.h"
 
 #define DSE_PROTOCOL_VERSION_BIT 0x40
 #define DSE_PROTOCOL_VERSION_MASK 0x3F
 
 using namespace datastax;
 using namespace datastax::internal::core;
+
+static bool is_protocol_at_least_v5_or_dse_v2(int version) {
+  if (version & DSE_PROTOCOL_VERSION_BIT) {
+    return version >= CASS_PROTOCOL_VERSION_DSEV2;
+  } else {
+    return version >= CASS_PROTOCOL_VERSION_V5;
+  }
+}
 
 ProtocolVersion::ProtocolVersion()
     : value_(-1) {}
@@ -31,40 +39,29 @@ ProtocolVersion::ProtocolVersion(int value)
     : value_(value) {}
 
 ProtocolVersion ProtocolVersion::lowest_supported() {
-  return ProtocolVersion(CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION);
+  return ProtocolVersion(CASS_PROTOCOL_VERSION_V3);
 }
 
-ProtocolVersion ProtocolVersion::highest_supported() {
-  return ProtocolVersion(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
+ProtocolVersion ProtocolVersion::highest_supported(bool is_dse) {
+  return ProtocolVersion(is_dse ? CASS_PROTOCOL_VERSION_DSEV2 : CASS_PROTOCOL_VERSION_V4);
 }
 
-ProtocolVersion ProtocolVersion::newest_beta() {
-  return ProtocolVersion(CASS_NEWEST_BETA_PROTOCOL_VERSION);
-}
+ProtocolVersion ProtocolVersion::newest_beta() { return ProtocolVersion(CASS_PROTOCOL_VERSION_V5); }
 
 int ProtocolVersion::value() const { return value_; }
 
 bool ProtocolVersion::is_valid() const {
-  if (value_ < CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
-    LOG_ERROR("Protocol version %s is lower than the lowest supported "
-              " protocol version %s",
-              to_string().c_str(), lowest_supported().to_string().c_str());
-    return false;
-  } else if (value_ > CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
-    LOG_ERROR("Protocol version %s is higher than the highest supported "
-              "protocol version %s (consider using the newest beta protocol version).",
-              to_string().c_str(), highest_supported().to_string().c_str());
-    return false;
-  }
-  return true;
+  return *this >= lowest_supported() && *this <= highest_supported(is_dse());
 }
 
-bool ProtocolVersion::is_beta() const { return value_ == CASS_NEWEST_BETA_PROTOCOL_VERSION; }
+bool ProtocolVersion::is_beta() const { return *this == newest_beta(); }
+
+bool ProtocolVersion::is_dse() const { return (value_ & DSE_PROTOCOL_VERSION_BIT) != 0; }
 
 String ProtocolVersion::to_string() const {
   if (value_ > 0) {
     OStringStream ss;
-    if (value_ & DSE_PROTOCOL_VERSION_BIT) {
+    if (is_dse()) {
       ss << "DSEv" << (value_ & DSE_PROTOCOL_VERSION_MASK);
     } else {
       ss << "v" << value_;
@@ -75,33 +72,23 @@ String ProtocolVersion::to_string() const {
   }
 }
 
-bool ProtocolVersion::attempt_lower_supported(const String& host) {
-  if (value_ <= CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
-    LOG_ERROR(
-        "Host %s does not support any valid protocol version (lowest supported version is %s)",
-        host.c_str(), lowest_supported().to_string().c_str());
-    return false;
+ProtocolVersion ProtocolVersion::previous() const {
+  if (*this <= lowest_supported()) {
+    return ProtocolVersion(); // Invalid
+  } else if (is_dse() && value_ <= CASS_PROTOCOL_VERSION_DSEV1) {
+    // Start trying Cassandra protocol versions
+    return ProtocolVersion::highest_supported(false);
+  } else {
+    return ProtocolVersion(value_ - 1);
   }
-
-  int previous_version = value_--;
-  LOG_WARN("Host %s does not support protocol version %s. "
-           "Trying protocol version %s...",
-           host.c_str(), ProtocolVersion(previous_version).to_string().c_str(),
-           to_string().c_str());
-  return true;
 }
 
 bool ProtocolVersion::supports_set_keyspace() const {
   assert(value_ > 0 && "Invalid protocol version");
-  return value_ >= CASS_PROTOCOL_VERSION_V5;
+  return is_protocol_at_least_v5_or_dse_v2(value_);
 }
 
 bool ProtocolVersion::supports_result_metadata_id() const {
   assert(value_ > 0 && "Invalid protocol version");
-  // Cassandra v4.x broke the beta protocol v5 version
-  // JIRA: https://issues.apache.org/jira/browse/CASSANDRA-10786
-  // Mailing List Discussion: https://www.mail-archive.com/dev@cassandra.apache.org/msg11731.html
-  // TODO: Remove after Cassandra v4.0.0 is released
-  return false;
-  // return version_ >= CASS_PROTOCOL_VERSION_V5;
+  return is_protocol_at_least_v5_or_dse_v2(value_);
 }
