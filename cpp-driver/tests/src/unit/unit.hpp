@@ -242,7 +242,6 @@ private:
       logging_criteria_;
   int logging_criteria_count_;
   uv_mutex_t mutex_;
-  uint64_t start_time_;
 };
 
 #endif // UNIT_TEST_HPP

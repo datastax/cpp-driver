@@ -68,7 +68,7 @@ TEST_F(SupportedResponseUnitTest, Simple) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   StringMultimap supported_options;
-  ASSERT_EQ(0, supported_options.size());
+  ASSERT_EQ(0u, supported_options.size());
   Connector::Ptr connector(new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                          PROTOCOL_VERSION,
                                          bind_callback(on_connect, &supported_options)));
@@ -121,7 +121,7 @@ TEST_F(SupportedResponseUnitTest, UppercaseKeysOnly) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   StringMultimap supported_options;
-  ASSERT_EQ(0, supported_options.size());
+  ASSERT_EQ(0u, supported_options.size());
   Connector::Ptr connector(new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                          PROTOCOL_VERSION,
                                          bind_callback(on_connect, &supported_options)));

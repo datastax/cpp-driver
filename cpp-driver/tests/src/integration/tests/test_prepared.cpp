@@ -146,7 +146,7 @@ CASSANDRA_INTEGRATION_TEST_F(PreparedTests, PrepareFromExistingSimpleStatement) 
   bound_statement.bind<Integer>(0, Integer(1));
 
   Result result = session_.execute(bound_statement);
-  ASSERT_EQ(result.row_count(), 1);
+  ASSERT_EQ(result.row_count(), 1u);
   EXPECT_EQ(result.first_row().column_by_name<Integer>("value").value(), 99);
 }
 
@@ -191,6 +191,6 @@ CASSANDRA_INTEGRATION_TEST_F(PreparedTests, PrepareFromExistingBoundStatement) {
   bound_statement2.bind<Integer>(0, Integer(1));
 
   Result result = session_.execute(bound_statement2);
-  ASSERT_EQ(result.row_count(), 1);
+  ASSERT_EQ(result.row_count(), 1u);
   EXPECT_EQ(result.first_row().column_by_name<Integer>("value").value(), 99);
 }

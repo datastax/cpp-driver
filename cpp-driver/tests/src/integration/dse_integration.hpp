@@ -80,9 +80,11 @@ public:
   /**
    * Get the default DSE cluster configuration
    *
+   * @param is_with_default_contact_points True if default contact points
+                                           should be added to the cluster
    * @return DSE Cluster object (default)
    */
-  virtual Cluster default_cluster();
+  virtual Cluster default_cluster(bool is_with_default_contact_points = true);
 
 protected:
   /**

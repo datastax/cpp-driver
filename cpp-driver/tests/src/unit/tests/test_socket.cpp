@@ -214,7 +214,6 @@ public:
 private:
   void verify_dns_check() {
     uv_getaddrinfo_t request;
-    Address::SocketStorage storage;
     ASSERT_EQ(0, uv_getaddrinfo(loop(), &request, on_request, DNS_HOSTNAME, "8888", NULL));
     uv_run(loop(), UV_RUN_DEFAULT);
   }
