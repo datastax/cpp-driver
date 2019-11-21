@@ -52,7 +52,7 @@ public:
   }
 
   void wait_for_count(const Session& session, cass_uint64_t expected_count) {
-    CassSpeculativeExecutionMetrics metrics;
+    CassSpeculativeExecutionMetrics metrics = session.speculative_execution_metrics();
     for (int i = 0; i < 600 && metrics.count != expected_count; ++i) {
       metrics = session.speculative_execution_metrics();
       msleep(100);

@@ -649,7 +649,7 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   // 4.0.0.0  9223372036854775804
 
   const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
+  Murmur3Partitioner::Token token = CASS_INT64_MIN + static_cast<int64_t>(partition_size);
 
   for (size_t i = 1; i <= num_hosts; ++i) {
     Host::Ptr host(create_host(addr_for_sequence(i), single_token(token),
@@ -718,7 +718,7 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   // 7.0.0.0 local   9223372036854775806
 
   const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
+  Murmur3Partitioner::Token token = CASS_INT64_MIN + static_cast<int64_t>(partition_size);
 
   for (size_t i = 1; i <= num_hosts; ++i) {
     Host::Ptr host(create_host(addr_for_sequence(i), single_token(token),
@@ -788,7 +788,7 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   // 4.0.0.0  9223372036854775804
 
   const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
+  Murmur3Partitioner::Token token = CASS_INT64_MIN + static_cast<int64_t>(partition_size);
 
   for (size_t i = 1; i <= num_hosts; ++i) {
     Host::Ptr host(create_host(addr_for_sequence(i), single_token(token),
