@@ -108,7 +108,6 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
 int main(int argc, char* argv[]) {
   /* Setup and connect to cluster */
-  CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
   char* hosts = "127.0.0.1";

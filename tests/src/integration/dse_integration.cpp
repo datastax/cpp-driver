@@ -41,9 +41,12 @@ void DseIntegration::connect() {
   connect(dse_cluster_);
 }
 
-Cluster DseIntegration::default_cluster() {
-  return dse::Cluster::build()
-      .with_contact_points(contact_points_)
-      .with_randomized_contact_points(is_randomized_contact_points_)
-      .with_schema_metadata(is_schema_metadata_);
+Cluster DseIntegration::default_cluster(bool is_with_default_contact_points) {
+  Cluster cluster = dse::Cluster::build()
+                        .with_randomized_contact_points(is_randomized_contact_points_)
+                        .with_schema_metadata(is_schema_metadata_);
+  if (is_with_default_contact_points) {
+    cluster.with_contact_points(contact_points_);
+  }
+  return cluster;
 }

@@ -66,8 +66,7 @@ public:
    * Create the downgrading consistency retry policy object from the native
    * driver downgrading consistency retry policy object
    */
-  DowngradingConsistencyRetryPolicy()
-      : RetryPolicy(cass_retry_policy_downgrading_consistency_new()) {}
+  DowngradingConsistencyRetryPolicy();
 };
 
 /**

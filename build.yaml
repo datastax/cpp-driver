@@ -46,7 +46,7 @@ build:
 
       FUNCTIONS+=($(grep -Eoh '(^cass_\s*(\w+)\s*\()|(^dse_\s*(\w+)\s*\()' include/dse.h | awk -F '(' '{print $1}'));
       FUNCTIONS+=($(grep -Eoh '^cass_\s*(\w+)\s*\(' include/cassandra.h | awk -F '(' '{print $1}'))
-      check_driver_exports 'build/libcassandra_static.a' "${FUNCTIONS[@]}"
+      check_driver_exports 'build/libcassandra' "${FUNCTIONS[@]}"
 
       build/cassandra-unit-tests --gtest_output=xml:unit-test-results.xml
 

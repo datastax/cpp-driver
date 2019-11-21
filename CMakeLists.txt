@@ -55,7 +55,6 @@ if(CASS_BUILD_TESTS)
 endif()
 
 if(CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
-  set(CASS_BUILD_STATIC ON) # Required for tests
   set(CASS_USE_OPENSSL ON) # Required for tests
   set(CASS_USE_KERBEROS ON) # Required for tests
 endif()

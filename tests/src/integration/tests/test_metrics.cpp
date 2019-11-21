@@ -90,11 +90,10 @@ CASSANDRA_INTEGRATION_TEST_F(MetricsTests, ErrorsPendingRequestTimeouts) {
     session_.execute_async(SELECT_ALL_SYSTEM_LOCAL_CQL);
   }
 
-  CassMetrics metrics;
-  start_timer();
-  while (elapsed_time() < 10000 && metrics.errors.pending_request_timeouts == 0) {
-    msleep(100);
+  CassMetrics metrics = session_.metrics();
+  for (int i = 0; i < 100 && metrics.errors.pending_request_timeouts == 0; ++i) {
     metrics = session_.metrics();
+    msleep(100);
   }
   EXPECT_GT(metrics.errors.pending_request_timeouts, 0u);
 }
@@ -117,11 +116,10 @@ CASSANDRA_INTEGRATION_TEST_F(MetricsTests, ErrorsRequestTimeouts) {
     session.execute_async(SELECT_ALL_SYSTEM_LOCAL_CQL);
   }
 
-  CassMetrics metrics;
-  start_timer();
-  while (elapsed_time() < 10000 && metrics.errors.request_timeouts == 0) {
-    msleep(100);
+  CassMetrics metrics = session.metrics();
+  for (int i = 0; i < 100 && metrics.errors.request_timeouts == 0; ++i) {
     metrics = session.metrics();
+    msleep(100);
   }
   EXPECT_GT(metrics.errors.request_timeouts, 0u);
 }
@@ -138,11 +136,11 @@ CASSANDRA_INTEGRATION_TEST_F(MetricsTests, ErrorsRequestTimeouts) {
 CASSANDRA_INTEGRATION_TEST_F(MetricsTests, Requests) {
   CHECK_FAILURE;
 
-  CassMetrics metrics;
-  start_timer();
-  while (elapsed_time() < 60000 && metrics.requests.fifteen_minute_rate == 0.0) {
+  CassMetrics metrics = session_.metrics();
+  for (int i = 0; i < 600 && metrics.requests.fifteen_minute_rate == 0; ++i) {
     session_.execute_async(SELECT_ALL_SYSTEM_LOCAL_CQL);
     metrics = session_.metrics();
+    msleep(100);
   }
 
   EXPECT_LT(metrics.requests.min, CASS_UINT64_MAX);
@@ -187,11 +185,11 @@ CASSANDRA_INTEGRATION_TEST_F(MetricsTests, SpeculativeExecutionRequests) {
   statement.set_idempotent(true);
   statement.set_request_timeout(30000);
 
-  CassSpeculativeExecutionMetrics metrics;
-  start_timer();
-  while (elapsed_time() < 60000 && metrics.count < 1000u) {
+  CassSpeculativeExecutionMetrics metrics = session.speculative_execution_metrics();
+  for (int i = 0; i < 600 && metrics.count < 1000u; ++i) {
     session.execute_async(statement);
     metrics = session.speculative_execution_metrics();
+    msleep(100);
   }
 
   EXPECT_LT(metrics.min, CASS_UINT64_MAX);

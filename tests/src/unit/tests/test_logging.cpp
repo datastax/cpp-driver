@@ -65,7 +65,7 @@ TEST_F(LoggingUnitTest, ControlConnectionSeverityHigh) {
   add_logging_critera("Unable to establish a control connection to host 127.0.0.1", CASS_LOG_ERROR);
   Future::Ptr connect_future = connect_async();
   EXPECT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
-  EXPECT_EQ(1u, logging_criteria_count());
+  EXPECT_EQ(1, logging_criteria_count());
 }
 
 /**
@@ -82,7 +82,7 @@ TEST_F(LoggingUnitTest, ControlConnectionSeverityReduced) {
   add_logging_critera("Lost control connection to host 127.0.0.1", CASS_LOG_WARN);
   Future::Ptr connect_future = connect_async();
   EXPECT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
-  EXPECT_EQ(0u, logging_criteria_count());
+  EXPECT_EQ(0, logging_criteria_count());
   cluster.stop_all();
   EXPECT_TRUE(wait_for_logger(1));
 }

@@ -228,11 +228,8 @@ CassError insert_into_collections(CassSession* session, const char* key, const D
   const CassDataType* udt_type = NULL;
   CassUserType* udt = NULL;
 
-  const char** item = NULL;
   const char* query =
       "INSERT INTO examples.drcoll (key, coll_value, tuple_value, udt_value) VALUES (?, ?, ?, ?);";
-  int ind = 0;
-
   statement = cass_statement_new(query, 4);
 
   cass_statement_bind_string(statement, 0, key);
