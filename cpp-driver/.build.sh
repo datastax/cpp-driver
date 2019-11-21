@@ -27,9 +27,11 @@ SHA=$(echo ${GIT_COMMIT} | cut -c1-7)
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 if [ "${OS_NAME}" = "osx" ]; then
+  LIB_SUFFIX="dylib"
   PROCS=$(sysctl -n hw.logicalcpu)
   . ${SCRIPT_DIR}/.build.osx.sh
 else
+  LIB_SUFFIX="so"
   PROCS=$(grep -e '^processor' -c /proc/cpuinfo)
   . ${SCRIPT_DIR}/.build.linux.sh
 fi
@@ -79,7 +81,6 @@ build_driver() {
     fi
     cmake -DCMAKE_BUILD_TYPE=Release \
           -D${driver_prefix}_BUILD_SHARED=On \
-          -D${driver_prefix}_BUILD_STATIC=On \
           -D${driver_prefix}_BUILD_EXAMPLES=On \
           -D${driver_prefix}_BUILD_UNIT_TESTS=On \
           -D${driver_prefix}_BUILD_INTEGRATION_TESTS=${BUILD_INTEGRATION_TESTS} \
@@ -91,11 +92,13 @@ build_driver() {
 
 check_driver_exports() {(
   set +e  #Disable fail fast for this subshell
-  local driver_library=${1}
+  local driver_library="${1}.${LIB_SUFFIX}"
   if [ -f ${driver_library} ]; then
     declare -a MISSING_FUNCTIONS
+    local symbols_file=$(mktemp /tmp/driver_exports.XXXXXX)
+    nm ${driver_library} > $symbols_file
     for function in "${@:2}"; do
-      nm ${driver_library} | grep ${function} > /dev/null
+      grep ${function} $symbols_file > /dev/null
       if [ $? -ne 0 ]
       then
         MISSING_DEFINITION+=("${function}")

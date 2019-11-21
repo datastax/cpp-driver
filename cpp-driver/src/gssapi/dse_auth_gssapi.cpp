@@ -40,17 +40,6 @@ using namespace datastax::internal::enterprise;
 static void dse_gssapi_authenticator_nop_lock(void* data) {}
 static void dse_gssapi_authenticator_nop_unlock(void* data) {}
 
-extern "C" {
-
-CassError
-dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
-                                            DseGssapiAuthenticatorUnlockCallback unlock_callback,
-                                            void* data) {
-  return DseGssapiAuthenticator::set_lock_callbacks(lock_callback, unlock_callback, data);
-}
-
-} // extern "C"
-
 struct GssapiBuffer {
 public:
   gss_buffer_desc buffer;

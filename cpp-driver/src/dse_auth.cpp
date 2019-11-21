@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include "dse.h"
+
 #include "dse_auth.hpp"
 #include "logger.hpp"
 
@@ -25,6 +27,21 @@
 using namespace datastax;
 using namespace datastax::internal;
 using namespace datastax::internal::enterprise;
+
+extern "C" {
+
+CassError
+dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
+                                            DseGssapiAuthenticatorUnlockCallback unlock_callback,
+                                            void* data) {
+#ifdef HAVE_KERBEROS
+  return DseGssapiAuthenticator::set_lock_callbacks(lock_callback, unlock_callback, data);
+#else
+  return CASS_ERROR_LIB_NOT_IMPLEMENTED;
+#endif
+}
+
+} // extern "C"
 
 bool DsePlainTextAuthenticator::initial_response(String* response) {
   if (class_name_ == DSE_AUTHENTICATOR) {
