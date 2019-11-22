@@ -69,12 +69,13 @@ if(CASS_BUILD_INTEGRATION_TESTS)
     ${CASS_LIBS}
     ${PROJECT_LIB_NAME_TARGET}
     ${INTEGRATION_TESTS_LIBSSH2_LIBRARIES})
-  set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY PROJECT_LABEL ${INTEGRATION_TESTS_DISPLAY_NAME})
-  set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
   # Enable bigobj for large object files during compilation (Cassandra types integration test)
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    set_property(TARGET ${INTEGRATION_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS "/bigobj")
+    set(TEST_CMAKE_CXX_FLAGS "${TEST_CMAKE_CXX_FLAGS} /bigobj")
   endif()
+  set_target_properties(${INTEGRATION_TESTS_NAME} PROPERTIES PROJECT_LABEL "${INTEGRATION_TESTS_DISPLAY_NAME}"
+                                                             FOLDER "Tests"
+                                                             COMPILE_FLAGS "${TEST_CMAKE_CXX_FLAGS}")
   if(LIBSSH2_LIBRARY_NAME) # Handle ExternalProject dependency
     add_dependencies(${INTEGRATION_TESTS_NAME} ${LIBSSH2_LIBRARY_NAME})
   endif()
