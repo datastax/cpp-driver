@@ -147,22 +147,22 @@ macro(CassConfigureShared prefix)
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES
       COMPILE_PDB_NAME "${PROJECT_LIB_NAME}"
       COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  set(STATIC_COMPILE_FLAGS "-D${prefix}_BUILDING")
+  set(SHARED_COMPILE_FLAGS "-D${prefix}_BUILDING")
   if("${prefix}" STREQUAL "DSE")
-    set(STATIC_COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -DCASS_BUILDING")
+    set(SHARED_COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -DCASS_BUILDING")
   endif()
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set_property(
         TARGET ${PROJECT_LIB_NAME}
-        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-undefined-var-template -Werror")
+        APPEND PROPERTY COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-undefined-var-template -Werror")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # To many superfluous warnings generated with GCC when using -Wconversion (see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40752)
     set_property(
         TARGET ${PROJECT_LIB_NAME}
-        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Werror")
+        APPEND PROPERTY COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -Werror")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set_property(
         TARGET ${PROJECT_LIB_NAME}
-        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} /we4800")
+        APPEND PROPERTY COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} /we4800")
   endif()
 endmacro()
 
@@ -204,8 +204,8 @@ macro(CassConfigureStatic prefix)
 
   # Update the CXX flags to indicate the use of the static library
   if(${prefix}_USE_STATIC_LIBS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STATIC_COMPILE_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${STATIC_COMPILE_FLAGS}")
+    set(TEST_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STATIC_COMPILE_FLAGS}") # Unit and integration test executables
+    set(EXAMPLE_CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${STATIC_COMPILE_FLAGS}") # Example executables
   endif()
 endmacro()
 

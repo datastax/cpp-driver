@@ -81,8 +81,9 @@ if(DSE_BUILD_INTEGRATION_TESTS)
                         ${DSE_LIBS}
                         ${PROJECT_LIB_NAME_TARGET}
                         ${INTEGRATION_TESTS_LIBSSH2_LIBRARIES})
-  set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY PROJECT_LABEL ${INTEGRATION_TESTS_DISPLAY_NAME})
-  set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
+  set_target_properties(${INTEGRATION_TESTS_NAME} PROPERTIES PROJECT_LABEL "${INTEGRATION_TESTS_DISPLAY_NAME}"
+                                                             FOLDER "Tests"
+                                                             COMPILE_FLAGS "${TEST_CMAKE_CXX_FLAGS}")
   if(LIBSSH2_LIBRARY_NAME) # Handle ExternalProject dependency
     add_dependencies(${INTEGRATION_TESTS_NAME} ${LIBSSH2_LIBRARY_NAME})
   endif()
