@@ -287,9 +287,9 @@ macro(GtestUnitTests extra_files extra_includes excluded_test_files)
   target_link_libraries(${UNIT_TESTS_NAME}
                         ${DSE_LIBS}
                         ${PROJECT_LIB_NAME_TARGET})
-  set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY PROJECT_LABEL ${UNIT_TESTS_DISPLAY_NAME})
-  set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY FOLDER "Tests")
-  set_property(TARGET ${UNIT_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS ${TEST_CXX_FLAGS})
+  set_target_properties(${UNIT_TESTS_NAME} PROPERTIES PROJECT_LABEL "${UNIT_TESTS_DISPLAY_NAME}"
+                                                      FOLDER "Tests"
+                                                      COMPILE_FLAGS "${TEST_CMAKE_CXX_FLAGS}")
 
   # Add the unit tests to be executed by ctest (see CMake BUILD_TESTING)
   add_test(${UNIT_TESTS_DISPLAY_NAME} ${UNIT_TESTS_NAME}
