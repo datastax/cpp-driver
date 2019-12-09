@@ -167,6 +167,24 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request, const ResponseF
     , manager_(NULL)
     , metrics_(metrics) {}
 
+RequestHandler::~RequestHandler() {
+  if (Logger::log_level() >= CASS_LOG_TRACE) {
+    OStringStream ss;
+    for (RequestTryVec::const_iterator it = request_tries_.begin(), end = request_tries_.end();
+         it != end; ++it) {
+      if (it != request_tries_.begin()) ss << ", ";
+      ss << "(" << it->address << ", ";
+      if (it->error != CASS_OK) {
+        ss << cass_error_desc(it->error);
+      } else {
+        ss << it->latency;
+      }
+      ss << ")";
+    }
+    LOG_TRACE("Speculative execution attempts: [%s]", ss.str().c_str());
+  }
+}
+
 void RequestHandler::set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry) {
   wrapper_.set_prepared_metadata(entry);
 }
@@ -269,6 +287,10 @@ void RequestHandler::set_response(const Host::Ptr& host, const Response::Ptr& re
       metrics_->record_speculative_request(uv_hrtime() - start_time_ns_);
     }
   }
+
+  if (Logger::log_level() >= CASS_LOG_TRACE) {
+    request_tries_.push_back(RequestTry(host->address(), uv_hrtime() - start_time_ns_));
+  }
 }
 
 void RequestHandler::set_error(CassError code, const String& message) {
@@ -289,6 +311,9 @@ void RequestHandler::set_error(const Host::Ptr& host, CassError code, const Stri
       set_error(code, message);
     }
   }
+  if (Logger::log_level() >= CASS_LOG_TRACE) {
+    request_tries_.push_back(RequestTry(host->address(), code));
+  }
 }
 
 void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
@@ -297,6 +322,9 @@ void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
   stop_request();
   running_executions_--;
   future_->set_error_with_response(host->address(), error, code, message);
+  if (Logger::log_level() >= CASS_LOG_TRACE) {
+    request_tries_.push_back(RequestTry(host->address(), code));
+  }
 }
 
 void RequestHandler::stop_timer() { timer_.stop(); }
