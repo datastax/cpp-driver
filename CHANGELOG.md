@@ -1,3 +1,10 @@
+Unreleased
+===========
+
+Bug Fixes
+--------
+* Allow remote hosts to come back up even if policy ignores down hosts
+
 2.14.0
 ===========
 
