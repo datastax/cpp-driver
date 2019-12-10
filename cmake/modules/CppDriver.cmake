@@ -425,13 +425,13 @@ macro(CassUseLibuv)
     message(FATAL_ERROR "Unable to Locate libuv: libuv v1.0.0+ is required")
   endif()
 
-  if (LIBUV_VERSION VERSION_LESS "1.0")
+  if(LIBUV_VERSION VERSION_LESS "1.0")
     message(FATAL_ERROR "Libuv version ${LIBUV_VERSION} is not "
       " supported. Please updgrade to libuv version 1.0 or greater in order to "
       "utilize the driver.")
   endif()
 
-  if (LIBUV_VERSION VERSION_LESS "1.6")
+  if(LIBUV_VERSION VERSION_LESS "1.6")
     message(WARNING "Libuv version ${LIBUV_VERSION} does not support custom "
     "memory allocators (version 1.6 or greater required)")
   endif()
@@ -441,10 +441,16 @@ macro(CassUseLibuv)
   set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARIES})
 
   # libuv and gtests require thread library
-  set (THREADS_PREFER_PTHREAD_FLAG 1)
+  set(CMAKE_THREAD_PREFER_PTHREAD 1)
+  set(THREADS_PREFER_PTHREAD_FLAG 1)
   find_package(Threads REQUIRED)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+  if(NOT WIN32 AND ${CMAKE_VERSION} VERSION_LESS "3.1.0")
+    # FindThreads in CMake versions < v3.1.0 do not have the THREADS_PREFER_PTHREAD_FLAG to prefer -pthread
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+  endif()
 endmacro()
 
 #------------------------
