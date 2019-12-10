@@ -935,6 +935,46 @@ TEST_F(SessionUnitTest, DefaultConsistencyExecutionProfileNotUpdated) {
   close(&session);
 }
 
+TEST_F(SessionUnitTest, RemoteDCNodeRecovery) {
+  mockssandra::SimpleCluster cluster(simple(), 1, 1); // 1 local DC node and 1 remote DC node
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  ExecutionProfile profile;
+  Config config;
+  config.set_constant_reconnect(100); // Faster reconnect time to handle node outages
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_load_balancing_policy(new DCAwarePolicy("dc1", 1));
+
+  Session session;
+  connect(config, &session);
+
+  cluster.stop(1); // Force using the remote node
+
+  cluster.stop(2); // Force the remote node down and up
+  cluster.start(2);
+
+  bool remote_dc_node_recovered = false;
+
+  // Wait for the remote DC node to become available
+  for (int i = 0; i < 20; ++i) { // Around 2 seconds
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+    request->set_consistency(CASS_CONSISTENCY_ONE); // Don't use a LOCAL consistency
+    request->set_record_attempted_addresses(true);
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    if (!future->error() && !future->attempted_addresses().empty() &&
+        Address("127.0.0.2", 9042) == future->attempted_addresses()[0]) {
+      remote_dc_node_recovered = true;
+      break;
+    }
+    test::Utils::msleep(100);
+  }
+
+  EXPECT_TRUE(remote_dc_node_recovered);
+
+  close(&session);
+}
+
 TEST_F(SessionUnitTest, DbaasDetectionUpdateDefaultConsistency) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.on(mockssandra::OPCODE_OPTIONS).execute(new SupportedDbaasOptions());
