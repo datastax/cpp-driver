@@ -1,3 +1,11 @@
+1.10.1
+===========
+
+Bug Fixes
+--------
+* [CPP-879] Allow remote hosts to come back up even if policy ignores down hosts
+  (community PR from kw217)
+
 1.10.0
 ===========
 
