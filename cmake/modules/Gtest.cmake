@@ -6,8 +6,7 @@ cmake_minimum_required(VERSION 2.6.4)
 # Initialize the Google Test framework
 #
 # Input: VENDOR_DIR
-# Output: GOOGLE_TEST_DIR, GOOGLE_TEST_HEADER_FILES, GOOGLE_TEST_SOURCE_FILES,
-#         GOOGLE_TEST_LIBRARIES
+# Output: GOOGLE_TEST_DIR, GOOGLE_TEST_HEADER_FILES, GOOGLE_TEST_SOURCE_FILES
 #------------------------
 macro(GtestFramework)
   #------------------------------
@@ -26,9 +25,6 @@ macro(GtestFramework)
     # VS 2012     11           1700            std::tr1::tuple + _VARIADIC_MAX=10
     # VS 2013     12           1800            std::tr1::tuple
     add_definitions(-D_VARIADIC_MAX=10)
-  else()
-    find_package(Threads REQUIRED)
-    set(GOOGLE_TEST_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
   endif()
 endmacro()
 
@@ -108,10 +104,12 @@ endmacro()
 #------------------------
 macro(GtestIntegrationTestFiles integration_tests_source_dir prefix)
   file(GLOB ${prefix}_INTEGRATION_TESTS_INCLUDE_FILES ${integration_tests_source_dir}/*.hpp)
+  file(GLOB ${prefix}_INTEGRATION_TESTS_CCM_INCLUDE_FILES ${integration_tests_source_dir}/ccm/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES ${integration_tests_source_dir}/objects/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_POLICIES_INCLUDE_FILES ${integration_tests_source_dir}/policies/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_VALUES_INCLUDE_FILES ${integration_tests_source_dir}/values/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_SOURCE_FILES ${integration_tests_source_dir}/*.cpp)
+  file(GLOB ${prefix}_INTEGRATION_TESTS_CCM_SOURCE_FILES ${integration_tests_source_dir}/ccm/*.cpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_OBJECTS_SOURCE_FILES ${integration_tests_source_dir}/objects/*.cpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_TESTS_SOURCE_FILES ${integration_tests_source_dir}/tests/*.cpp)
 endmacro()
@@ -127,10 +125,12 @@ endmacro()
 #------------------------
 macro(GtestIntegrationTestSourceGroups)
   source_group("Header Files" FILES ${INTEGRATION_TESTS_INCLUDE_FILES})
+  source_group("Header Files\\ccm" FILES ${INTEGRATION_TESTS_CCM_INCLUDE_FILES})
   source_group("Header Files\\objects" FILES ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES})
   source_group("Header Files\\policies" FILES ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES})
   source_group("Header Files\\values" FILES ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES})
   source_group("Source Files" FILES ${INTEGRATION_TESTS_SOURCE_FILES})
+  source_group("Source Files\\ccm" FILES ${INTEGRATION_TESTS_CCM_SOURCE_FILES})
   source_group("Source Files\\objects" FILES ${INTEGRATION_TESTS_OBJECTS_SOURCE_FILES})
   source_group("Source Files\\tests" FILES ${INTEGRATION_TESTS_TESTS_SOURCE_FILES})
 endmacro()
@@ -142,10 +142,11 @@ endmacro()
 # the project.
 #
 # Input: many
-# Output: COMMON_INTEGRATION_TEST_SOURCE_FILES
+# Output: COMMON_INTEGRATION_TEST_INCLUDE_FILES, COMMON_INTEGRATION_TEST_SOURCE_FILES
 #------------------------
 macro(GtestCommonIntegrationTestSourceFiles)
   set(COMMON_INTEGRATION_TEST_INCLUDE_FILES ${INTEGRATION_TESTS_INCLUDE_FILES}
+                                            ${INTEGRATION_TESTS_CCM_INCLUDE_FILES}
                                             ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES}
                                             ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES}
                                             ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES}
@@ -154,16 +155,73 @@ macro(GtestCommonIntegrationTestSourceFiles)
                                             ${CPP_DRIVER_INCLUDE_FILES}
                                             ${CPP_DRIVER_HEADER_SOURCE_FILES}
                                             ${CPP_DRIVER_HEADER_SOURCE_ATOMIC_FILES}
-                                            ${CCM_BRIDGE_HEADER_FILES}
                                             ${GOOGLE_TEST_HEADER_FILES}
                                             ${LIBUV_INCLUDE_FILES}
                                             ${LIBSSH2_INCLUDE_FILES}
                                             ${OPENSSL_INCLUDE_FILES})
   set(COMMON_INTEGRATION_TEST_SOURCE_FILES ${INTEGRATION_TESTS_SOURCE_FILES}
+                                           ${INTEGRATION_TESTS_CCM_SOURCE_FILES}
                                            ${INTEGRATION_TESTS_OBJECTS_SOURCE_FILES}
                                            ${INTEGRATION_TESTS_TESTS_SOURCE_FILES}
                                            ${CPP_DRIVER_SOURCE_FILES}
                                            ${GOOGLE_TEST_SOURCE_FILES})
+endmacro()
+
+#------------------------
+# GtestLibssh2IntegrationTest
+#
+# Determine if libssh2 has been requested.
+#
+# Input: CASS_USE_LIBSSH2
+# Output: INTEGRATION_TESTS_LIBSSH2_INCLUDE_FILES, INTEGRATION_TESTS_LIBSSH2_LIBRARIES
+#------------------------
+macro(GtestLibssh2IntegrationTest)
+  if(CASS_USE_LIBSSH2)
+  # Allow for libssh2 directory to be specified on the command line
+    if(NOT LIBSSH2_ROOT)
+      if(EXISTS "${PROJECT_SOURCE_DIR}/lib/libssh2/")
+        set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
+      elseif(EXISTS "${PROJECT_SOURCE_DIR}/build/libs/libssh2/")
+        set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/build/libs/libssh2/")
+      elseif(DEFINED ENV{LIBSSH2_ROOT} AND
+             EXISTS "$ENV{LIBSSH2_ROOT}")
+        set(LIBSSH2_ROOT "$ENV{LIBSSH2_ROOT}")
+      endif()
+    endif()
+    if(LIBSSH2_ROOT_DIR)
+      if(EXISTS ${LIBSSH2_ROOT_DIR})
+        set(LIBSSH2_ROOT ${LIBSSH2_ROOT_DIR})
+      endif()
+    endif()
+
+    # Check for libssh2 availability (build if necessary on Windows)
+    if(WIN32 AND LIBSSH2_VERSION) # Store the current version of libssh2 to prevent corruption
+      set(SAVED_LIBSSH2_VERSION ${LIBSSH2_VERSION})
+    endif()
+    find_package(Libssh2)
+    if(WIN32 AND NOT LIBSSH2_FOUND)
+      message(STATUS "Unable to Locate libssh2: Third party build step will be performed")
+      if(SAVED_LIBSSH2_VERSION)
+        set(LIBSSH2_VERSION ${SAVED_LIBSSH2_VERSION})
+      endif()
+      include(ExternalProject-libssh2)
+    elseif(NOT LIBSSH2_FOUND)
+      message(STATUS "libssh2 is Unavailable: Building integration tests without libssh2 support")
+    endif()
+  endif()
+  if(LIBSSH2_FOUND OR LIBSSH2_INCLUDE_DIRS)
+    include_directories(${LIBSSH2_INCLUDE_DIRS})
+    set(INTEGRATION_TESTS_LIBSSH2_LIBRARIES ${LIBSSH2_LIBRARIES})
+    # Build up the includes and libraries for CCM dependencies
+    add_definitions(-DCASS_USE_LIBSSH2 -DOPENSSL_CLEANUP)
+    file(GLOB INTEGRATION_TESTS_LIBSSH2_INCLUDE_FILES ${LIBSSH2_INCLUDE_DIRS}/*.h)
+    source_group("Header Files\\libssh2" FILES ${INTEGRATION_TESTS_LIBSSH2_INCLUDE_FILES})
+
+    if(WIN32)
+      add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS)
+      set(INTEGRATION_TESTS_LIBSSH2_LIBRARIES ${INTEGRATION_TESTS_LIBSSH2_LIBRARIES} wsock32 ws2_32)
+    endif()
+  endif()
 endmacro()
 
 #------------------------
@@ -186,11 +244,10 @@ macro(GtestUnitTests project_name extra_files extra_includes excluded_test_files
 
   # The unit tests use `test::Utils::msleep()` and this is the minimum include
   # and source files required to shared that code.
-  set(INTEGRATION_TESTS_SOURCE_DIR ${CASS_ROOT_DIR}/gtests/src/integration)
-  set(CCM_BRIDGE_SOURCE_DIR ${CASS_ROOT_DIR}/test/ccm_bridge/src)
-  set(INTEGRATION_TESTS_SOURCE_FILES ${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp
-                                     ${INTEGRATION_TESTS_SOURCE_DIR}/driver_utils.cpp)
-  set(CCM_BRIDGE_SOURCE_FILES "${CCM_BRIDGE_SOURCE_DIR}/tsocket.cpp")
+  set(INTEGRATION_TESTS_SOURCE_DIR ${CASS_ROOT_DIR}/tests/src/integration)
+  set(INTEGRATION_TESTS_CCM_SOURCE_DIR ${INTEGRATION_TESTS_SOURCE_DIR}/ccm)
+  set(INTEGRATION_TESTS_SOURCE_FILES ${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp)
+  set(INTEGRATION_TESTS_CCM_SOURCE_FILES "${INTEGRATION_TESTS_CCM_SOURCE_DIR}/tsocket.cpp")
   file(GLOB UNIT_TESTS_INCLUDE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.hpp )
   file(GLOB UNIT_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.cpp)
   file(GLOB UNIT_TESTS_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/tests/*.cpp)
@@ -207,7 +264,7 @@ macro(GtestUnitTests project_name extra_files extra_includes excluded_test_files
                  ${UNIT_TESTS_SOURCE_FILES}
                  ${UNIT_TESTS_TESTS_SOURCE_FILES}
                  ${INTEGRATION_TESTS_SOURCE_FILES}
-                 ${CCM_BRIDGE_SOURCE_FILES}
+                 ${INTEGRATION_TESTS_CCM_SOURCE_FILES}
                  ${CPP_DRIVER_SOURCE_FILES}
                  ${UNIT_TESTS_INCLUDE_FILES}
                  ${CASS_API_HEADER_FILES}
@@ -220,21 +277,20 @@ macro(GtestUnitTests project_name extra_files extra_includes excluded_test_files
     include_directories(${extra_includes}
                         ${UNIT_TESTS_SOURCE_DIR}
                         ${INTEGRATION_TESTS_SOURCE_DIR}
-                        ${CCM_BRIDGE_SOURCE_DIR})
+                        ${INTEGRATION_TESTS_CCM_SOURCE_DIR})
   else()
     target_include_directories(${UNIT_TESTS_NAME}
                                PUBLIC ${extra_includes}
                                       ${UNIT_TESTS_SOURCE_DIR}
                                       ${INTEGRATION_TESTS_SOURCE_DIR}
-                                      ${CCM_BRIDGE_SOURCE_DIR})
+                                      ${INTEGRATION_TESTS_CCM_SOURCE_DIR})
   endif()
   target_link_libraries(${UNIT_TESTS_NAME}
-                        ${GOOGLE_TEST_LIBRARIES}
                         ${DSE_LIBS}
                         ${PROJECT_LIB_NAME_TARGET})
-  set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY PROJECT_LABEL ${UNIT_TESTS_DISPLAY_NAME})
-  set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY FOLDER "Tests")
-  set_property(TARGET ${UNIT_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS ${TEST_CXX_FLAGS})
+  set_target_properties(${UNIT_TESTS_NAME} PROPERTIES PROJECT_LABEL "${UNIT_TESTS_DISPLAY_NAME}"
+                                                      FOLDER "Tests"
+                                                      COMPILE_FLAGS "${TEST_CMAKE_CXX_FLAGS}")
 
   # Add the unit tests to be executed by ctest (see CMake BUILD_TESTING)
   add_test(${UNIT_TESTS_DISPLAY_NAME} ${UNIT_TESTS_NAME}

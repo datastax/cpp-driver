@@ -63,7 +63,6 @@ Function Build-Configuration-Information {
   $output = @"
 Visual Studio: $($Env:CMAKE_GENERATOR.Split(" ")[-2]) [$($Env:CMAKE_GENERATOR.Split(" ")[-1])]
 Architecture:  $($Env:Platform)
-Boost:         v$($Env:BOOST_VERSION)
 libssh2:       v$($Env:LIBSSH2_VERSION)
 libuv:         v$($Env:LIBUV_VERSION)
 OpenSSL:       v$(Get-OpenSSL-Version)
@@ -112,7 +111,6 @@ Function Environment-Information {
 
 Function Initialize-Build-Environment {
   # Get the versions for the third party dependencies
-  $boost_version = $Env:BOOST_VERSION
   $libssh2_version = $Env:LIBSSH2_VERSION
   $libuv_version = $Env:LIBUV_VERSION
   $openssl_version = Get-OpenSSL-Version
@@ -179,17 +177,15 @@ Function Initialize-Build-Environment {
   }
 
   # Generate default environment variables for per commit builds
-  $boost_version_filename = "$($boost_version.Replace(".", "_"))"
+  If ($Env:APPVEYOR_BUILD_WORKER_IMAGE -Like "Visual Studio 2019") {
+    $boost_version_directory_suffix = "1_71_0"
+  } Else {
+    $boost_version_directory_suffix = "1_69_0"
+  }
   $visual_studio_version = "$($Env:VISUAL_STUDIO_INTERNAL_VERSION.Insert(2, "."))"
 
   # Generate the default Boost environment variables
-  $Env:BOOST_ROOT = "C:/Libraries/boost_$($boost_version_filename)"
-  $Env:BOOST_LIBRARYDIR = "$($Env:BOOST_ROOT)/$($lib_architecture)-msvc-$($visual_studio_version)"
-  If (-Not (Test-Path -Path "$($Env:BOOST_LIBRARYDIR)")) {
-    # Update the Boost environment variables for CMake to find installation
-    $Env:BOOST_ROOT = "$($libs_location_prefix)/boost-$($boost_version)"
-    $Env:BOOST_LIBRARYDIR = "$($Env:BOOST_ROOT)/$($lib_architecture)-msvc-$($visual_studio_version)"
-  }
+  $Env:BOOST_ROOT = "C:/Libraries/boost_$($boost_version_directory_suffix)"
   $Env:BOOST_INCLUDEDIR = "$($Env:BOOST_ROOT)/include"
 
   # Generate the default libssh2 environment variables
@@ -507,55 +503,6 @@ add_dependencies(`${PROJECT_NAME} `${ZLIB_LIBRARY_NAME})
         Throw $PSItem
       }
     }
-  }
-
-  # Handle installation of the per commit dependencies (e.g. Test builds)
-  # Determine if Boost should be installed (pre-installed or cached)
-  If (-Not (Test-Path -Path "$($Env:BOOST_LIBRARYDIR)")) {
-    New-Item -ItemType Directory -Force -Path "$($dependencies_build_location_prefix)/boost" | Out-Null
-    Push-Location -Path "$($dependencies_build_location_prefix)/boost"
-
-    $cmakelists_contents = @"
-cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
-project(Boost)
-set(PROJECT_DISPLAY_NAME "AppVeyor CI Build for Boost")
-set(PROJECT_MODULE_DIR $cmake_modules_dir)
-set(CMAKE_MODULE_PATH `${CMAKE_MODULE_PATH} `${PROJECT_MODULE_DIR})
-include(ExternalProject-boost)
-set(GENERATED_SOURCE_FILE `${CMAKE_CURRENT_BINARY_DIR}/main.cpp)
-file(REMOVE `${GENERATED_SOURCE_FILE})
-file(WRITE `${GENERATED_SOURCE_FILE} "int main () { return 0; }")
-add_executable(`${PROJECT_NAME} `${GENERATED_SOURCE_FILE})
-add_dependencies(`${PROJECT_NAME} `${BOOST_LIBRARY_NAME})
-"@
-    $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
-
-    Write-Host "Configuring Boost"
-    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-DBOOST_VERSION=$($Env:BOOST_VERSION)" "-DBOOST_INSTALL_PREFIX=$($Env:BOOST_ROOT)" .
-    If ($LastExitCode -ne 0) {
-      If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
-        Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "Boost Output Log"
-      }
-      If (Test-Path -Path "build/CMakeFiles/CMakeError.log") {
-        Push-AppveyorArtifact "build/CMakeFiles/CMakeError.log" -DeploymentName "Boost Error Log"
-      }
-      Pop-Location
-      Throw "Failed to configure Boost for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
-    }
-    Write-Host "Building and Installing Boost"
-    cmake --build . --config RelWithDebInfo
-    If ($LastExitCode -ne 0) {
-      If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
-        Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "Boost Output Log"
-      }
-      If (Test-Path -Path "build/CMakeFiles/CMakeError.log") {
-        Push-AppveyorArtifact "build/CMakeFiles/CMakeError.log" -DeploymentName "Boost Error Log"
-      }
-      Pop-Location
-      Throw "Failed to build Boost for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
-    }
-
-    Pop-Location
   }
 
   # Determine if libssh2 should be installed (cached)
