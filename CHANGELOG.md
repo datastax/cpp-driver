@@ -1,32 +1,33 @@
-Unreleased
+2.14.1
 ===========
 
 Bug Fixes
 --------
-* Allow remote hosts to come back up even if policy ignores down hosts
+* [CPP-879] Allow remote hosts to come back up even if policy ignores down hosts
+  (community PR from kw217)
 
 2.14.0
 ===========
 
 Bug Fixes
 --------
-* [CPP-819] - Ensure port is updated on already assigned contact points
-* [CPP-825] - Cloud should be verifying the peer certificates CN
+* [CPP-819] Ensure port is updated on already assigned contact points
+* [CPP-825] Cloud should be verifying the peer certificates CN
 
 2.14.0-alpha2
 ===========
 
 Features
 --------
-* [CPP-812] - Enable warnings for implicit casts and fix problems
-* [CPP-813] - Detect CaaS and change consistency default
-* [CPP-817] - Provide error if mixed usage of secure connect bundle and contact points/ssl context
+* [CPP-812] Enable warnings for implicit casts and fix problems
+* [CPP-813] Detect CaaS and change consistency default
+* [CPP-817] Provide error if mixed usage of secure connect bundle and contact points/ssl context
 
 Bug Fixes
 --------
-* [CPP-802] - Handle prepared id mismatch when repreparing on the fly
-* [CPP-815] - Schema agreement fails with SNI
-* [CPP-811] - Requests won't complete if they exceed the number of streams on a connection
+* [CPP-802] Handle prepared id mismatch when repreparing on the fly
+* [CPP-815] Schema agreement fails with SNI
+* [CPP-811] Requests won't complete if they exceed the number of streams on a connection
 
 2.14.0-alpha
 ===========
