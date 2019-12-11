@@ -19,10 +19,6 @@
 #include "callback.hpp"
 #include "name_resolver.hpp"
 
-#ifdef WIN32
-#include "winsock.h"
-#endif
-
 #define RESOLVE_TIMEOUT 2000
 
 using namespace datastax;
@@ -58,13 +54,7 @@ TEST_F(NameResolverUnitTest, Simple) {
   resolver->resolve(loop(), RESOLVE_TIMEOUT);
   run_loop();
   ASSERT_EQ(NameResolver::SUCCESS, status());
-#ifdef WIN32
-  char win_hostname[64];
-  gethostname(win_hostname, 64);
-  EXPECT_EQ(String(win_hostname), hostname());
-#else
   EXPECT_EQ("cpp-driver.hostname.", hostname());
-#endif
 }
 
 TEST_F(NameResolverUnitTest, Timeout) {
