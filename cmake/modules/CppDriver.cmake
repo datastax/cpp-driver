@@ -88,13 +88,13 @@ endmacro()
 # CassOptionalDependencies
 #
 # Configure enabled optional dependencies if found or if Windows use an
-# external project to build Boost, OpenSSL, zlib.
+# external project to build OpenSSL and zlib.
 #
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
 macro(CassOptionalDependencies)
   # Boost
-  if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS)
+  if(CASS_USE_BOOST_ATOMIC)
     CassUseBoost()
   endif()
 
@@ -147,22 +147,22 @@ macro(CassConfigureShared prefix)
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES
       COMPILE_PDB_NAME "${PROJECT_LIB_NAME}"
       COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  set(STATIC_COMPILE_FLAGS "-D${prefix}_BUILDING")
+  set(SHARED_COMPILE_FLAGS "-D${prefix}_BUILDING")
   if("${prefix}" STREQUAL "DSE")
-    set(STATIC_COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -DCASS_BUILDING")
+    set(SHARED_COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -DCASS_BUILDING")
   endif()
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set_property(
         TARGET ${PROJECT_LIB_NAME}
-        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-undefined-var-template -Werror")
+        APPEND PROPERTY COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-undefined-var-template -Werror")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # To many superfluous warnings generated with GCC when using -Wconversion (see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40752)
     set_property(
         TARGET ${PROJECT_LIB_NAME}
-        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Werror")
+        APPEND PROPERTY COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -Werror")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set_property(
         TARGET ${PROJECT_LIB_NAME}
-        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} /we4800")
+        APPEND PROPERTY COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} /we4800")
   endif()
 endmacro()
 
@@ -204,8 +204,8 @@ macro(CassConfigureStatic prefix)
 
   # Update the CXX flags to indicate the use of the static library
   if(${prefix}_USE_STATIC_LIBS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STATIC_COMPILE_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${STATIC_COMPILE_FLAGS}")
+    set(TEST_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STATIC_COMPILE_FLAGS}") # Unit and integration test executables
+    set(EXAMPLE_CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${STATIC_COMPILE_FLAGS}") # Example executables
   endif()
 endmacro()
 
@@ -383,15 +383,8 @@ endmacro()
 # Input: CASS_BUILD_INTEGRATION_TESTS, CASS_BUILD_UNIT_TESTS, CASS_ROOT_DIR
 #------------------------
 macro(CassConfigureTests)
-  if(CASS_BUILD_INTEGRATION_TESTS)
-    # Add CCM bridge as a dependency for integration tests
-    set(CCM_BRIDGE_INCLUDES "${CASS_ROOT_DIR}/test/ccm_bridge/src")
-    add_subdirectory(${CASS_ROOT_DIR}/test/ccm_bridge)
-    add_subdirectory(${CASS_ROOT_DIR}/test/integration_tests)
-  endif()
-
   if (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
-    add_subdirectory(${CASS_ROOT_DIR}/gtests)
+    add_subdirectory(${CASS_ROOT_DIR}/tests)
   endif()
 endmacro()
 
@@ -427,13 +420,13 @@ macro(CassUseLibuv)
     message(FATAL_ERROR "Unable to Locate libuv: libuv v1.0.0+ is required")
   endif()
 
-  if (LIBUV_VERSION VERSION_LESS "1.0")
+  if(LIBUV_VERSION VERSION_LESS "1.0")
     message(FATAL_ERROR "Libuv version ${LIBUV_VERSION} is not "
       " supported. Please updgrade to libuv version 1.0 or greater in order to "
       "utilize the driver.")
   endif()
 
-  if (LIBUV_VERSION VERSION_LESS "1.6")
+  if(LIBUV_VERSION VERSION_LESS "1.6")
     message(WARNING "Libuv version ${LIBUV_VERSION} does not support custom "
     "memory allocators (version 1.6 or greater required)")
   endif()
@@ -441,6 +434,18 @@ macro(CassUseLibuv)
   # Assign libuv include and libraries
   set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIRS})
   set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARIES})
+
+  # libuv and gtests require thread library
+  set(CMAKE_THREAD_PREFER_PTHREAD 1)
+  set(THREADS_PREFER_PTHREAD_FLAG 1)
+  find_package(Threads REQUIRED)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+  if(NOT WIN32 AND ${CMAKE_VERSION} VERSION_LESS "3.1.0")
+    # FindThreads in CMake versions < v3.1.0 do not have the THREADS_PREFER_PTHREAD_FLAG to prefer -pthread
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+  endif()
 endmacro()
 
 #------------------------
@@ -516,37 +521,12 @@ macro(CassHttpParser)
 endmacro()
 
 #------------------------
-# CassSimulacron
-#
-# Set up Simulacron for use in tests.
-#
-# Input: TESTS_SIMULACRON_SERVER_DIR
-# Output: SIMULACRON_SERVER_JAR
-#------------------------
-macro(CassSimulacron)
-  # Determine if Simulacron server can be executed (Java runtime is available)
-  find_package(Java COMPONENTS Runtime)
-  if(Java_Runtime_FOUND)
-    # Determine the Simulacron jar file
-    file(GLOB SIMULACRON_SERVER_JAR
-      ${TESTS_SIMULACRON_SERVER_DIR}/simulacron-standalone-*.jar)
-  endif()
-
-  # Determine if the Simulacron server will be available for the tests
-  if(NOT EXISTS ${SIMULACRON_SERVER_JAR})
-    message(WARNING "Simulacron Not Found: Simulacron support will be disabled")
-  endif()
-endmacro()
-
-
-#------------------------
 # CassUseBoost
 #
-# Add includes, libraries, define flags required for using Boost if found or if
-# Windows use an external project to build Boost.
+# Add includes and define flags required for using Boost if found.
 #
-# Input: CASS_USE_STATIC_LIBS, CASS_USE_BOOST_ATOMIC, CASS_INCLUDES, CASS_LIBS
-# Output: CASS_INCLUDES and CASS_LIBS
+# Input: CASS_USE_BOOST_ATOMIC, CASS_INCLUDES
+# Output: CASS_INCLUDES
 #------------------------
 macro(CassUseBoost)
   # Allow for boost directory to be specified on the command line
@@ -568,64 +548,15 @@ macro(CassUseBoost)
     add_definitions(-DBOOST_ALL_NO_LIB)
   endif()
 
-  # Determine if shared or static boost libraries should be used
-  if(CASS_USE_STATIC_LIBS OR
-     (WIN32 AND CASS_BUILD_INTEGRATION_TESTS)) # Force the use of Boost static libraries for Windows (e.g. executables)
-    set(Boost_USE_STATIC_LIBS ON)
-  else()
-    set(Boost_USE_STATIC_LIBS OFF)
-    add_definitions(-DBOOST_ALL_DYN_LINK)
-  endif()
-  set(Boost_USE_STATIC_RUNTIME OFF)
-  set(Boost_USE_MULTITHREADED ON)
-  add_definitions(-DBOOST_THREAD_USES_MOVE)
-
   # Check for general Boost availability
   find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} QUIET)
-  if ((WIN32 AND NOT Boost_FOUND) AND
-      (CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS))
-    message(STATUS "Unable to Locate Boost: Third party build step will be performed")
-    include(ExternalProject-Boost)
-  else()
-    message(STATUS "Boost version: v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-    # Ensure the driver components exist (optional)
-    if(CASS_USE_BOOST_ATOMIC)
-      if(NOT Boost_INCLUDE_DIRS)
-        message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
-      endif()
-
-      # Assign Boost include for atomics
-      set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
+  if(CASS_USE_BOOST_ATOMIC)
+    if(NOT Boost_INCLUDE_DIRS)
+      message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
     endif()
 
-    # Determine if Boost components are available for test executables
-    if(CASS_BUILD_INTEGRATION_TESTS)
-      # Handle new required version of CMake for Boost v1.66.0 (Windows only)
-      if(WIN32)
-        if(Boost_FOUND)
-          if(Boost_VERSION GREATER 106600 OR Boost_VERSION EQUAL 106600)
-            # Ensure CMake version is v3.11.0+
-            if(CMAKE_VERSION VERSION_LESS 3.11.0)
-              message(FATAL_ERROR "Boost v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} requires CMake v3.11.0+."
-                "Updgrade CMake or downgrade Boost to v${CASS_MINIMUM_BOOST_VERSION} - v1.65.1.")
-            endif()
-          endif()
-        endif()
-      endif()
-
-      # Ensure Boost components are available
-      find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono system thread unit_test_framework)
-      if(NOT Boost_FOUND)
-        # Ensure Boost was not found due to minimum version requirement
-        set(CASS_FOUND_BOOST_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-        if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "${CASS_MINIMUM_BOOST_VERSION}")
-          OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "${CASS_MINIMUM_BOOST_VERSION}"))
-          message(FATAL_ERROR "Boost [chrono, system, thread, and unit_test_framework] are required to build tests")
-        else()
-          message(FATAL_ERROR "Boost v${CASS_FOUND_BOOST_VERSION} Found: v${CASS_MINIMUM_BOOST_VERSION} or greater required")
-        endif()
-      endif()
-    endif()
+    # Assign Boost include for atomics
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
   endif()
 
   # Determine if additional Boost definitions are required for driver/executables

@@ -1,32 +1,52 @@
-Unreleased
+2.14.1
 ===========
 
 Bug Fixes
 --------
-* Allow remote hosts to come back up even if policy ignores down hosts
+* [CPP-849] Error result doesn't allow access to keyspace, table, and function
+  data
+* [CPP-851] Disable deprecated warnings for std::ptr_fun
+* [CPP-879] Allow remote hosts to come back up even if policy ignores down hosts
+  (community PR from kw217)
+
+Other
+--------
+* [CPP-220] Remove use of external Boost from unit and integration tests. 
+  * We ported all integration tests from Boost to Google test. This includes
+    several JIRA issues included in the [CPP-220] epic.
+* [CPP-853] Correct linking libraries for unix based OS when using
+  CASS_USE_STATIC_LIBS=On 
+* [CPP-859] Remove vc_build.bat scripts and update building documentation
+* [CPP-872] Fix GCC 9.2+ build
+* [CPP-878] Correct compile flags for libraries and executable
+* [CPP-882] Correct pthread compiler flag for older CMake versions
+
+Community
+--------
+* Fix build error when compiling without an SSL implementation (kmaragon)
 
 2.14.0
 ===========
 
 Bug Fixes
 --------
-* [CPP-819] - Ensure port is updated on already assigned contact points
-* [CPP-825] - Cloud should be verifying the peer certificates CN
+* [CPP-819] Ensure port is updated on already assigned contact points
+* [CPP-825] Cloud should be verifying the peer certificates CN
 
 2.14.0-alpha2
 ===========
 
 Features
 --------
-* [CPP-812] - Enable warnings for implicit casts and fix problems
-* [CPP-813] - Detect CaaS and change consistency default
-* [CPP-817] - Provide error if mixed usage of secure connect bundle and contact points/ssl context
+* [CPP-812] Enable warnings for implicit casts and fix problems
+* [CPP-813] Detect CaaS and change consistency default
+* [CPP-817] Provide error if mixed usage of secure connect bundle and contact points/ssl context
 
 Bug Fixes
 --------
-* [CPP-802] - Handle prepared id mismatch when repreparing on the fly
-* [CPP-815] - Schema agreement fails with SNI
-* [CPP-811] - Requests won't complete if they exceed the number of streams on a connection
+* [CPP-802] Handle prepared id mismatch when repreparing on the fly
+* [CPP-815] Schema agreement fails with SNI
+* [CPP-811] Requests won't complete if they exceed the number of streams on a connection
 
 2.14.0-alpha
 ===========

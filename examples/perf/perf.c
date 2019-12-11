@@ -138,8 +138,6 @@ CassCluster* create_cluster(const char* hosts) {
   cass_cluster_set_num_threads_io(cluster, NUM_IO_WORKER_THREADS);
   cass_cluster_set_queue_size_io(cluster, 10000);
   cass_cluster_set_core_connections_per_host(cluster, 1);
-  cass_cluster_set_max_connections_per_host(cluster, 2);
-  cass_cluster_set_max_requests_per_flush(cluster, 10000);
   return cluster;
 }
 
