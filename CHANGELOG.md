@@ -24,7 +24,6 @@ Other
 Community
 --------
 * Fix build error when compiling without an SSL implementation (kmaragon)
- (community PR from kw217)
 
 1.10.0
 ===========
