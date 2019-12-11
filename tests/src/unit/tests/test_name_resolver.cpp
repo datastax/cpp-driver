@@ -54,7 +54,7 @@ private:
 };
 
 TEST_F(NameResolverUnitTest, Simple) {
-  NameResolver::Ptr resolver(create(Address("127.0.0.1", 9042)));
+  NameResolver::Ptr resolver(create(Address("127.254.254.254", 9042)));
   resolver->resolve(loop(), RESOLVE_TIMEOUT);
   run_loop();
   ASSERT_EQ(NameResolver::SUCCESS, status());
@@ -63,12 +63,12 @@ TEST_F(NameResolverUnitTest, Simple) {
   gethostname(win_hostname, 64);
   EXPECT_EQ(String(win_hostname), hostname());
 #else
-  EXPECT_EQ("localhost", hostname());
+  EXPECT_EQ("cpp-driver.hostname.", hostname());
 #endif
 }
 
 TEST_F(NameResolverUnitTest, Timeout) {
-  NameResolver::Ptr resolver(create(Address("127.0.0.1", 9042)));
+  NameResolver::Ptr resolver(create(Address("127.254.254.254", 9042)));
 
   // Libuv's address resolver uses the uv_work thread pool to handle resolution
   // asynchronously. If we starve all the threads in the uv_work thread pool
@@ -91,7 +91,7 @@ TEST_F(NameResolverUnitTest, Invalid) {
 }
 
 TEST_F(NameResolverUnitTest, Cancel) {
-  NameResolver::Ptr resolver(create(Address("127.0.0.1", 9042)));
+  NameResolver::Ptr resolver(create(Address("127.254.254.254", 9042)));
   resolver->resolve(loop(), RESOLVE_TIMEOUT);
   resolver->cancel();
   run_loop();
