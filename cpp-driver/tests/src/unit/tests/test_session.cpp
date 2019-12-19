@@ -948,7 +948,7 @@ TEST_F(SessionUnitTest, RemoteDCNodeRecovery) {
     QueryRequest::Ptr request(new QueryRequest("blah", 0));
     request->set_consistency(CASS_CONSISTENCY_ONE); // Don't use a LOCAL consistency
     request->set_record_attempted_addresses(true);
-    ResponseFuture::Ptr future = session.execute(request, NULL);
+    ResponseFuture::Ptr future = session.execute(Request::ConstPtr(request));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
     if (!future->error() && !future->attempted_addresses().empty() &&
         Address("127.0.0.2", 9042) == future->attempted_addresses()[0]) {
