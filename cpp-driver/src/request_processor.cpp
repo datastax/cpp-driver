@@ -462,9 +462,7 @@ void RequestProcessor::internal_host_ready(const Host::Ptr& host) {
     LoadBalancingPolicy::Vec policies = load_balancing_policies();
     for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(); it != policies.end();
          ++it) {
-      if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-        (*it)->on_host_up(host);
-      }
+      (*it)->on_host_up(host);
     }
   }
 }
