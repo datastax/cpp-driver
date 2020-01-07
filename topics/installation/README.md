@@ -196,7 +196,7 @@ Kerberos) on Windows because they can be difficult to install/build.
 
 #### To Install
 
-First, you will need to download and install [Kerberos for Windows].
+First, you will need to download and install [Kerberos] for Windows.
 
 Unzip the packages (from http://downloads.datastax.com) and add the include and
 library directories to your project's `Additional Include Directories` and
@@ -208,3 +208,5 @@ If pre-built packages are not available for your platform or architecture you
 will need to build the driver from source. Directions for building and
 installing the DataStax C/C++ Driver for Apache Cassandra and DataStax Products
 can be found [here](/topics/building/).
+
+[Kerberos]: https://web.mit.edu/kerberos

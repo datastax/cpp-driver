@@ -268,7 +268,7 @@ with other drivers. The schedule for these features can be found on [JIRA].
 [cpp-driver-dependencies-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/
 [cpp-driver-dependencies-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/
 [cpp-driver-dependencies-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/
-[cpp-driver-dependencies-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/
+[cpp-driver-dependencies-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/
 [cpp-driver-dependencies-windows]: http://downloads.datastax.com/cpp-driver/windows/dependencies/
 [built from source]: http://datastax.github.io/cpp-driver/topics/building/
 [prepared statements]: http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/
