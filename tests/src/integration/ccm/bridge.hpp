@@ -773,10 +773,6 @@ private:
    * generation
    */
   std::string host_;
-  /**
-   * Flag to determine if verbose output is enabled
-   */
-  bool is_verbose_;
 #ifdef CASS_USE_LIBSSH2
   /**
    * SSH session handle for establishing connection
@@ -795,6 +791,10 @@ private:
    * Workload values to use when setting the workload via CCM
    */
   static const std::vector<std::string> dse_workloads_;
+  /**
+   * Flag to determine if verbose output is enabled
+   */
+  bool is_verbose_;
 
 #ifdef CASS_USE_LIBSSH2
   /**
