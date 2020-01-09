@@ -28,13 +28,19 @@ The C/C++ driver depends on the following software:
 * [libuv] 1.x
 * Kerberos v5 ([Heimdal] or [MIT]) \*
 * [OpenSSL] v1.0.x or v1.1.x \*\*
+* [zlib] v1.x \*\*\*
 
 __\*__ Use the `CASS_USE_KERBEROS` CMake option to enable/disable Kerberos
        support. Enabling this option will enable Kerberos authentication
        protocol within the driver; defaults to `Off`.
+
 __\*\*__ Use the `CASS_USE_OPENSSL` CMake option to enable/disable OpenSSL
          support. Disabling this option will disable SSL/TLS protocol support
          within the driver; defaults to `On`.
+
+__\*\*\*__ Use the `CASS_USE_ZLIB` CMake option to enable/disable zlib support.
+           Disabling this option will disable DataStax Constellation support
+           within the driver; defaults to `On`.
 
 ## Linux/Mac OS
 
@@ -163,7 +169,39 @@ wget --no-check-certificate https://www.openssl.org/source/openssl-1.0.2s.tar.gz
 tar xzf openssl-1.0.2s.tar.gz
 pushd openssl-1.0.2s
 CFLAGS=-fpic ./config shared
-make
+make install
+popd
+popd
+```
+
+#### zlib
+
+##### CentOS (Yum)
+
+```bash
+yum install zlib-devel
+```
+
+##### Ubuntu (APT)
+
+```bash
+apt-get install zlib1g-dev
+```
+
+##### Mac OS (Brew)
+
+```bash
+brew install zlib
+```
+
+##### Manually build and install
+
+```bash
+pushd /tmp
+wget --no-check-certificate https://www.zlib.net/zlib-1.2.11.tar.gz
+tar xzf zlib-1.2.11.tar.gz
+pushd zlib-1.2.11
+./configure
 make install
 popd
 popd
@@ -312,3 +350,4 @@ cmake -G "Visual Studio 16 2019" -A x64 -DCASS_BUILD_UNIT_TESTS=On ..
 [Heimdal]: https://www.h5l.org
 [MIT]: https://web.mit.edu/kerberos
 [OpenSSL]: https://www.openssl.org
+[zlib]: https://www.zlib.net

@@ -14,10 +14,10 @@ Binary versions of the driver, available for multiple operating systems and
 multiple architectures, can be obtained from our [download server]. The
 source code is made available via [GitHub].
 
-Packages for the driver's dependencies, libuv (1.x)
-and OpenSSL, are also provided under the `dependencies` directory for each
-platform (if applicable). __Note__: CentOS and Ubuntu use the version of OpenSSL
-provided with the distribution:
+Packages for the driver's dependencies, libuv (1.x), OpenSSL, and zlib are also
+provided under the `dependencies` directory for each platform (if applicable).
+__Note__: CentOS and Ubuntu use the version of OpenSSL and zlib provided with the
+distribution:
 
 * [CentOS 6][centos-6-dependencies]
 * [CentOS 7][centos-7-dependencies]

@@ -56,7 +56,7 @@ CentOS doesn't have up-to-date versions of libuv so we provide current packages.
 Install dependencies:
 
 ```bash
-yum install openssl krb5
+yum install openssl krb5 zlib
 rpm -Uvh libuv-<version>.rpm
 ```
 
@@ -135,7 +135,7 @@ Ubuntu doesn't have up-to-date versions of libuv so we provide current packages.
 Install dependencies:
 
 ```bash
-apt-get install libssl libkrb5
+apt-get install libssl libkrb5 zlib1g
 dpkg -i libuv_<version>.deb
 ```
 

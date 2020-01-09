@@ -15,8 +15,8 @@ Packages are available for the following platforms:
 
 ### Dependencies
 
-Packages for the dependencies, libuv (1.x) and OpenSSL are also provided and
-can be found under the "dependencies" directory for each platform:
+Packages for the dependencies, libuv (1.x), OpenSSL, and zlib are also provided
+and can be found under the "dependencies" directory for each platform:
 
 * [CentOS 6][cpp-driver-dependencies-centos6]
 * [CentOS 7][cpp-driver-dependencies-centos7]
@@ -25,7 +25,7 @@ can be found under the "dependencies" directory for each platform:
 * [Ubuntu 18.04 LTS][cpp-driver-dependencies-ubuntu18-04]
 * [Windows][cpp-driver-dependencies-windows]
 
-*Note*: CentOS and Ubuntu use the version of OpenSSL provided with the
+*Note*: CentOS and Ubuntu use the version of OpenSSL and zlib provided with the
 distribution.
 
 The driver can also be [built from source].
