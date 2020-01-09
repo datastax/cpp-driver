@@ -123,9 +123,9 @@ your system._
 
 ```bash
 pushd /tmp
-wget http://dist.libuv.org/dist/v1.33.0/libuv-v1.33.0.tar.gz
-tar xzf libuv-v1.33.0.tar.gz
-pushd libuv-v1.33.0
+wget http://dist.libuv.org/dist/v1.34.0/libuv-v1.34.0.tar.gz
+tar xzf libuv-v1.34.0.tar.gz
+pushd libuv-v1.34.0
 sh autogen.sh
 ./configure
 make install
@@ -165,9 +165,9 @@ brew link --force openssl
 
 ```bash
 pushd /tmp
-wget --no-check-certificate https://www.openssl.org/source/openssl-1.0.2s.tar.gz
-tar xzf openssl-1.0.2s.tar.gz
-pushd openssl-1.0.2s
+wget --no-check-certificate https://www.openssl.org/source/openssl-1.0.2u.tar.gz
+tar xzf openssl-1.0.2u.tar.gz
+pushd openssl-1.0.2u
 CFLAGS=-fpic ./config shared
 make install
 popd

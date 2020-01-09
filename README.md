@@ -1,6 +1,6 @@
 # DataStax C/C++ Driver for Apache Cassandra and DataStax Products
 
-A modern, feature-rich] and highly tunable C/C++ client library for
+A modern, feature-rich and highly tunable C/C++ client library for
 [Apache Cassandra] 2.1+ using exclusively Cassandra's binary protocol and
 Cassandra Query Language v3. This driver can also be used with other DataStax
 products:
@@ -25,6 +25,24 @@ distribution:
 * [Ubuntu 16.04][ubuntu-16-04-dependencies]
 * [Ubuntu 18.04][ubuntu-18-04-dependencies]
 * [Windows][windows-dependencies]
+
+## Upgrading
+
+Starting with DataStax C/C++ driver for Apache Cassandra v2.15.0, DataStax
+Enterprise (DSE) support is now available; using the DSE driver exclusively is no
+longer required for DSE customers.
+
+### For DSE driver users
+
+Linking changes will be required when migrating to this driver. Replace `-ldse` with `-lcassandra`.
+
+### For Cassandra driver users
+
+No changes will be required when upgrading to this driver. There will be new
+driver dependencies when using any of the binary versions obtained from our
+[download server] as [Kerberos] is utilized in the [DSE features] of this
+driver. See the [installation] section for more information on obtaining the
+dependencies for a specific platform.
 
 ## Features
 
@@ -208,6 +226,7 @@ specific language governing permissions and limitations under the License.
 [ubuntu-18-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies
 [windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
 [DataStax Constellation]: https://constellation.datastax.com
+[Kerberos]: https://web.mit.edu/kerberos
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
 [Simple]: http://datastax.github.io/cpp-driver/topics/#executing-queries
@@ -238,3 +257,4 @@ specific language governing permissions and limitations under the License.
 [DSE Proxy Authentication]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication/#proxy-authentication
 [DSE Proxy Execution]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication/#proxy-execution
 [DSE DateRange]: https://github.com/datastax/cpp-driver/blob/master/examples/dse/date_range/date_range.c
+[DSE features]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features

@@ -2,14 +2,10 @@
 
 ## Connecting to your [DataStax Apollo database on Constellation] using a secure connection bundle
 
-   **Note:** Both the C++ Driver for Apache Cassandra and the C++ Driver for DataStax
-   Enterprise (DSE) use the same code to connect and query your Cassandra database,
-   but when using the DSE driver use the header `#include <dse.h>`.
-
    Use the following code snippet to connect your database:
 
    ```c
-   #include <cassandra.h> /* Use "#include <dse.h>" when using the C++ DSE Driver */
+   #include <cassandra.h>
    #include <stdio.h>
 
    int main(int argc, char* argv[]) {
