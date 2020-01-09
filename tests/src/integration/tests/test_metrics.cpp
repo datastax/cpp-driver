@@ -77,28 +77,6 @@ CASSANDRA_INTEGRATION_TEST_F(MetricsTests, ErrorsConnectionTimeouts) {
 }
 
 /**
- * This test ensures that the driver is reporting the proper timeouts for pending requests
- *
- * @since 2.0.0
- * @jira_ticket CPP-188
- */
-CASSANDRA_INTEGRATION_TEST_F(MetricsTests, ErrorsPendingRequestTimeouts) {
-  CHECK_FAILURE;
-  CHECK_VERSION(2.1.2);
-
-  for (int n = 0; n < 1000; ++n) {
-    session_.execute_async(SELECT_ALL_SYSTEM_LOCAL_CQL);
-  }
-
-  CassMetrics metrics = session_.metrics();
-  for (int i = 0; i < 100 && metrics.errors.pending_request_timeouts == 0; ++i) {
-    metrics = session_.metrics();
-    msleep(100);
-  }
-  EXPECT_GT(metrics.errors.pending_request_timeouts, 0u);
-}
-
-/**
  * This test ensures that the driver is reporting the proper timeouts for requests
  *
  * @since 2.0.0

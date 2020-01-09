@@ -423,7 +423,7 @@ typedef struct CassMetrics_ {
 
   struct {
     cass_uint64_t connection_timeouts; /**< Occurrences of a connection timeout */
-    cass_uint64_t pending_request_timeouts; /**< Occurrences of requests that timed out waiting for a connection */
+    cass_uint64_t pending_request_timeouts; /**< Deprecated */
     cass_uint64_t request_timeouts; /**< Occurrences of requests that timed out waiting for a request to finish */
   } errors; /**< Error metrics */
 } CassMetrics;
