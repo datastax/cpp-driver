@@ -420,7 +420,6 @@ public:
       , request_rates(&thread_state_)
       , total_connections(&thread_state_)
       , connection_timeouts(&thread_state_)
-      , pending_request_timeouts(&thread_state_)
       , request_timeouts(&thread_state_) {}
 
   void record_request(uint64_t latency_ns) {
@@ -446,7 +445,6 @@ public:
   Counter total_connections;
 
   Counter connection_timeouts;
-  Counter pending_request_timeouts;
   Counter request_timeouts;
 
 private:

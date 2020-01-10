@@ -136,7 +136,7 @@ void cass_session_get_metrics(const CassSession* session, CassMetrics* metrics) 
   metrics->stats.exceeded_pending_requests_water_mark = 0;                 // Deprecated
 
   metrics->errors.connection_timeouts = internal_metrics->connection_timeouts.sum();
-  metrics->errors.pending_request_timeouts = internal_metrics->pending_request_timeouts.sum();
+  metrics->errors.pending_request_timeouts = 0; // Deprecated
   metrics->errors.request_timeouts = internal_metrics->request_timeouts.sum();
 }
 

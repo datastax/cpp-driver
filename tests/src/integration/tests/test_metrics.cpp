@@ -16,7 +16,7 @@
 
 #include "integration.hpp"
 
-#define SPECULATIVE_EXECUTION_SELECT_FORMAT "SELECT timeout(value) FROM %s WHERE key=%d"
+#define SPECULATIVE_EXECUTION_SELECT_FORMAT "SELECT timeout(value) FROM %s.%s WHERE key=%d"
 #define SPECULATIVE_EXECUTION_CREATE_TIMEOUT_UDF_FORMAT   \
   "CREATE OR REPLACE FUNCTION %s.timeout(arg int) "       \
   "RETURNS NULL ON NULL INPUT RETURNS int LANGUAGE java " \
@@ -74,28 +74,6 @@ CASSANDRA_INTEGRATION_TEST_F(MetricsTests, ErrorsConnectionTimeouts) {
 
   CassMetrics metrics = session.metrics();
   EXPECT_GE(2u, metrics.errors.connection_timeouts);
-}
-
-/**
- * This test ensures that the driver is reporting the proper timeouts for pending requests
- *
- * @since 2.0.0
- * @jira_ticket CPP-188
- */
-CASSANDRA_INTEGRATION_TEST_F(MetricsTests, ErrorsPendingRequestTimeouts) {
-  CHECK_FAILURE;
-  CHECK_VERSION(2.1.2);
-
-  for (int n = 0; n < 1000; ++n) {
-    session_.execute_async(SELECT_ALL_SYSTEM_LOCAL_CQL);
-  }
-
-  CassMetrics metrics = session_.metrics();
-  for (int i = 0; i < 100 && metrics.errors.pending_request_timeouts == 0; ++i) {
-    metrics = session_.metrics();
-    msleep(100);
-  }
-  EXPECT_GT(metrics.errors.pending_request_timeouts, 0u);
 }
 
 /**
@@ -173,20 +151,21 @@ CASSANDRA_INTEGRATION_TEST_F(MetricsTests, SpeculativeExecutionRequests) {
   CHECK_FAILURE;
   CHECK_VERSION(2.2.0);
 
-  Session session = default_cluster().with_constant_speculative_execution_policy(100, 20).connect();
+  Session session = default_cluster().with_constant_speculative_execution_policy(100, 10).connect();
 
   session.execute(format_string(CASSANDRA_KEY_VALUE_QUALIFIED_TABLE_FORMAT, keyspace_name_.c_str(),
                                 table_name_.c_str(), "int", "int"));
   session.execute(format_string(CASSANDRA_KEY_VALUE_QUALIFIED_INSERT_FORMAT, keyspace_name_.c_str(),
-                                table_name_.c_str(), "0", "1000"));
+                                table_name_.c_str(), "0", "200"));
   session.execute(
       format_string(SPECULATIVE_EXECUTION_CREATE_TIMEOUT_UDF_FORMAT, keyspace_name_.c_str()));
-  Statement statement(format_string(SPECULATIVE_EXECUTION_SELECT_FORMAT, table_name_.c_str(), 0));
+  Statement statement(format_string(SPECULATIVE_EXECUTION_SELECT_FORMAT, keyspace_name_.c_str(),
+                                    table_name_.c_str(), 0));
   statement.set_idempotent(true);
   statement.set_request_timeout(30000);
 
   CassSpeculativeExecutionMetrics metrics = session.speculative_execution_metrics();
-  for (int i = 0; i < 600 && metrics.count < 1000u; ++i) {
+  for (int i = 0; i < 600 && metrics.count < 10; ++i) {
     session.execute_async(statement);
     metrics = session.speculative_execution_metrics();
     msleep(100);
