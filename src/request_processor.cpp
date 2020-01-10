@@ -204,7 +204,7 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener, EventLoop
       LOG_TRACE("Built load balancing policy for '%s' execution profile", it->first.c_str());
       load_balancing_policies_.push_back(load_balancing_policy);
     } else {
-      it->second.set_load_balancing_policy(default_profile_.load_balancing_policy().get());
+      it->second.use_load_balancing_policy(default_profile_.load_balancing_policy());
     }
   }
 

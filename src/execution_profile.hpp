@@ -44,9 +44,7 @@ public:
       , serial_consistency_(CASS_CONSISTENCY_UNKNOWN)
       , latency_aware_routing_(false)
       , token_aware_routing_(true)
-      , token_aware_routing_shuffle_replicas_(true)
-      , load_balancing_policy_(NULL)
-      , retry_policy_(NULL) {}
+      , token_aware_routing_shuffle_replicas_(true) {}
 
   uint64_t request_timeout_ms() const { return request_timeout_ms_; }
 
@@ -102,13 +100,27 @@ public:
 
   const LoadBalancingPolicy::Ptr& load_balancing_policy() const { return load_balancing_policy_; }
 
-  void set_load_balancing_policy(LoadBalancingPolicy* lbp) { load_balancing_policy_.reset(lbp); }
+  void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
+    base_load_balancing_policy_.reset(lbp);
+  }
+
+  /**
+   * Use another profile's load balancing policy. This is used to override profiles that don't have
+   * policies of their own with the default profile's load balancing policy.
+   *
+   * @param lbp The other profile's load balancing policy chain.
+   */
+  void use_load_balancing_policy(const LoadBalancingPolicy::Ptr& lbp) {
+    assert(!base_load_balancing_policy_ &&
+           "The profile should have a no base load balancing policy");
+    load_balancing_policy_ = lbp;
+  }
 
   void build_load_balancing_policy() {
     // The base LBP can be augmented by special wrappers (whitelist,
     // token aware, latency aware)
-    if (load_balancing_policy_) {
-      LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
+    if (base_load_balancing_policy_) {
+      LoadBalancingPolicy* chain = base_load_balancing_policy_->new_instance();
 
       if (!blacklist_.empty()) {
         chain = new BlacklistPolicy(chain, blacklist_);
@@ -159,6 +171,7 @@ private:
   ContactPointList whitelist_;
   DcList whitelist_dc_;
   LoadBalancingPolicy::Ptr load_balancing_policy_;
+  LoadBalancingPolicy::Ptr base_load_balancing_policy_;
   RetryPolicy::Ptr retry_policy_;
   SpeculativeExecutionPolicy::Ptr speculative_execution_policy_;
 };

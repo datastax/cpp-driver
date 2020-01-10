@@ -39,7 +39,7 @@ public:
                                     const TokenMap* token_map);
 
   virtual void on_host_added(const Host::Ptr& host);
-  virtual void on_host_removed(const Host::Ptr& host);
+  virtual void on_host_up(const Host::Ptr& host);
 
   virtual ListPolicy* new_instance() = 0;
 

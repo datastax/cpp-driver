@@ -57,8 +57,8 @@ void ListPolicy::on_host_added(const Host::Ptr& host) {
   }
 }
 
-void ListPolicy::on_host_removed(const Host::Ptr& host) {
+void ListPolicy::on_host_up(const Host::Ptr& host) {
   if (is_valid_host(host)) {
-    child_policy_->on_host_removed(host);
+    child_policy_->on_host_up(host);
   }
 }

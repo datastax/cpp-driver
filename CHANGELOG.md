@@ -18,6 +18,7 @@ Features
 
 Bug Fixes
 --------
+* [CPP-885] Fix filtering load balancing policies (and remove duplicated load balancing policy chain)
 * [CPP-884] Deprecate pending request timeouts metric and remove unused internal logic
 * [CPP-871] Fix SSL cleanup on error conditions in mockssandra
 * [CPP-855] Fix C\*/DSE protocol lowering attempts when `cass_cluster_set_use_beta_protocol_version()` is true
