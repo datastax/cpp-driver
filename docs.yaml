@@ -62,6 +62,7 @@ rewrites:
   - http://docs.datastax.com/en/cassandra/latest/cassandra/dml/dmlConfigConsistency.html: https://docs.datastax.com/en/ddac/doc/datastax_enterprise/dbInternals/dbIntConfigConsistency.html # Apache Cassandra docs are no longer maintained (use DDAC)
   - https://www.h5l.org: https://github.com/heimdal/heimdal # Temporary until h5l.org is back online
   - http://docs.datastax.com/en/developer/cpp-driver/latest/: / # Get current version documentation
+  - https://github.com/datastax/cpp-driver/blob/master/vc_build.bat: https://github.com/datastax/cpp-driver/blob/2.14.0/vc_build.bat
 rules:
   use_path_nav_files_only: true
 
