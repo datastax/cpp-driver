@@ -70,7 +70,7 @@ versions:
   - name: "2.15"
     ref: 2.15.0
   - name: "2.14"
-    ref: 2.14.1
+    ref: 2.14.0
   - name: "2.13"
     ref: 2.13.0
   - name: "2.12"
