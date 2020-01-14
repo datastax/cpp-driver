@@ -1,5 +1,5 @@
-title:  DataStax C/C++ Driver for Apache Cassandra and DataStax Products
-summary: DataStax C/C++ Driver for Apache Cassandra and DataStax Products Documentation
+title:  DataStax C/C++ Driver
+summary: DataStax C/C++ Driver for Apache Cassandra®
 homepage: http://docs.datastax.com/en/developer/cpp-driver/latest
 swiftype_drivers: cppdrivers
 sections:

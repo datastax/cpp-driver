@@ -1,7 +1,7 @@
-# DataStax C/C++ Driver for Apache Cassandra and DataStax Products
+# DataStax C/C++ Driver for Apache Cassandra® and DataStax Products
 
 A modern, feature-rich and highly tunable C/C++ client library for
-[Apache Cassandra] 2.1+ using exclusively Cassandra's binary protocol and
+[Apache Cassandra®] 2.1+ using exclusively Cassandra's binary protocol and
 Cassandra Query Language v3. This driver can also be used with other DataStax
 products:
 
@@ -28,7 +28,7 @@ distribution:
 
 ## Upgrading
 
-Starting with DataStax C/C++ driver for Apache Cassandra v2.15.0, DataStax
+Starting with DataStax C/C++ driver for Apache Cassandra® v2.15.0, DataStax
 Enterprise (DSE) support is now available; using the DSE driver exclusively is no
 longer required for DSE customers.
 
@@ -86,11 +86,11 @@ dependencies for a specific platform.
 This driver works exclusively with the Cassandra Query Language v3 (CQL3) and
 Cassandra's native protocol. The current version works with:
 
-* Apache Cassandra versions 2.1, 2.2 and 3.0+
+* Apache Cassandra® versions 2.1, 2.2 and 3.0+
 * Architectures: 32-bit (x86) and 64-bit (x64)
 * Compilers: GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013/2015/2017/2019
 
-A complete compatibility matrix for both Apache Cassandra
+A complete compatibility matrix for both Apache Cassandra®
 and DataStax Enterprise can be found [here][cpp-driver-compatability-matrix].
 
 __Disclaimer__: DataStax products do not support big-endian systems.
@@ -208,7 +208,7 @@ under the License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 
-[Apache Cassandra]: http://cassandra.apache.org
+[Apache Cassandra®]: http://cassandra.apache.org
 [DataStax Enterprise]: http://www.datastax.com/products/datastax-enterprise
 [Examples]: examples/
 [download server]: http://downloads.datastax.com/cpp-driver/
