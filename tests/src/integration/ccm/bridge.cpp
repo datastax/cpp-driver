@@ -334,7 +334,7 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
             create_command.push_back("git:" + branch_tag_);
           }
         } else {
-          create_command.push_back(cassandra_version_.to_string());
+          create_command.push_back(cassandra_version_.ccm_version());
         }
       } else {
         if (use_git_) {
@@ -344,7 +344,7 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
             create_command.push_back("git:" + branch_tag_);
           }
         } else {
-          create_command.push_back(dse_version_.to_string());
+          create_command.push_back(dse_version_.ccm_version());
         }
         if (dse_credentials_type_ == DseCredentialsType::USERNAME_PASSWORD) {
           create_command.push_back("--dse-username=" + dse_username_);
