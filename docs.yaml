@@ -7,6 +7,7 @@ sections:
     prefix:    /topics
     type:      markdown
     files:     'topics/**/*.md'
+    excludes:  'topics/dse_features/**/*.md'
   - title:     DSE Features
     prefix:    /dse_features
     type:      markdown
