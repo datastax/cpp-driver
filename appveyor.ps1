@@ -320,7 +320,7 @@ Function Install-Driver-Environment {
   If ($Env:DRIVER_TYPE -Like "dse") {
     $cmake_modules_dir += "cpp-driver/"
   }
-  $cmake_modules_dir += "cmake/modules"
+  $cmake_modules_dir += "cmake"
 
   # Build and install the dependencies (if needed; cached)
   $dependencies_build_location_prefix = "C:/projects/dependencies/build/"

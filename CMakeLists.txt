@@ -1,31 +1,32 @@
-cmake_minimum_required(VERSION 2.6.4)
-set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+cmake_minimum_required(VERSION 2.8.12)
+project(cassandra C CXX)
 
-# Ensure functions/modules are available
 set(CASS_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CASS_SRC_DIR "${CASS_ROOT_DIR}/src")
 set(CASS_INCLUDE_DIR "${CASS_ROOT_DIR}/include")
-list(APPEND CMAKE_MODULE_PATH ${CASS_ROOT_DIR}/cmake/modules)
 
-include(CppDriver)
-include(ClangFormat)
+# Ensure functions/modules are available
+list(APPEND CMAKE_MODULE_PATH ${CASS_ROOT_DIR}/cmake)
 
-CassInitProject(cassandra)
-CassPolicies()
-CassCheckPlatform()
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-#------------------------
-# Project Version
-#------------------------
-CassProjectVersion("${CASS_INCLUDE_DIR}/cassandra.h" "CASS")
+#---------------
+# Policies
+#---------------
+
+if(POLICY CMP0074)
+  cmake_policy(SET CMP0074 NEW)
+endif()
+
+if (POLICY CMP0054)
+  cmake_policy(SET CMP0054 NEW)
+endif()
 
 #---------------
 # Options
 #---------------
 
-option(CASS_BUILD_DOCS "Build documentation" OFF)
 option(CASS_BUILD_EXAMPLES "Build examples" OFF)
 option(CASS_BUILD_INTEGRATION_TESTS "Build integration tests" OFF)
 option(CASS_BUILD_SHARED "Build shared library" ON)
@@ -43,7 +44,6 @@ option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
-option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 option(CASS_USE_ZLIB "Use zlib" ON)
 option(CASS_USE_TIMERFD "Use timerfd (Linux only)" ON)
 
@@ -60,12 +60,12 @@ if(CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
 endif()
 
 # Determine which driver target should be used as a dependency
-set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
+set(PROJECT_LIB_NAME_TARGET cassandra)
 if(CASS_USE_STATIC_LIBS OR
    (WIN32 AND (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)))
   set(CASS_USE_STATIC_LIBS ON) # Not all driver internals are exported for test executable (e.g. CASS_EXPORT)
   set(CASS_BUILD_STATIC ON)
-  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
+  set(PROJECT_LIB_NAME_TARGET cassandra_static)
 endif()
 
 # Ensure the driver is configured to build
@@ -77,131 +77,155 @@ if(CASS_DEBUG_CUSTOM_ALLOC AND CASS_USE_STATIC_LIBS)
   message(WARNING "Debugging the custom allocator while static linking the library can cause your application to fail")
 endif()
 
-#---------------
+#------------------------
 # Dependencies
-#---------------
+#------------------------
 
-CassUseLibuv()
+include(Dependencies)
+include(ClangFormat)
 
 #------------------------
-# Optional Dependencies
+# Project Version
 #------------------------
-CassOptionalDependencies()
 
-#----------------------
-# Generating API docs
-#----------------------
+file(STRINGS "${CASS_INCLUDE_DIR}/cassandra.h" _VERSION_PARTS
+  REGEX "^#define[ \t]+CASS_VERSION_(MAJOR|MINOR|PATCH|SUFFIX)[ \t]+([0-9]+|\"([^\"]+)\")$")
 
-# Doxygen
-if(CASS_BUILD_DOCS)
-  CassDoxygen()
+foreach(part MAJOR MINOR PATCH SUFFIX)
+  string(REGEX MATCH "CASS_VERSION_${part}[ \t]+([0-9]+|\"([^\"]+)\")"
+    PROJECT_VERSION_${part} ${_VERSION_PARTS})
+  # Extract version numbers
+  if (PROJECT_VERSION_${part})
+    string(REGEX REPLACE "CASS_VERSION_${part}[ \t]+([0-9]+|\"([^\"]+)\")" "\\1"
+      PROJECT_VERSION_${part} ${PROJECT_VERSION_${part}})
+  endif()
+endforeach()
+
+# Verify version parts
+if(NOT PROJECT_VERSION_MAJOR AND NOT PROJECT_VERSION_MINOR)
+  message(FATAL_ERROR "Unable to retrieve driver version from ${version_header_file}")
 endif()
 
-#------------------------------
-# Cassandra static and shared
-#------------------------------
-
-CassSetCompilerFlags()
-CassAddIncludes()
-CassFindSourceFiles()
-CassConfigure()
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-
-# Assign the include directories
-include_directories(${CASS_INCLUDES})
-
-# Determine if the dynamic/shared library should be built
-if(CASS_BUILD_SHARED)
-  add_library(${PROJECT_LIB_NAME} SHARED ${CASS_ALL_SOURCE_FILES})
-  if(CASS_USE_BOOST_ATOMIC AND BOOST_LIBRARY_NAME)
-    add_dependencies(${PROJECT_LIB_NAME} ${BOOST_LIBRARY_NAME})
-  endif()
-  if(LIBUV_LIBRARY_NAME)
-    add_dependencies(${PROJECT_LIB_NAME} ${LIBUV_LIBRARY_NAME})
-  endif()
-  if(OPENSSL_LIBRARY_NAME)
-    add_dependencies(${PROJECT_LIB_NAME} ${OPENSSL_LIBRARY_NAME})
-  endif()
-  CassConfigureShared("CASS")
-  set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY FOLDER "Driver/Cassandra")
+set(PROJECT_VERSION_STRING
+  ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
+if(NOT PROJECT_VERSION_PATCH STREQUAL "")
+  set(PROJECT_VERSION_STRING
+    "${PROJECT_VERSION_STRING}.${PROJECT_VERSION_PATCH}")
+endif()
+if(NOT PROJECT_VERSION_SUFFIX STREQUAL "")
+  string(REPLACE "\"" ""
+    PROJECT_VERSION_SUFFIX ${PROJECT_VERSION_SUFFIX})
+  set(PROJECT_VERSION_STRING
+    "${PROJECT_VERSION_STRING}-${PROJECT_VERSION_SUFFIX}")
 endif()
 
-# Determine if the static library should be built
-if(CASS_BUILD_STATIC)
-  add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${CASS_ALL_SOURCE_FILES})
-  if(CASS_USE_BOOST_ATOMIC AND BOOST_LIBRARY_NAME)
-    add_dependencies(${PROJECT_LIB_NAME_STATIC} ${BOOST_LIBRARY_NAME})
-  endif()
-  if(LIBUV_LIBRARY_NAME)
-    add_dependencies(${PROJECT_LIB_NAME_STATIC} ${LIBUV_LIBRARY_NAME})
-  endif()
-  if(OPENSSL_LIBRARY_NAME)
-    add_dependencies(${PROJECT_LIB_NAME_STATIC} ${OPENSSL_LIBRARY_NAME})
-  endif()
-  CassConfigureStatic("CASS")
+message(STATUS "Driver version: ${PROJECT_VERSION_STRING}")
 
-  # Set pkg_config required libraries
-  set(PC_REQUIRED_LIBS "libuv")
-  if (CASS_USE_OPENSSL)
-    set(PC_REQUIRED_LIBS "${PC_REQUIRED_LIBS} openssl")
-  endif()
+#------------------------
+# Determine atomic implementation
+#------------------------
 
-  set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/Cassandra")
+# Determine if std::atomic can be used for GCC, Clang, or MSVC
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    # Version determined from: https://gcc.gnu.org/wiki/Atomic/GCCMM
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" OR
+        CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7")
+      set(CASS_USE_STD_ATOMIC ON)
+    endif()
+  endif()
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  # Version determined from: http://clang.llvm.org/cxx_status.html
+  # 3.2 includes the full C++11 memory model, but 3.1 had atomic
+  # support.
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "3.1" OR
+      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "3.1")
+    set(CASS_USE_STD_ATOMIC ON)
+  endif()
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  # Version determined from https://msdn.microsoft.com/en-us/library/hh874894
+  # VS2012+/VS 11.0+/WindowsSDK v8.0+
+  if(MSVC_VERSION GREATER 1700 OR
+      MSVC_VERSION EQUAL 1700)
+    set(CASS_USE_STD_ATOMIC ON)
+  endif()
 endif()
 
-#-----------------------------
-# Unit and integration tests
-#-----------------------------
+if(CASS_USE_BOOST_ATOMIC)
+  message(STATUS "Using boost::atomic implementation for atomic operations")
+elseif(CASS_USE_STD_ATOMIC)
+  message(STATUS "Using std::atomic implementation for atomic operations")
+endif()
 
-CassConfigureTests()
+#------------------------
+# Top-level compiler flags
+#------------------------
 
-#-----------
-# Examples
-#-----------
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
+   "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  # Enable C++11 support to use std::atomic
+  if(CASS_USE_STD_ATOMIC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  endif()
 
-# Determine example directories at cmake execution time.
-# When a new example dir is added, the user just runs cmake again to pull it in;
-# no need to update CMakeLists.txt!
+  # OpenSSL is deprecated on later versions of Mac OS X. The long-term solution
+  # is to provide a CommonCryto implementation.
+  if (APPLE AND CASS_USE_OPENSSL)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+  endif()
+
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") 
+    # Clang/Intel specific compiler options
+    # I disabled long-long warning because boost generates about 50 such warnings
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-variadic-macros -Wno-zero-length-array")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedef -Wno-unknown-warning-option")
+  else() 
+    # GCC specific compiler options
+    # I disabled long-long warning because boost generates about 50 such warnings
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter -Wno-variadic-macros")
+
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
+        CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs")
+    endif()
+  endif()
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  add_definitions(/we4800)
+
+  # Determine if multicore compilation should be enabled
+  if(CASS_MULTICORE_COMPILATION)
+    # Default multicore compilation with effective processors (see https://msdn.microsoft.com/en-us/library/bb385193.aspx)
+    add_definitions("/MP")
+  endif()
+
+  # On Visual C++ -pedantic flag is not used,
+  # -fPIC is not used on Windows platform (all DLLs are
+  # relocable), -Wall generates about 30k stupid warnings
+  # that can hide useful ones.
+  # Create specific warning disable compiler flags
+  # TODO(mpenick): Fix these "possible loss of data" warnings
+  add_definitions(/wd4244)
+  add_definitions(/wd4267)
+
+  # Add preprocessor definitions for proper compilation
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)  # Remove warnings for not using safe functions (TODO: Fix codebase to be more secure for Visual Studio)
+  add_definitions(-DNOMINMAX)                 # Does not define min/max macros
+  add_definitions(-D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING) # Remove warnings for TR1 deprecation (Visual Studio 15 2017); caused by sparsehash
+else()
+  message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
+endif()
+
+#------------------------
+# Subdirectories
+#------------------------
+
+add_subdirectory(src)
 
 if(CASS_BUILD_EXAMPLES)
-  CassBuildExamples("examples")
+  add_subdirectory(examples)
 endif()
 
-#-------------------------------------
-# Installation information
-#-------------------------------------
-CassConfigureInstall(CASS cassandra)
-
-#-------------------
-# Uninstall target
-#-------------------
-
-configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-  IMMEDIATE @ONLY)
-
-add_custom_target(UNINSTALL
-  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-
-#-----------------------------------
-# Build an RPM.
-#-----------------------------------
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION_STRING})
-set(CPACK_GENERATOR "RPM")
-set(CPACK_PACKAGE_NAME "cpp-cassandra-driver")
-set(CPACK_PACKAGE_RELEASE 1)
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "C++ driver for Cassandra")
-set(CPACK_PACKAGE_CONTACT "Michael Penick")
-set(CPACK_PACKAGE_VENDOR "Datastax")
-if(32BIT)
-  set(CPACK_RPM_PACKAGE_ARCHITECTURE i686)
-else()
-  set(CPACK_RPM_PACKAGE_ARCHITECTURE x86_64)
+if(CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
+  add_subdirectory(tests)
 endif()
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_ARCHITECTURE}")
-set(CPACK_RPM_PACKAGE_REQUIRES "libuv")
-include(CPack)
