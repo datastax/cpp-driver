@@ -564,18 +564,18 @@ public:
     Utils::mkdir(ssl_path);
 
     {
-      std::ofstream out(ssl_path + Utils::PATH_SEPARATOR + "cassandra.crt",
-                        std::ios::binary | std::ios::trunc);
+      std::string file = ssl_path + Utils::PATH_SEPARATOR + "cassandra.crt";
+      std::ofstream out(file.c_str(), std::ios::binary | std::ios::trunc);
       out.write(reinterpret_cast<char const*>(cassandra_crt), sizeof(cassandra_crt));
     }
     {
-      std::ofstream out(ssl_path + Utils::PATH_SEPARATOR + "keystore.jks",
-                        std::ios::binary | std::ios::trunc);
+      std::string file = ssl_path + Utils::PATH_SEPARATOR + "keystore.jks";
+      std::ofstream out(file.c_str(), std::ios::binary | std::ios::trunc);
       out.write(reinterpret_cast<char const*>(keystore_jks), sizeof(keystore_jks));
     }
     {
-      std::ofstream out(ssl_path + Utils::PATH_SEPARATOR + "truststore.jks",
-                        std::ios::binary | std::ios::trunc);
+      std::string file = ssl_path + Utils::PATH_SEPARATOR + "truststore.jks";
+      std::ofstream out(file.c_str(), std::ios::binary | std::ios::trunc);
       out.write(reinterpret_cast<char const*>(truststore_jks), sizeof(truststore_jks));
     }
   }
