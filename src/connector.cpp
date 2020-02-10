@@ -262,7 +262,7 @@ void Connector::on_ready_or_set_keyspace() {
     finish();
   } else {
     connection_->write_and_flush(RequestCallback::Ptr(
-        new StartupCallback(this, Request::ConstPtr(new QueryRequest("USE " + keyspace_)))));
+        new StartupCallback(this, Request::ConstPtr(new QueryRequest("USE \"" + keyspace_ + "\"")))));
   }
 }
 

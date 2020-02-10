@@ -180,7 +180,7 @@ void PrepareHostHandler::PrepareCallback::on_internal_timeout() {
 
 PrepareHostHandler::SetKeyspaceCallback::SetKeyspaceCallback(const String& keyspace,
                                                              const PrepareHostHandler::Ptr& handler)
-    : SimpleRequestCallback(Request::ConstPtr(new QueryRequest("USE " + keyspace)))
+    : SimpleRequestCallback(Request::ConstPtr(new QueryRequest("USE \"" + keyspace + "\"")))
     , handler_(handler) {}
 
 void PrepareHostHandler::SetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
