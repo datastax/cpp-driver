@@ -1810,7 +1810,7 @@ void UseKeyspace::on_run(Request* request) const {
     query.erase(0, query.find_first_not_of(" \t"));
     if (query.substr(0, 3) == "USE" || query.substr(0, 3) == "use") {
       query.erase(0, 3);
-      query.erase(0, query.find_first_not_of(" \t"));
+      query.erase(0, query.find_first_not_of(" \t\""));
       if (query.substr(0, keyspace.size()) == keyspace) {
         String body;
         encode_int32(RESULT_SET_KEYSPACE, &body);
