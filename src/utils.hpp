@@ -69,11 +69,9 @@ String implode(const Vector<String>& vec, const char delimiter = ',');
 
 String& trim(String& str);
 
-bool is_valid_cql_id(const String& str);
+String& quote_id(String& str);
 
-String& to_cql_id(String& str);
-
-String& escape_id(String& str);
+String& quote_id_if_needed(String& str);
 
 inline size_t num_leading_zeros(int64_t value) {
   if (value == 0) return 64;

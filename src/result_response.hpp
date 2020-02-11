@@ -66,6 +66,11 @@ public:
   StringRef keyspace() const { return keyspace_; }
   StringRef table() const { return table_; }
 
+  String quoted_keyspace() const {
+    String temp(keyspace_.to_string());
+    return quote_id_if_needed(temp);
+  }
+
   bool metadata_changed() { return new_metadata_id_.size() > 0; }
   StringRef new_metadata_id() const { return new_metadata_id_; }
 

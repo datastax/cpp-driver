@@ -37,7 +37,7 @@ private:
   class SetKeyspaceRequest : public QueryRequest {
   public:
     SetKeyspaceRequest(const String& keyspace, uint64_t request_timeout_ms)
-        : QueryRequest("USE \"" + keyspace + "\"") {
+        : QueryRequest("USE " + keyspace) {
       set_request_timeout_ms(request_timeout_ms);
     }
   };

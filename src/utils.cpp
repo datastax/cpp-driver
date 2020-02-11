@@ -111,32 +111,16 @@ String& trim(String& str) {
   return str;
 }
 
-static bool is_word_char(int c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
-}
+static bool is_lowercase(const String& str) {
+  if (str.empty()) return true;
 
-static bool is_lower_word_char(int c) {
-  return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_';
-}
+  char c = str.front();
+  if (!(c >= 'a' && c <= 'z')) return false;
 
-bool is_valid_cql_id(const String& str) {
-  for (String::const_iterator i = str.begin(), end = str.end(); i != end; ++i) {
-    if (!is_word_char(*i)) {
+  for (String::const_iterator it = str.begin() + 1, end = str.end(); it != end; ++it) {
+    char c = *it;
+    if (!((c >= '0' && c <= '9') || (c == '_') || (c >= 'a' && c <= 'z'))) {
       return false;
-    }
-  }
-  return true;
-}
-
-bool is_valid_lower_cql_id(const String& str) {
-  if (str.empty() || !is_lower_word_char(str[0])) {
-    return false;
-  }
-  if (str.size() > 1) {
-    for (String::const_iterator i = str.begin() + 1, end = str.end(); i != end; ++i) {
-      if (!is_lower_word_char(*i)) {
-        return false;
-      }
     }
   }
   return true;
@@ -159,18 +143,7 @@ String& quote_id(String& str) {
   return str;
 }
 
-String& escape_id(String& str) { return is_valid_lower_cql_id(str) ? str : quote_id(str); }
-
-String& to_cql_id(String& str) {
-  if (is_valid_cql_id(str)) {
-    std::transform(str.begin(), str.end(), str.begin(), tolower);
-    return str;
-  }
-  if (str.length() > 2 && str[0] == '"' && str[str.length() - 1] == '"') {
-    return str.erase(str.length() - 1, 1).erase(0, 1);
-  }
-  return str;
-}
+String& quote_id_if_needed(String& str) { return is_lowercase(str) ? str : quote_id(str); }
 
 int32_t get_pid() {
 #if (defined(WIN32) || defined(_WIN32))
