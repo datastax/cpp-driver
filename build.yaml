@@ -21,7 +21,7 @@ schedules:
       include: ["/CPP-\\d+/", "master"]
     matrix:
       exclude:
-        - os: ['ubuntu/trusty64/cpp', 'ubuntu/xenial64/cpp', 'centos/6-64/cpp', 'centos/7-64/cpp', 'osx/high-sierra']
+        - os: ['ubuntu/trusty64/cpp', 'ubuntu/xenial64/cpp', 'centos/6-64/cpp', 'centos/7-64/cpp', 'centos/8-64/cpp', 'osx/high-sierra']
     env_vars: |
       CI_SCHEDULE=nightly
       CI_INTEGRATION_ENABLED=true
@@ -33,6 +33,7 @@ os:
   - ubuntu/xenial64/cpp
   - centos/6-64/cpp
   - centos/7-64/cpp
+  - centos/8-64/cpp
   - osx/high-sierra
 env:
   LIBUV_VERSION: 1.34.0
