@@ -40,8 +40,6 @@ if(LIBUV_VERSION VERSION_LESS "1.6")
     "memory allocators (version 1.6 or greater required)")
 endif()
 
-list(APPEND PC_REQUIRED_LIBS "libuv")
-
 # Assign libuv include and libraries
 set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIRS})
 set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARIES})
@@ -102,12 +100,6 @@ if(CASS_USE_OPENSSL)
     endif()
     message(STATUS "${openssl_name} version: v${OPENSSL_VERSION}")
   endif()
-
-  # FIXME: "openssl" isn't correct
-  #  # Set pkg_config required libraries
-  #  if (CASS_USE_OPENSSL)
-  #    set(PC_REQUIRED_LIBS "${PC_REQUIRED_LIBS} openssl")
-  #  endif()
 
   set(CASS_INCLUDES ${CASS_INCLUDES} ${OPENSSL_INCLUDE_DIR})
   set(CASS_LIBS ${CASS_LIBS} ${OPENSSL_LIBRARIES})
