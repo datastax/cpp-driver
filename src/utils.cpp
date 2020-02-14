@@ -114,7 +114,7 @@ String& trim(String& str) {
 static bool is_lowercase(const String& str) {
   if (str.empty()) return true;
 
-  char c = str.front();
+  char c = str[0];
   if (!(c >= 'a' && c <= 'z')) return false;
 
   for (String::const_iterator it = str.begin() + 1, end = str.end(); it != end; ++it) {
