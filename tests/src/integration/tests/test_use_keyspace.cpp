@@ -19,7 +19,7 @@
 #include <locale>
 
 /**
- * "USE <keyspace>" case sensitive tests
+ * "USE <keyspace>" case-sensitive tests
  */
 class UseKeyspaceCaseSensitiveTests : public Integration {
 public:
@@ -41,6 +41,9 @@ public:
   }
 };
 
+/**
+ * Verify that case-sensitive keyspaces work when connecting a session with a keyspace.
+ */
 CASSANDRA_INTEGRATION_TEST_F(UseKeyspaceCaseSensitiveTests, ConnectWithKeyspace) {
   CHECK_FAILURE;
   Session session = default_cluster().connect(keyspace_name_);
@@ -52,6 +55,9 @@ CASSANDRA_INTEGRATION_TEST_F(UseKeyspaceCaseSensitiveTests, ConnectWithKeyspace)
   EXPECT_EQ(row.column_by_name<Integer>("value"), Integer(2));
 }
 
+/**
+ * Verify that case-sensitive keyspaces work with "USE <keyspace>".
+ */
 CASSANDRA_INTEGRATION_TEST_F(UseKeyspaceCaseSensitiveTests, UseKeyspace) {
   CHECK_FAILURE;
   Session session = default_cluster().connect();

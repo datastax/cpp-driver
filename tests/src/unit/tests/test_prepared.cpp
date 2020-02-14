@@ -236,7 +236,7 @@ TEST_F(PreparedUnitTest, ReprepareOnUnpreparedNode) {
 }
 
 /**
- * Verify that preparing a host on "UP" properly switches case sensitive keyspaces before preparing
+ * Verify that preparing a host on "UP" properly switches case-sensitive keyspaces before preparing
  * statements.
  */
 TEST_F(PreparedUnitTest, PreparedOnUpWithCaseSensitiveKeyspace) {

@@ -845,7 +845,7 @@ TEST_F(PoolUnitTest, NoAvailableStreams) {
 }
 
 /**
- * Verify that connections start up correctly with a case sensitive keyspace.
+ * Verify that connections start up correctly with a case-sensitive keyspace.
  */
 TEST_F(PoolUnitTest, CaseSenstiveKeyspace) {
   mockssandra::SimpleRequestHandlerBuilder builder;
@@ -884,7 +884,7 @@ TEST_F(PoolUnitTest, CaseSenstiveKeyspace) {
 }
 
 /**
- * Verify that connections properly switch to a case sensitive keyspace when triggered by a request.
+ * Verify that connections properly switch to a case-sensitive keyspace when triggered by a request.
  */
 TEST_F(PoolUnitTest, ChangeToCaseSensitiveKeyspaceWithRequest) {
   mockssandra::SimpleRequestHandlerBuilder builder;
