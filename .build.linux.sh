@@ -46,7 +46,7 @@ install_libuv() {(
   if [ "${OS_NAME}" = "ubuntu" ]; then
     sudo dpkg -i packages/libuv*.deb
   else
-    sudo rpm -i packages/libuv*.rpm
+    sudo rpm -U --force packages/libuv*.rpm
   fi
 )}
 

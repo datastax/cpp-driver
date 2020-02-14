@@ -86,28 +86,6 @@
 #define CCM_NODE_STATUS_UNINITIALIZED "(not initialized)"
 #define CCM_NODE_STATUS_UP "up"
 
-// Configuration file setting keys
-#define CCM_CONFIGURATION_KEY_CASSANDRA_VERSION "cassandra_version"
-#define CCM_CONFIGURATION_KEY_USE_GIT "use_git"
-#define CCM_CONFIGURATION_KEY_BRANCH_TAG "branch_tag"
-#define CCM_CONFIGURATION_KEY_USE_INSTALL_DIR "use_install_dir"
-#define CCM_CONFIGURATION_KEY_INSTALL_DIR "install_dir"
-#define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
-#define CCM_CONFIGURATION_KEY_VERBOSE "verbose"
-#define CCM_CONFIGURATION_KEY_USE_DSE "use_dse"
-#define CCM_CONFIGURATION_KEY_USE_DDAC "use_ddac"
-#define CCM_CONFIGURATION_KEY_DSE_VERSION "dse_version"
-#define CCM_CONFIGURATION_KEY_DSE_CREDENTIALS_TYPE "dse_credentials_type"
-#define CCM_CONFIGURATION_KEY_DSE_USERNAME "dse_username"
-#define CCM_CONFIGURATION_KEY_DSE_PASSWORD "dse_password"
-#define CCM_CONFIGURATION_KEY_AUTHENTICATION_TYPE "authentication_type"
-#define CCM_CONFIGURATION_KEY_HOST "host"
-#define CCM_CONFIGURATION_KEY_SSH_PORT "ssh_port"
-#define CCM_CONFIGURATION_KEY_SSH_USERNAME "ssh_username"
-#define CCM_CONFIGURATION_KEY_SSH_PASSWORD "ssh_password"
-#define CCM_CONFIGURATION_KEY_SSH_PUBLIC_KEY "ssh_public_key"
-#define CCM_CONFIGURATION_KEY_SSH_PRIVATE_KEY "ssh_private_key"
-
 // Workload value initialization
 const std::string DSE_WORKLOADS[] = { "cassandra", "cfs",  "dsefs", "graph",
                                       "hadoop",    "solr", "spark" };
@@ -334,7 +312,7 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
             create_command.push_back("git:" + branch_tag_);
           }
         } else {
-          create_command.push_back(cassandra_version_.to_string());
+          create_command.push_back(cassandra_version_.ccm_version());
         }
       } else {
         if (use_git_) {
@@ -344,7 +322,7 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
             create_command.push_back("git:" + branch_tag_);
           }
         } else {
-          create_command.push_back(dse_version_.to_string());
+          create_command.push_back(dse_version_.ccm_version());
         }
         if (dse_credentials_type_ == DseCredentialsType::USERNAME_PASSWORD) {
           create_command.push_back("--dse-username=" + dse_username_);

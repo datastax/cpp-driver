@@ -16,12 +16,15 @@ Source1: cassandra.pc.in
 Source2: cassandra_static.pc.in
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-%if 0%{?distnum}
-%if %{distnum} == 5
-BuildRequires: buildsys-macros >= 5
+
+%if 0%{?distnum} >= 8
+%define cmakecmd cmake
+BuildRequires: cmake >= 3.5.0
+%else
+BuildRequires: cmake3 >= 3.5.0
+%define cmakecmd cmake3
 %endif
-%endif
-BuildRequires: cmake >= 2.6.4
+
 BuildRequires: libuv-devel >= %{libuv_version}
 BuildRequires: openssl-devel >= 0.9.8e
 
@@ -48,7 +51,7 @@ Development libraries for %{name}
 %build
 export CFLAGS='%{optflags}'
 export CXXFLAGS='%{optflags}'
-cmake -DCMAKE_BUILD_TYPE=RELEASE -DCASS_BUILD_STATIC=ON -DCASS_INSTALL_PKG_CONFIG=OFF -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} -DCMAKE_INSTALL_LIBDIR=%{_libdir} .
+%{cmakecmd} -DCMAKE_BUILD_TYPE=RELEASE -DCASS_BUILD_STATIC=ON -DCASS_INSTALL_PKG_CONFIG=OFF -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} -DCMAKE_INSTALL_LIBDIR=%{_libdir} .
 make %{?_smp_mflags}
 
 %install

@@ -106,5 +106,18 @@ check_type_size("uint16_t" UINT16_T)
 check_type_size("u_int16_t" U_INT16_T)
 check_type_size("__uint16_t" __UINT16_T)
 
-configure_file("${CASS_SRC_DIR}/third_party/sparsehash/config.h.cmake"
-               "${CASS_SRC_DIR}/third_party/sparsehash/src/sparsehash/internal/sparseconfig.h")
+configure_file("config.h.cmake" "${CMAKE_CURRENT_SOURCE_DIR}/src/sparsehash/internal/sparseconfig.h")
+
+file(GLOB SPARSEHASH_HEADER_FILES sparsehash)
+file(GLOB SPARSEHASH_INTERNAL_HEADER_FILES sparsehash/*.h sparsehash/internal/*.h)
+
+set(SOURCES 
+  ${SPARSEHASH_HEADER_FILES} 
+  ${SPARSEHASH_INTERNAL_HEADER_FILES})
+
+source_group("Header Files\\" FILES ${SPARSEHASH_HEADER_FILES})
+source_group("Header Files\\internal" FILES ${SPARSEHASH_INTERNAL_HEADER_FILES})
+
+add_custom_target(sparsehash ${SOURCES})
+set_target_properties(sparsehash PROPERTIES 
+  FOLDER "Driver/Dependencies")

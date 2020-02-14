@@ -55,7 +55,8 @@ public:
       : major_version(0)
       , minor_version(0)
       , patch_version(0)
-      , extra("") {
+      , extra("")
+      , ccm_version_(version_string) {
     from_string(version_string);
   }
 
@@ -234,6 +235,13 @@ public:
   bool operator>=(const std::string& version) { return compare(CassVersion(version)) >= 0; }
 
   /**
+   * Get the CCM version that was used
+   *
+   * @return CCM version string
+   */
+  const std::string& ccm_version() const { return ccm_version_; }
+
+  /**
    * Convert the version into a human readable string
    *
    * @param is_extra_requested True if extra field should be added to version
@@ -255,6 +263,12 @@ public:
     }
     return version_string.str();
   }
+
+private:
+  /**
+   * CCM version string that was supplied
+   */
+  std::string ccm_version_;
 
 private:
   /**
