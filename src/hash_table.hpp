@@ -72,7 +72,6 @@ private:
 
 private:
   size_t index_mask_;
-  size_t count_;
   SmallVector<T*, 32> index_;
   EntryVec entries_;
 

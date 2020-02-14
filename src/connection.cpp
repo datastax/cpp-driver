@@ -178,7 +178,7 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
   if (response->opcode() == CQL_OPCODE_RESULT) {
     ResultResponse* result = static_cast<ResultResponse*>(response->response_body().get());
     if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
-      keyspace_ = result->keyspace().to_string();
+      keyspace_ = result->quoted_keyspace();
     }
   }
 }

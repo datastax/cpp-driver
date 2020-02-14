@@ -612,6 +612,7 @@ struct Action {
     Builder& system_traces();
 
     Builder& use_keyspace(const String& keyspace);
+    Builder& use_keyspace(const Vector<String>& keyspaces);
     Builder& plaintext_auth(const String& username = "cassandra",
                             const String& password = "cassandra");
 
@@ -844,10 +845,11 @@ struct SystemTraces : public Action {
 };
 
 struct UseKeyspace : public Action {
-  UseKeyspace(const String& keyspace)
-      : keyspace(keyspace) {}
+  UseKeyspace(const String& keyspace) { keyspaces.push_back(keyspace); }
+  UseKeyspace(const Vector<String>& keyspaces)
+      : keyspaces(keyspaces) {}
   virtual void on_run(Request* request) const;
-  String keyspace;
+  Vector<String> keyspaces;
 };
 
 struct PlaintextAuth : public Action {
@@ -1018,8 +1020,12 @@ public:
   const Options& options() const { return options_; }
   void set_options(const Options& options) { options_ = options; }
 
+  const String& keyspace() const { return keyspace_; }
+  void set_keyspace(const String& keyspace) { keyspace_ = keyspace; }
+
 private:
   ProtocolHandler handler_;
+  String keyspace_;
   const Cluster* cluster_;
   int protocol_version_;
   bool is_registered_for_events_;

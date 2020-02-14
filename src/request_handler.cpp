@@ -461,7 +461,7 @@ void RequestExecution::notify_result_metadata_changed(const Request* request,
   if (result_response->protocol_version().supports_set_keyspace() && !request->keyspace().empty()) {
     keyspace = request->keyspace();
   } else {
-    keyspace = result_response->keyspace().to_string();
+    keyspace = result_response->quoted_keyspace();
   }
 
   if (request->opcode() == CQL_OPCODE_EXECUTE && result_response->kind() == CASS_RESULT_KIND_ROWS) {
@@ -531,7 +531,7 @@ void RequestExecution::on_result_response(Connection* connection, ResponseMessag
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
       // The response is set after the keyspace is propagated to all threads.
-      request_handler_->notify_keyspace_changed(result->keyspace().to_string(), current_host_,
+      request_handler_->notify_keyspace_changed(result->quoted_keyspace(), current_host_,
                                                 response->response_body());
       break;
 

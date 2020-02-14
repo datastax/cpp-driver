@@ -23,28 +23,8 @@
 #include <stdio.h>
 
 using datastax::String;
+using datastax::internal::escape_id;
 using datastax::internal::num_leading_zeros;
-using datastax::internal::to_cql_id;
-
-TEST(UtilsUnitTest, CqlId) {
-  String s;
-
-  // valid id
-  s = "abc";
-  EXPECT_EQ(to_cql_id(s), String("abc"));
-
-  // test lower cassing
-  s = "ABC";
-  EXPECT_EQ(to_cql_id(s), String("abc"));
-
-  // quoted
-  s = "\"aBc\"";
-  EXPECT_EQ(to_cql_id(s), String("aBc"));
-
-  // invalid chars
-  s = "!@#";
-  EXPECT_EQ(to_cql_id(s), String("!@#"));
-}
 
 TEST(UtilsUnitTest, EscapeId) {
   String s;
