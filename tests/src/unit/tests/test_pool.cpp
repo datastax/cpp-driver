@@ -39,7 +39,6 @@ public:
 
   protected:
     void set(State state) { results_.push_back(state); }
-    void clear() { results_.clear(); }
 
   private:
     Vector<State> results_;
