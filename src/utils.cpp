@@ -126,7 +126,7 @@ static bool is_lowercase(const String& str) {
   return true;
 }
 
-String& quote_id(String& str) {
+static String& quote_id(String& str) {
   String temp(str);
   str.clear();
   str.push_back('"');

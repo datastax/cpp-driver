@@ -69,8 +69,6 @@ String implode(const Vector<String>& vec, const char delimiter = ',');
 
 String& trim(String& str);
 
-String& quote_id(String& str);
-
 String& escape_id(String& str);
 
 inline size_t num_leading_zeros(int64_t value) {
