@@ -1726,7 +1726,7 @@ void IndexMetadata::update_legacy(StringRef index_type, const ColumnMetadata* co
 String IndexMetadata::target_from_legacy(const ColumnMetadata* column, const Value* options) {
   String column_name(column->name());
 
-  quote_id(column_name);
+  escape_id(column_name);
 
   if (options != NULL && options->value_type() == CASS_VALUE_TYPE_MAP) {
     MapIterator iterator(options);

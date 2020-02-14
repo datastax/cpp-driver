@@ -71,7 +71,7 @@ String& trim(String& str);
 
 String& quote_id(String& str);
 
-String& quote_id_if_needed(String& str);
+String& escape_id(String& str);
 
 inline size_t num_leading_zeros(int64_t value) {
   if (value == 0) return 64;

@@ -68,7 +68,7 @@ public:
 
   String quoted_keyspace() const {
     String temp(keyspace_.to_string());
-    return quote_id_if_needed(temp);
+    return escape_id(temp);
   }
 
   bool metadata_changed() { return new_metadata_id_.size() > 0; }

@@ -86,23 +86,31 @@ public:
    */
   class PrepareQuery : public Action {
   public:
-    PrepareQuery(PrepareStatements* statements)
-        : statements_(statements) {}
+    PrepareQuery(PrepareStatements* statements, const String& keyspace = "")
+        : statements_(statements)
+        , keyspace_(keyspace) {}
 
     void on_run(Request* request) const {
       String query;
       PrepareParameters params;
       if (!request->decode_prepare(&query, &params)) {
         request->error(ERROR_PROTOCOL_ERROR, "Invalid prepare message");
+      } else if (request->client()->keyspace() != keyspace_) {
+        request->error(ERROR_INVALID_QUERY, "Invalid keyspace");
       } else {
         String id = statements_->put_query(request->address(), query);
         String body;
         encode_int32(RESULT_PREPARED, &body);
         encode_string(id, &body); // Prepared ID
         // Metadata
-        encode_int32(0, &body); // Flags
-        encode_int32(0, &body); // Column count
+        bool global_table_spec = !keyspace_.empty();
+        encode_int32(global_table_spec ? RESULT_FLAG_GLOBAL_TABLESPEC : 0, &body); // Flags
+        encode_int32(0, &body);                                                    // Column count
         encode_int32(0, &body); // Primary key count
+        if (global_table_spec) {
+          encode_string(keyspace_, &body);
+          encode_string("", &body); // Empty table doesn't matter for these tests
+        }
         // Result metadata
         encode_int32(0, &body); // Flags
         encode_int32(0, &body); // Column count
@@ -113,6 +121,7 @@ public:
 
   private:
     PrepareStatements* statements_;
+    const String keyspace_;
   };
 
   /**
@@ -121,8 +130,9 @@ public:
    */
   class ExecuteQuery : public Action {
   public:
-    ExecuteQuery(PrepareStatements* statements)
-        : statements_(statements) {}
+    ExecuteQuery(PrepareStatements* statements, const String& keyspace = "")
+        : statements_(statements)
+        , keyspace_(keyspace) {}
 
     void on_run(Request* request) const {
       String id;
@@ -130,6 +140,8 @@ public:
       QueryParameters params;
       if (!request->decode_execute(&id, &params)) {
         request->error(ERROR_PROTOCOL_ERROR, "Invalid execute message");
+      } else if (request->client()->keyspace() != keyspace_) {
+        request->error(ERROR_INVALID_QUERY, "Invalid keyspace");
       } else if (!statements_->contains_id(request->address(), id)) {
         String body;
         encode_int32(ERROR_UNPREPARED, &body);         // Error code
@@ -148,11 +160,12 @@ public:
 
   private:
     PrepareStatements* statements_;
+    const String keyspace_;
   };
 
-  static void connect(const Config& config, Session* session,
+  static void connect(const Config& config, Session* session, const String& keyspace = "",
                       uint64_t wait_for_time_us = WAIT_FOR_TIME) {
-    Future::Ptr connect_future(session->connect(config));
+    Future::Ptr connect_future(session->connect(config, keyspace));
     ASSERT_TRUE(connect_future->wait_for(wait_for_time_us))
         << "Timed out waiting for session to connect";
     ASSERT_FALSE(connect_future->error()) << cass_error_desc(connect_future->error()->code) << ": "
@@ -218,6 +231,61 @@ TEST_F(PreparedUnitTest, ReprepareOnUnpreparedNode) {
 
   EXPECT_TRUE(statements.contains_query(Address("127.0.0.1", 9042), PREPARED_QUERY));
   EXPECT_TRUE(statements.contains_query(Address("127.0.0.2", 9042), PREPARED_QUERY));
+
+  close(&session);
+}
+
+/**
+ * Verify that preparing a host on "UP" properly switches case sensitive keyspaces before preparing
+ * statements.
+ */
+TEST_F(PreparedUnitTest, PreparedOnUpWithCaseSensitiveKeyspace) {
+  PrepareStatements statements;
+
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(OPCODE_PREPARE).execute(new PrepareQuery(&statements, "CaseSensitive"));
+  builder.on(OPCODE_EXECUTE).execute(new ExecuteQuery(&statements, "CaseSensitive"));
+  builder.on(OPCODE_QUERY)
+      .system_local()
+      .system_peers()
+      .use_keyspace("CaseSensitive") // Not quoted
+      .empty_rows_result(1);
+
+  mockssandra::SimpleCluster cluster(builder.build(), 2); // Requires at least 2 nodes
+  ASSERT_EQ(cluster.start(1), 0);
+
+  Config config;
+  config.set_prepare_on_all_hosts(true); // Add prepared statements to node2 when it comes up
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+
+  Session session;
+  connect(config, &session, "\"CaseSensitive\"");
+
+  Prepared::ConstPtr prepared = prepare(&session, PREPARED_QUERY);
+  ASSERT_TRUE(prepared);
+
+  EXPECT_TRUE(statements.contains_query(Address("127.0.0.1", 9042), PREPARED_QUERY));
+
+  ASSERT_EQ(cluster.start(2), 0);
+  cluster.event(StatusChangeEvent::up(Address("127.0.0.2", 9042)));
+
+  bool contains_query = false;
+  for (int i = 0; i < 600 && !contains_query; ++i) {
+    if (statements.contains_query(Address("127.0.0.2", 9042), PREPARED_QUERY)) {
+      contains_query = true;
+    }
+    test::Utils::msleep(100);
+  }
+  ASSERT_TRUE(contains_query);
+
+  {
+    ExecuteRequest::Ptr request(new ExecuteRequest(prepared.get()));
+    request->set_host(Address("127.0.0.2", 9042));
+    Future::Ptr future = session.execute(ExecuteRequest::ConstPtr(request));
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out waiting to execute prepared query ";
+    EXPECT_FALSE(future->error()) << cass_error_desc(future->error()->code) << ": "
+                                  << future->error()->message;
+  }
 
   close(&session);
 }

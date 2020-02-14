@@ -143,7 +143,7 @@ String& quote_id(String& str) {
   return str;
 }
 
-String& quote_id_if_needed(String& str) { return is_lowercase(str) ? str : quote_id(str); }
+String& escape_id(String& str) { return is_lowercase(str) ? str : quote_id(str); }
 
 int32_t get_pid() {
 #if (defined(WIN32) || defined(_WIN32))

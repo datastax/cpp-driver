@@ -23,22 +23,23 @@
 #include <stdio.h>
 
 using datastax::String;
+using datastax::internal::escape_id;
 using datastax::internal::num_leading_zeros;
 
-TEST(UtilsUnitTest, QuoteId) {
+TEST(UtilsUnitTest, EscapeId) {
   String s;
 
   s = "abc";
-  EXPECT_EQ(quote_id(s), String("abc"));
+  EXPECT_EQ(escape_id(s), String("abc"));
 
   s = "aBc";
-  EXPECT_EQ(quote_id(s), String("\"aBc\""));
+  EXPECT_EQ(escape_id(s), String("\"aBc\""));
 
   s = "\"";
-  EXPECT_EQ(quote_id(s), String("\"\"\"\""));
+  EXPECT_EQ(escape_id(s), String("\"\"\"\""));
 
   s = "a\"Bc";
-  EXPECT_EQ(quote_id(s), String("\"a\"\"Bc\""));
+  EXPECT_EQ(escape_id(s), String("\"a\"\"Bc\""));
 }
 
 TEST(UtilsUnitTest, NumLeadingZeros) {

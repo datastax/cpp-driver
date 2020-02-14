@@ -23,6 +23,7 @@
 #include "memory.hpp"
 #include "scoped_lock.hpp"
 #include "tracing_data_handler.hpp" // For tracing query
+#include "utils.hpp"
 #include "uuids.hpp"
 
 #include <openssl/bio.h>
@@ -34,10 +35,12 @@
 #endif
 
 using datastax::internal::bind_callback;
+using datastax::internal::escape_id;
 using datastax::internal::Map;
 using datastax::internal::Memory;
 using datastax::internal::OStringStream;
 using datastax::internal::ScopedMutex;
+using datastax::internal::trim;
 using datastax::internal::core::UuidGen;
 
 #define SSL_BUF_SIZE 8192
@@ -1357,6 +1360,10 @@ Action::Builder& Action::Builder::use_keyspace(const String& keyspace) {
   return execute((new UseKeyspace(keyspace)));
 }
 
+Action::Builder& Action::Builder::use_keyspace(const Vector<String>& keyspaces) {
+  return execute((new UseKeyspace(keyspaces)));
+}
+
 Action::Builder& Action::Builder::plaintext_auth(const String& username, const String& password) {
   return execute((new PlaintextAuth(username, password)));
 }
@@ -1807,18 +1814,22 @@ void UseKeyspace::on_run(Request* request) const {
   String query;
   QueryParameters params;
   if (request->decode_query(&query, &params)) {
-    query.erase(0, query.find_first_not_of(" \t"));
-    if (query.substr(0, 3) == "USE" || query.substr(0, 3) == "use") {
-      query.erase(0, 3);
-      query.erase(0, query.find_first_not_of(" \t\""));
-      if (query.substr(0, keyspace.size()) == keyspace) {
-        String body;
-        encode_int32(RESULT_SET_KEYSPACE, &body);
-        encode_string(keyspace, &body);
-        request->write(OPCODE_RESULT, body);
-      } else {
-        request->error(ERROR_INVALID_QUERY, "Keyspace '" + keyspace + "' does not exist");
+    trim(query);
+    if (query.compare(0, 3, "USE") == 0 || query.compare(0, 3, "use") == 0) {
+      String keyspace(query.substr(query.find_first_not_of(" \t", 3)));
+      for (Vector<String>::const_iterator it = keyspaces.begin(), end = keyspaces.end(); it != end;
+           ++it) {
+        String temp(*it);
+        if (keyspace == escape_id(temp)) {
+          String body;
+          encode_int32(RESULT_SET_KEYSPACE, &body);
+          encode_string(*it, &body);
+          request->client()->set_keyspace(*it);
+          request->write(OPCODE_RESULT, body);
+          return;
+        }
       }
+      request->error(ERROR_INVALID_QUERY, "Keyspace '" + keyspace + "' does not exist");
     } else {
       run_next(request);
     }

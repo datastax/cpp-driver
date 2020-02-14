@@ -35,10 +35,11 @@ public:
       return count;
     }
 
-    Vector<State> results() { return results_; }
+    const Vector<State>& results() { return results_; }
 
   protected:
     void set(State state) { results_.push_back(state); }
+    void clear() { results_.clear(); }
 
   private:
     Vector<State> results_;
@@ -73,6 +74,8 @@ public:
     RequestStatus(uv_loop_t* loop, int num_requests = NUM_NODES)
         : loop_(loop)
         , remaining_(num_requests) {}
+
+    virtual ~RequestStatus() {}
 
     virtual void set(RequestState::Enum state) {
       Status<RequestStatus::Enum>::set(state);
@@ -839,4 +842,88 @@ TEST_F(PoolUnitTest, NoAvailableStreams) {
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), static_cast<size_t>(CASS_MAX_STREAMS))
       << status.results();
+}
+
+/**
+ * Verify that connections start up correctly with a case sensitive keyspace.
+ */
+TEST_F(PoolUnitTest, CaseSenstiveKeyspace) {
+  mockssandra::SimpleRequestHandlerBuilder builder;
+
+  builder.on(mockssandra::OPCODE_QUERY)
+      .use_keyspace("CaseSensitive") // Not quoted
+      .validate_query()
+      .void_result();
+
+  mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  RequestStatusWithManager status(loop());
+
+  ConnectionPoolManagerInitializer::Ptr initializer(new ConnectionPoolManagerInitializer(
+      PROTOCOL_VERSION, bind_callback(on_pool_connected, &status)));
+
+  HostMap hosts(this->hosts());
+  Address address(hosts.begin()->first);
+
+  ConnectionPoolSettings settings;
+
+  settings.reconnection_policy =
+      ReconnectionPolicy::Ptr(new ConstantReconnectionPolicy(10)); // Reconnect quickly
+
+  initializer->with_keyspace("\"CaseSensitive\"")
+      ->with_settings(settings)
+      ->initialize(loop(), hosts);
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  ASSERT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
+
+  ConnectionPoolManager::Ptr manager(status.manager());
+  EXPECT_EQ(manager->find_least_busy(address)->keyspace(),
+            "\"CaseSensitive\""); // Verify new keyspace was set properly by running a request
+}
+
+/**
+ * Verify that connections properly switch to a case sensitive keyspace when triggered by a request.
+ */
+TEST_F(PoolUnitTest, ChangeToCaseSensitiveKeyspaceWithRequest) {
+  mockssandra::SimpleRequestHandlerBuilder builder;
+
+  Vector<String> keyspaces;
+  keyspaces.push_back("case_insensitive");
+  keyspaces.push_back("CaseSensitive"); // Not quoted
+  builder.on(mockssandra::OPCODE_QUERY).use_keyspace(keyspaces).validate_query().void_result();
+
+  mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  RequestStatusWithManager status(loop());
+
+  ConnectionPoolManagerInitializer::Ptr initializer(new ConnectionPoolManagerInitializer(
+      PROTOCOL_VERSION, bind_callback(on_pool_connected, &status)));
+
+  HostMap hosts(this->hosts());
+  Address address(hosts.begin()->first);
+
+  ConnectionPoolSettings settings;
+
+  settings.reconnection_policy =
+      ReconnectionPolicy::Ptr(new ConstantReconnectionPolicy(10)); // Reconnect quickly
+
+  initializer->with_keyspace("case_insensitive")
+      ->with_settings(settings)
+      ->initialize(loop(), hosts);
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  ASSERT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
+
+  ConnectionPoolManager::Ptr manager(status.manager());
+
+  manager->set_keyspace("\"CaseSensitive\"");
+  EXPECT_EQ(manager->find_least_busy(address)->keyspace(),
+            "case_insensitive"); // Verify existing keyspace is the one set during initialization
+
+  run_request(manager, address);
+  EXPECT_EQ(manager->find_least_busy(address)->keyspace(),
+            "\"CaseSensitive\""); // Verify new keyspace was set properly by running a request
 }
