@@ -30,7 +30,7 @@ public:
   RunInitializeProcessor(const RequestProcessorInitializer::Ptr& initializer)
       : initializer_(initializer) {}
 
-  virtual void run(EventLoop* event_loop) { initializer_->internal_intialize(); }
+  virtual void run(EventLoop* event_loop) { initializer_->internal_initialize(); }
 
 private:
   RequestProcessorInitializer::Ptr initializer_;
@@ -120,7 +120,7 @@ void RequestProcessorInitializer::on_close(ConnectionPoolManager* manager) {
   // Ignore
 }
 
-void RequestProcessorInitializer::internal_intialize() {
+void RequestProcessorInitializer::internal_initialize() {
   inc_ref();
   connection_pool_manager_initializer_.reset(new ConnectionPoolManagerInitializer(
       protocol_version_, bind_callback(&RequestProcessorInitializer::on_initialize, this)));

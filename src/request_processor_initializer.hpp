@@ -144,7 +144,7 @@ private:
   virtual void on_close(ConnectionPoolManager* manager);
 
 private:
-  void internal_intialize();
+  void internal_initialize();
 
 private:
   void on_initialize(ConnectionPoolManagerInitializer* initializer);
