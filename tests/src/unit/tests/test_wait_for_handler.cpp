@@ -22,8 +22,22 @@
 #include "timer.hpp"
 #include "wait_for_handler.hpp"
 
+#include <ostream>
+
 using namespace datastax::internal;
 using namespace datastax::internal::core;
+
+
+typedef Vector<WaitForHandler::WaitForError> Errors;
+
+std::ostream& operator<<(std::ostream& os, const Errors& errors) {
+  for (Errors::const_iterator it = errors.begin();
+       it != errors.end(); ++it) {
+    if (it != errors.begin()) os << ", ";
+    os << *it;
+  }
+  return os;
+}
 
 class WaitForHandlerUnitTest : public LoopTest {
 public:
@@ -35,54 +49,69 @@ public:
         : WaitForHandler(
               RequestHandler::Ptr(new RequestHandler(QueryRequest::Ptr(new QueryRequest("")),
                                                      ResponseFuture::Ptr(new ResponseFuture()))),
-              Host::Ptr(new Host(Address())), Response::Ptr(), max_wait_time, retry_wait_time) {}
+              Host::Ptr(new Host(Address())), Response::Ptr(), max_wait_time, retry_wait_time)
+        , count_on_set_(0)
+        , count_on_error_(0)
+        , is_idempotent_(false) {}
 
-    virtual RequestCallback::Ptr callback() = 0;
+    Ptr with_is_idempotent(bool is_idempotent) {
+      is_idempotent_ = is_idempotent;
+      return Ptr(this);
+    }
 
-  private:
+    Ptr with_expected_error(WaitForHandler::WaitForError error) {
+      expected_.push_back(error);
+      return Ptr(this);
+    }
+
+    virtual RequestCallback::Ptr callback() {
+      WaitforRequestVec requests;
+      QueryRequest::Ptr table1_request(
+          new QueryRequest("SELECT * FROM test.table1"));
+      QueryRequest::Ptr table2_request(new QueryRequest("SELECT * FROM test.table2"));
+      table1_request->set_is_idempotent(is_idempotent_);
+      table2_request->set_is_idempotent(is_idempotent_);
+      requests.push_back(WaitForRequest("table1", table1_request));
+      requests.push_back(WaitForRequest("table2", table2_request));
+      return WaitForHandler::callback(requests);
+    }
+
+    int count_on_set() const { return count_on_set_; }
+
+  protected:
     virtual bool on_set(const ChainedRequestCallback::Ptr& callback) {
+      EXPECT_EQ(0, count_on_error_); // Set shouldn't be called after an error
+      count_on_set_++;
       return false; // Never complete
     }
-  };
 
-  class RegularQueryHandler : public TestWaitForHandler {
-  public:
-    virtual RequestCallback::Ptr callback() {
-      WaitforRequestVec requests;
-      requests.push_back(make_request("local", "SELECT * FROM system.local WHERE key='local'"));
-      requests.push_back(make_request("peers", "SELECT * FROM system.peers"));
-      return WaitForHandler::callback(requests);
+    virtual void on_error(WaitForError code, const String& message) {
+      ASSERT_NE(0, expected_.size());
+      bool found_expected = false;
+      for (Errors::const_iterator it = expected_.begin(), end = expected_.end();
+           !found_expected && it != end; ++it) {
+        if (*it == code) {
+          found_expected = true;
+        }
+      }
+      EXPECT_TRUE(found_expected) << "Expected error codes [ " << expected_ << " ], but received error " << code;
+      count_on_error_++;
     }
 
   private:
-    virtual void on_error(WaitForError code, const String& message) {
-      EXPECT_TRUE(WAIT_FOR_ERROR_CONNECTION_CLOSED == code || WAIT_FOR_ERROR_REQUEST_ERROR == code);
-    }
-  };
-
-  class IdempotentQueryHandler : public TestWaitForHandler {
-  public:
-    virtual RequestCallback::Ptr callback() {
-      WaitforRequestVec requests;
-      QueryRequest::Ptr local_request(
-          new QueryRequest("SELECT * FROM system.local WHERE key='local'"));
-      QueryRequest::Ptr peers_request(new QueryRequest("SELECT * FROM system.peers"));
-      local_request->set_is_idempotent(true);
-      peers_request->set_is_idempotent(true);
-      requests.push_back(WaitForRequest("local", local_request));
-      requests.push_back(WaitForRequest("peers", peers_request));
-      return WaitForHandler::callback(requests);
-    }
-
-  private:
-    virtual void on_error(WaitForError code, const String& message) {
-      EXPECT_TRUE(WAIT_FOR_ERROR_CONNECTION_CLOSED == code ||
-                  WAIT_FOR_ERROR_REQUEST_TIMEOUT == code);
-    }
+    Errors expected_;
+    int count_on_set_;
+    int count_on_error_;
+    bool is_idempotent_;
   };
 
   void run(const TestWaitForHandler::Ptr& handler, uint64_t timeout = 0) {
-    mockssandra::SimpleCluster cluster(simple());
+    mockssandra::SimpleRequestHandlerBuilder builder;
+    run(handler, builder, timeout);
+  }
+
+  void run(const TestWaitForHandler::Ptr& handler, mockssandra::SimpleRequestHandlerBuilder& builder, uint64_t timeout = 0) {
+    mockssandra::SimpleCluster cluster(builder.build());
     ASSERT_EQ(cluster.start_all(), 0);
 
     handler_ = handler;
@@ -140,17 +169,39 @@ private:
 };
 
 TEST_F(WaitForHandlerUnitTest, CloseImmediatelyWhileWaiting) {
-  run(TestWaitForHandler::Ptr(new RegularQueryHandler()));
+  run(TestWaitForHandler::Ptr(new TestWaitForHandler())
+      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_ERROR)
+      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED));
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseAfterTimeoutWhileWaiting) {
-  run(TestWaitForHandler::Ptr(new RegularQueryHandler()), 500);
+  run(TestWaitForHandler::Ptr(new TestWaitForHandler())
+      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_ERROR)
+      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED), 500);
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseIdempotentImmediatelyWhileWaiting) {
-  run(TestWaitForHandler::Ptr(new IdempotentQueryHandler()));
+  run(TestWaitForHandler::Ptr(new TestWaitForHandler())
+      ->with_is_idempotent(true)
+      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_TIMEOUT)
+      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED));
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseIdempotentAfterTimeoutWhileWaiting) {
-  run(TestWaitForHandler::Ptr(new IdempotentQueryHandler()), 500);
+  run(TestWaitForHandler::Ptr(new TestWaitForHandler())
+      ->with_is_idempotent(true)
+      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_TIMEOUT)
+      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED), 500);
+}
+
+TEST_F(WaitForHandlerUnitTest, EnsureOnSetNotCalledAfterTimeout) {
+  TestWaitForHandler::Ptr handler(new TestWaitForHandler(1)); // Timeout handler before query returns
+
+  // Make sure the query doesn't complete before the handler times out
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_QUERY).system_local().system_peers().wait(200).empty_rows_result(1);
+
+  run(handler->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_TIMEOUT), builder, 500);
+
+  EXPECT_EQ(0, handler->count_on_set()); // Ensure on_set() never called
 }
