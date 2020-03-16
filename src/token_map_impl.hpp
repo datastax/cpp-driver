@@ -34,6 +34,8 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <iomanip>
+#include <ios>
 #include <uv.h>
 
 #define CASS_NETWORK_TOPOLOGY_STRATEGY "NetworkTopologyStrategy"
@@ -143,10 +145,30 @@ public:
   static StringRef name() { return "ByteOrderedPartitioner"; }
 };
 
+inline std::ostream& operator<<(std::ostream& os, const RandomPartitioner::Token& token) {
+  os << std::setfill('0') << std::setw(16) << std::hex << token.hi << std::setfill('0')
+     << std::setw(16) << std::hex << token.lo;
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ByteOrderedPartitioner::Token& token) {
+  for (ByteOrderedPartitioner::Token::const_iterator it = token.begin(), end = token.end();
+       it != end; ++it) {
+    os << std::hex << *it;
+  }
+  return os;
+}
+
 class HostSet : public DenseHashSet<Host::Ptr> {
 public:
   HostSet() {
     set_empty_key(Host::Ptr(new Host(Address::EMPTY_KEY)));
+    set_deleted_key(Host::Ptr(new Host(Address::DELETED_KEY)));
+  }
+
+  template <class InputIterator>
+  HostSet(InputIterator first, InputIterator last)
+      : DenseHashSet<Host::Ptr>(first, last, Host::Ptr(new Host(Address::EMPTY_KEY))) {
     set_deleted_key(Host::Ptr(new Host(Address::DELETED_KEY)));
   }
 };
@@ -355,6 +377,17 @@ void ReplicationStrategy<Partitioner>::build_replicas(const TokenHostVec& tokens
   }
 }
 
+// Adds unique replica. It returns true if the replica was added.
+inline bool add_replica(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
+  for (HostVec::const_reverse_iterator it = hosts->rbegin(); it != hosts->rend(); ++it) {
+    if ((*it)->address() == host->address()) {
+      return false; // Already in the replica set
+    }
+  }
+  hosts->push_back(host);
+  return true;
+}
+
 template <class Partitioner>
 void ReplicationStrategy<Partitioner>::build_replicas_network_topology(
     const TokenHostVec& tokens, const DatacenterMap& datacenters, TokenReplicasVec& result) const {
@@ -443,24 +476,27 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(
       // datacenter only then consider hosts in the same rack
 
       if (rack == 0 || racks_observed_this_dc.size() == rack_count_this_dc) {
-        ++replica_count_this_dc;
-        replicas->push_back(Host::Ptr(host));
+        if (add_replica(replicas, Host::Ptr(host))) {
+          ++replica_count_this_dc;
+        }
       } else {
         TokenHostQueue& skipped_endpoints_this_dc = dc_rack_info.skipped_endpoints;
         if (racks_observed_this_dc.count(rack) > 0) {
           skipped_endpoints_this_dc.push_back(curr_token_it);
         } else {
-          ++replica_count_this_dc;
-          replicas->push_back(Host::Ptr(host));
-          racks_observed_this_dc.insert(rack);
+          if (add_replica(replicas, Host::Ptr(host))) {
+            ++replica_count_this_dc;
+            racks_observed_this_dc.insert(rack);
+          }
 
           // Once we visited every rack in the current datacenter then starting considering
           // hosts we've already skipped.
           if (racks_observed_this_dc.size() == rack_count_this_dc) {
             while (!skipped_endpoints_this_dc.empty() &&
                    replica_count_this_dc < replication_factor) {
-              ++replica_count_this_dc;
-              replicas->push_back(Host::Ptr(skipped_endpoints_this_dc.front()->second));
+              if (add_replica(replicas, Host::Ptr(skipped_endpoints_this_dc.front()->second))) {
+                ++replica_count_this_dc;
+              }
               skipped_endpoints_this_dc.pop_front();
             }
           }
@@ -484,9 +520,10 @@ void ReplicationStrategy<Partitioner>::build_replicas_simple(const TokenHostVec&
   for (typename TokenHostVec::const_iterator i = tokens.begin(), end = tokens.end(); i != end;
        ++i) {
     CopyOnWriteHostVec replicas(new HostVec());
+    replicas->reserve(num_replicas);
     typename TokenHostVec::const_iterator token_it = i;
     do {
-      replicas->push_back(Host::Ptr(token_it->second));
+      add_replica(replicas, Host::Ptr(Host::Ptr(token_it->second)));
       ++token_it;
       if (token_it == tokens.end()) {
         token_it = tokens.begin();
@@ -578,7 +615,11 @@ public:
   virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
                                                  const String& routing_key) const;
 
-  // Test only
+  virtual String dump(const String& keyspace_name) const;
+
+public:
+  // Testing only
+
   bool contains(const Token& token) const {
     for (typename TokenHostVec::const_iterator i = tokens_.begin(), end = tokens_.end(); i != end;
          ++i) {
@@ -586,6 +627,8 @@ public:
     }
     return false;
   }
+
+  const TokenReplicasVec& token_replicas(const String& keyspace_name) const;
 
 private:
   void update_keyspace(const VersionNumber& cassandra_version, const ResultResponse* result,
@@ -714,6 +757,35 @@ const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const String& 
 }
 
 template <class Partitioner>
+String TokenMapImpl<Partitioner>::dump(const String& keyspace_name) const {
+  String result;
+  typename KeyspaceReplicaMap::const_iterator ks_it = replicas_.find(keyspace_name);
+  const TokenReplicasVec& replicas = ks_it->second;
+
+  for (typename TokenReplicasVec::const_iterator it = replicas.begin(), end = replicas.end();
+       it != end; ++it) {
+    OStringStream ss;
+    ss << std::setw(20) << it->first << " [ ";
+    const CopyOnWriteHostVec& hosts = it->second;
+    for (HostVec::const_iterator host_it = hosts->begin(), end = hosts->end(); host_it != end;
+         ++host_it) {
+      ss << (*host_it)->address_string() << " ";
+    }
+    ss << "]\n";
+    result.append(ss.str());
+  }
+  return result;
+}
+
+template <class Partitioner>
+const typename TokenMapImpl<Partitioner>::TokenReplicasVec&
+TokenMapImpl<Partitioner>::token_replicas(const String& keyspace_name) const {
+  typename KeyspaceReplicaMap::const_iterator ks_it = replicas_.find(keyspace_name);
+  static TokenReplicasVec not_found;
+  return ks_it != replicas_.end() ? ks_it->second : not_found;
+}
+
+template <class Partitioner>
 void TokenMapImpl<Partitioner>::update_keyspace(const VersionNumber& cassandra_version,
                                                 const ResultResponse* result,
                                                 bool should_build_replicas) {
@@ -773,6 +845,8 @@ void TokenMapImpl<Partitioner>::build_replicas() {
     const String& keyspace_name = i->first;
     const ReplicationStrategy<Partitioner>& strategy = i->second;
     strategy.build_replicas(tokens_, datacenters_, replicas_[keyspace_name]);
+    LOG_TRACE("Replicas for keyspace '%s':\n%s", keyspace_name.c_str(),
+              dump(keyspace_name).c_str());
   }
 }
 

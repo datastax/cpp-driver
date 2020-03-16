@@ -30,6 +30,7 @@ template <class Partitioner>
 struct TestTokenMap {
   typedef typename ReplicationStrategy<Partitioner>::Token Token;
   typedef Map<Token, Host::Ptr> TokenHostMap;
+  typedef typename TokenMapImpl<Partitioner>::TokenReplicasVec TokenReplicasVec;
 
   TokenHostMap tokens;
   TokenMap::Ptr token_map;
@@ -43,14 +44,11 @@ struct TestTokenMap {
       const String v(*i);
       tokens[Partitioner::from_string(*i)] = host;
     }
+    token_map->add_host(host);
   }
 
   void build(const String& keyspace_name = "ks", size_t replication_factor = 3) {
     add_keyspace_simple(keyspace_name, replication_factor, token_map.get());
-    for (typename TokenHostMap::const_iterator i = tokens.begin(), end = tokens.end(); i != end;
-         ++i) {
-      token_map->add_host(i->second);
-    }
     token_map->build();
   }
 
@@ -63,7 +61,7 @@ struct TestTokenMap {
     }
   }
 
-  void verify(const String& keyspace_name = "ks") {
+  void verify(const String& keyspace_name = "ks", size_t replication_factor = 3) {
     const String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
     for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
@@ -77,6 +75,25 @@ struct TestTokenMap {
       ASSERT_TRUE(host);
 
       EXPECT_EQ(hosts->front()->address(), host->address());
+    }
+
+    verify_unique_replica_count(keyspace_name, replication_factor);
+  }
+
+  void verify_unique_replica_count(const String& keyspace_name = "ks",
+                                   size_t replication_factor = 3) {
+    // Verify a unique set of replicas per token
+    const TokenReplicasVec& token_replicas =
+        static_cast<TokenMapImpl<Partitioner>*>(token_map.get())->token_replicas(keyspace_name);
+
+    ASSERT_EQ(tokens.size(), token_replicas.size());
+
+    for (typename TokenReplicasVec::const_iterator it = token_replicas.begin(),
+                                                   end = token_replicas.end();
+         it != end; ++it) {
+      HostSet replicas(it->second->begin(), it->second->end());
+      // Using assert here because they're can be many, many tokens
+      ASSERT_EQ(replication_factor, replicas.size());
     }
   }
 };
@@ -117,6 +134,7 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
   size_t num_hosts = 4;
   size_t num_vnodes = 256;
   size_t replication_factor = 3;
+  size_t total_replicas = std::min(num_hosts, replication_factor) * num_dcs;
 
   ReplicationMap replication;
   MT19937_64 rng;
@@ -144,7 +162,6 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
                                    Murmur3Partitioner::name().to_string(), rack, dc));
 
         test_murmur3.add_host(host);
-        token_map->add_host(host);
       }
     }
   }
@@ -159,7 +176,7 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
     const String& key = keys[i];
 
     const CopyOnWriteHostVec& hosts = token_map->get_replicas("ks1", key);
-    ASSERT_TRUE(hosts && hosts->size() == replication_factor * num_dcs);
+    ASSERT_TRUE(hosts && hosts->size() == total_replicas);
 
     typedef Map<String, Set<String> > DcRackMap;
 
@@ -181,6 +198,8 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
 
     EXPECT_EQ((*hosts)[0]->address(), host->address());
   }
+
+  test_murmur3.verify_unique_replica_count("ks1", total_replicas);
 }
 
 TEST(TokenMapUnitTest, Random) {
@@ -223,7 +242,7 @@ TEST(TokenMapUnitTest, RemoveHost) {
   test_remove_host.add_host(create_host("1.0.0.3", single_token(CASS_INT64_MAX / 2)));
 
   test_remove_host.build("ks", 2);
-  test_remove_host.verify();
+  test_remove_host.verify("ks", 2);
 
   TokenMap* token_map = test_remove_host.token_map.get();
 
@@ -275,7 +294,7 @@ TEST(TokenMapUnitTest, UpdateHost) {
   test_update_host.add_host(create_host("1.0.0.2", single_token(CASS_INT64_MIN / 4)));
 
   test_update_host.build("ks", 4);
-  test_update_host.verify();
+  test_update_host.verify("ks", 2); // Only two hosts, so rf = 2
 
   TokenMap* token_map = test_update_host.token_map.get();
 
@@ -317,6 +336,8 @@ TEST(TokenMapUnitTest, UpdateHost) {
     EXPECT_EQ((*replicas)[2]->address(), Address("1.0.0.3", 9042));
     EXPECT_EQ((*replicas)[3]->address(), Address("1.0.0.4", 9042));
   }
+
+  test_update_host.verify("ks", 4);
 }
 
 /**
@@ -436,7 +457,7 @@ TEST(TokenMapUnitTest, DropKeyspace) {
   test_drop_keyspace.add_host(create_host("1.0.0.3", single_token(CASS_INT64_MAX / 2)));
 
   test_drop_keyspace.build("ks", 2);
-  test_drop_keyspace.verify();
+  test_drop_keyspace.verify("ks", 2);
 
   TokenMap* token_map = test_drop_keyspace.token_map.get();
 
@@ -455,4 +476,19 @@ TEST(TokenMapUnitTest, DropKeyspace) {
 
     EXPECT_FALSE(replicas);
   }
+}
+
+TEST(TokenMapUnitTest, UniqueReplicas) {
+  TestTokenMap<Murmur3Partitioner> test_murmur3;
+
+  const size_t tokens_per_host = 256;
+  MT19937_64 rng;
+
+  test_murmur3.add_host(create_host("1.0.0.1", random_murmur3_tokens(rng, tokens_per_host)));
+  test_murmur3.add_host(create_host("1.0.0.2", random_murmur3_tokens(rng, tokens_per_host)));
+  test_murmur3.add_host(create_host("1.0.0.3", random_murmur3_tokens(rng, tokens_per_host)));
+  test_murmur3.add_host(create_host("1.0.0.4", random_murmur3_tokens(rng, tokens_per_host)));
+
+  test_murmur3.build();
+  test_murmur3.verify();
 }
