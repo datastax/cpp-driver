@@ -29,6 +29,8 @@ using namespace datastax::internal::core;
 
 typedef Vector<WaitForHandler::WaitForError> Errors;
 
+namespace std {
+
 std::ostream& operator<<(std::ostream& os, const Errors& errors) {
   for (Errors::const_iterator it = errors.begin(); it != errors.end(); ++it) {
     if (it != errors.begin()) os << ", ";
@@ -36,6 +38,8 @@ std::ostream& operator<<(std::ostream& os, const Errors& errors) {
   }
   return os;
 }
+
+} // namespace std
 
 class WaitForHandlerUnitTest : public LoopTest {
 public:
