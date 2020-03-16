@@ -51,6 +51,8 @@ void WaitForCallback::on_chain_write(Connection* connection) { handler_->start(c
 }}} // namespace datastax::internal::core
 
 void WaitForCallback::on_chain_set() {
+  if (handler_->is_finished_) return;
+
   if (handler_->on_set(Ptr(this))) {
     handler_->finish();
   } else {
@@ -59,6 +61,8 @@ void WaitForCallback::on_chain_set() {
 }
 
 void WaitForCallback::on_chain_error(CassError code, const String& message) {
+  if (handler_->is_finished_) return;
+
   OStringStream ss;
   ss << message << " (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code
      << ")";
@@ -67,6 +71,8 @@ void WaitForCallback::on_chain_error(CassError code, const String& message) {
 }
 
 void WaitForCallback::on_chain_timeout() {
+  if (handler_->is_finished_) return;
+
   handler_->on_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_TIMEOUT, "Request timed out");
   handler_->schedule();
 }
@@ -102,26 +108,26 @@ void WaitForHandler::start(Connection* connection) {
 }
 
 void WaitForHandler::schedule() {
-  if (connection_ && !is_finished_) { // Don't schedule a retry if the handler is finished.
-    retry_timer_.start(connection_->loop(), retry_wait_time_ms_,
-                       bind_callback(&WaitForHandler::on_retry_timeout, this));
-  }
+  assert(!is_finished_ && "This shouldn't be called if the handler is finished");
+  retry_timer_.start(connection_->loop(), retry_wait_time_ms_,
+                     bind_callback(&WaitForHandler::on_retry_timeout, this));
 }
 
 void WaitForHandler::finish() {
-  if (!is_finished_) {
-    is_finished_ = true;
-    request_handler_->set_response(current_host_, response_);
-    if (connection_) {
-      connection_.reset();
-      retry_timer_.stop();
-      timer_.stop();
-      dec_ref();
-    }
+  assert(!is_finished_ && "This shouldn't be called more than once");
+  is_finished_ = true;
+  request_handler_->set_response(current_host_, response_);
+  if (connection_) {
+    connection_.reset();
+    retry_timer_.stop();
+    timer_.stop();
+    dec_ref();
   }
 }
 
 void WaitForHandler::on_retry_timeout(Timer* timer) {
+  if (is_finished_) return;
+
   if (connection_->is_closing()) {
     on_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED, "Connection closed");
     finish();
@@ -133,6 +139,8 @@ void WaitForHandler::on_retry_timeout(Timer* timer) {
 }
 
 void WaitForHandler::on_timeout(Timer* timer) {
+  if (is_finished_) return;
+
   on_error(WaitForHandler::WAIT_FOR_ERROR_TIMEOUT, "Timed out");
   finish();
 }
