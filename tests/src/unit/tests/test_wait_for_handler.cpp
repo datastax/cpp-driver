@@ -27,12 +27,10 @@
 using namespace datastax::internal;
 using namespace datastax::internal::core;
 
-
 typedef Vector<WaitForHandler::WaitForError> Errors;
 
 std::ostream& operator<<(std::ostream& os, const Errors& errors) {
-  for (Errors::const_iterator it = errors.begin();
-       it != errors.end(); ++it) {
+  for (Errors::const_iterator it = errors.begin(); it != errors.end(); ++it) {
     if (it != errors.begin()) os << ", ";
     os << *it;
   }
@@ -66,8 +64,7 @@ public:
 
     virtual RequestCallback::Ptr callback() {
       WaitforRequestVec requests;
-      QueryRequest::Ptr table1_request(
-          new QueryRequest("SELECT * FROM test.table1"));
+      QueryRequest::Ptr table1_request(new QueryRequest("SELECT * FROM test.table1"));
       QueryRequest::Ptr table2_request(new QueryRequest("SELECT * FROM test.table2"));
       table1_request->set_is_idempotent(is_idempotent_);
       table2_request->set_is_idempotent(is_idempotent_);
@@ -94,7 +91,8 @@ public:
           found_expected = true;
         }
       }
-      EXPECT_TRUE(found_expected) << "Expected error codes [ " << expected_ << " ], but received error " << code;
+      EXPECT_TRUE(found_expected) << "Expected error codes [ " << expected_
+                                  << " ], but received error " << code;
       count_on_error_++;
     }
 
@@ -110,7 +108,8 @@ public:
     run(handler, builder, timeout);
   }
 
-  void run(const TestWaitForHandler::Ptr& handler, mockssandra::SimpleRequestHandlerBuilder& builder, uint64_t timeout = 0) {
+  void run(const TestWaitForHandler::Ptr& handler,
+           mockssandra::SimpleRequestHandlerBuilder& builder, uint64_t timeout = 0) {
     mockssandra::SimpleCluster cluster(builder.build());
     ASSERT_EQ(cluster.start_all(), 0);
 
@@ -170,36 +169,43 @@ private:
 
 TEST_F(WaitForHandlerUnitTest, CloseImmediatelyWhileWaiting) {
   run(TestWaitForHandler::Ptr(new TestWaitForHandler())
-      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_ERROR)
-      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED));
+          ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_ERROR)
+          ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED));
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseAfterTimeoutWhileWaiting) {
   run(TestWaitForHandler::Ptr(new TestWaitForHandler())
-      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_ERROR)
-      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED), 500);
+          ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_ERROR)
+          ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED),
+      500);
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseIdempotentImmediatelyWhileWaiting) {
   run(TestWaitForHandler::Ptr(new TestWaitForHandler())
-      ->with_is_idempotent(true)
-      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_TIMEOUT)
-      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED));
+          ->with_is_idempotent(true)
+          ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_TIMEOUT)
+          ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED));
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseIdempotentAfterTimeoutWhileWaiting) {
   run(TestWaitForHandler::Ptr(new TestWaitForHandler())
-      ->with_is_idempotent(true)
-      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_TIMEOUT)
-      ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED), 500);
+          ->with_is_idempotent(true)
+          ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_TIMEOUT)
+          ->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED),
+      500);
 }
 
 TEST_F(WaitForHandlerUnitTest, EnsureOnSetNotCalledAfterTimeout) {
-  TestWaitForHandler::Ptr handler(new TestWaitForHandler(1)); // Timeout handler before query returns
+  TestWaitForHandler::Ptr handler(
+      new TestWaitForHandler(1)); // Timeout handler before query returns
 
   // Make sure the query doesn't complete before the handler times out
   mockssandra::SimpleRequestHandlerBuilder builder;
-  builder.on(mockssandra::OPCODE_QUERY).system_local().system_peers().wait(200).empty_rows_result(1);
+  builder.on(mockssandra::OPCODE_QUERY)
+      .system_local()
+      .system_peers()
+      .wait(200)
+      .empty_rows_result(1);
 
   run(handler->with_expected_error(WaitForHandler::WAIT_FOR_ERROR_TIMEOUT), builder, 500);
 
