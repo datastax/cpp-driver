@@ -47,6 +47,28 @@ class ExecutionProfile;
 class Timer;
 class TokenMap;
 
+struct RequestTry {
+  RequestTry()
+      : error(CASS_OK)
+      , latency(0) {}
+
+  RequestTry(const Address& address, uint64_t latency)
+      : address(address)
+      , error(CASS_OK)
+      , latency(latency / (1000 * 1000)) {} // To milliseconds
+
+  RequestTry(const Address& address, CassError error)
+      : address(address)
+      , error(error)
+      , latency(0) {}
+
+  Address address;
+  CassError error;
+  uint64_t latency;
+};
+
+typedef SmallVector<RequestTry, 2> RequestTryVec;
+
 class ResponseFuture : public Future {
 public:
   typedef SharedRefPtr<ResponseFuture> Ptr;
@@ -138,6 +160,7 @@ public:
 
   RequestHandler(const Request::ConstPtr& request, const ResponseFuture::Ptr& future,
                  Metrics* metrics = NULL);
+  ~RequestHandler();
 
   void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
 
@@ -210,6 +233,8 @@ private:
   ConnectionPoolManager* manager_;
 
   Metrics* const metrics_;
+
+  RequestTryVec request_tries_;
 };
 
 class KeyspaceChangedResponse {

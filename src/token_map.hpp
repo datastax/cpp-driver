@@ -52,6 +52,8 @@ public:
 
   virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
                                                  const String& routing_key) const = 0;
+
+  virtual String dump(const String& keyspace_name) const = 0;
 };
 
 }}} // namespace datastax::internal::core
