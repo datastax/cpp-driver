@@ -1,3 +1,23 @@
+2.15.1
+===========
+
+Bug Fixes
+--------
+* [CPP-747] Cannot connect to keyspace with uppercase characters
+* [CPP-897] Simplify CMake build
+* [CPP-913] Possible for a token map replica set for a given range to have duplicates
+* [CPP-914] Possible for a WaitForHandler's on_set() method to be called after timeout/error
+
+Other
+--------
+* [CPP-847] Add CentOS 8 support
+* [CPP-889] Duplicated entry for the DSE features documentation
+
+Community
+--------
+* Fix cflags when build with CASS_INSTALL_HEADER_IN_SUBDIR on (remicollet)
+* Fix typo in RequestProcessorInitializer::internal_initialize (m8mble)
+
 2.15.0
 ===========
 

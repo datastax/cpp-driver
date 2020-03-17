@@ -6,6 +6,7 @@ available for the following platforms:
 
 * [CentOS 6][cpp-driver-centos6]
 * [CentOS 7][cpp-driver-centos7]
+* [CentOS 8][cpp-driver-centos8]
 * [Ubuntu 14.04 LTS][cpp-driver-ubuntu14-04]
 * [Ubuntu 16.04 LTS][cpp-driver-ubuntu16-04]
 * [Ubuntu 18.04 LTS][cpp-driver-ubuntu18-04]
@@ -44,7 +45,7 @@ __\*\*\*__ Use the `CASS_USE_ZLIB` CMake option to enable/disable zlib support.
 
 ## Linux/Mac OS
 
-The driver is known to build on CentOS/RHEL 6/7, Mac OS X 10.10/10.11 (Yosemite
+The driver is known to build on CentOS/RHEL 6/7/8, Mac OS X 10.10/10.11 (Yosemite
 and El Capitan), Mac OS 10.12/10.13 (Sierra and High Sierra), and Ubuntu
 14.04/16.04/18.04 LTS.
 
@@ -106,6 +107,7 @@ Packages are available from our [download server]:
 
 * [CentOS 6][libuv-centos6]
 * [CentOS 7][libuv-centos7]
+* [CentOS 8][libuv-centos8]
 * [Ubuntu 14.04 LTS][libuv-ubuntu14-04]
 * [Ubuntu 16.04 LTS][libuv-ubuntu16-04]
 * [Ubuntu 18.04 LTS][libuv-ubuntu18-04]
@@ -123,9 +125,9 @@ your system._
 
 ```bash
 pushd /tmp
-wget http://dist.libuv.org/dist/v1.34.0/libuv-v1.34.0.tar.gz
-tar xzf libuv-v1.34.0.tar.gz
-pushd libuv-v1.34.0
+wget http://dist.libuv.org/dist/v1.34.0/libuv-v1.35.0.tar.gz
+tar xzf libuv-v1.35.0.tar.gz
+pushd libuv-v1.35.0
 sh autogen.sh
 ./configure
 make install
@@ -330,12 +332,14 @@ cmake -G "Visual Studio 16 2019" -A x64 -DCASS_BUILD_UNIT_TESTS=On ..
 [download server]: http://downloads.datastax.com
 [cpp-driver-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/cassandra
 [cpp-driver-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/cassandra
+[cpp-driver-centos8]: http://downloads.datastax.com/cpp-driver/centos/8/cassandra
 [cpp-driver-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/cassandra
 [cpp-driver-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/cassandra
 [cpp-driver-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/cassandra
 [cpp-driver-windows]: http://downloads.datastax.com/cpp-driver/windows/cassandra
 [libuv-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies/libuv
 [libuv-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/libuv
+[libuv-centos8]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies/libuv
 [libuv-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv
 [libuv-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/libuv
 [libuv-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/libuv

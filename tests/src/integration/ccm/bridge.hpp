@@ -37,8 +37,8 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 #endif
 
 // Default values
-#define DEFAULT_CASSANDRA_VERSION CassVersion("3.11.4")
-#define DEFAULT_DSE_VERSION DseVersion("6.7.5")
+#define DEFAULT_CASSANDRA_VERSION CassVersion("3.11.6")
+#define DEFAULT_DSE_VERSION DseVersion("6.7.7")
 #define DEFAULT_USE_GIT false
 #define DEFAULT_USE_INSTALL_DIR false
 #define DEFAULT_SERVER_TYPE ServerType(ServerType::CASSANDRA)

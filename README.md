@@ -21,6 +21,7 @@ distribution:
 
 * [CentOS 6][centos-6-dependencies]
 * [CentOS 7][centos-7-dependencies]
+* [CentOS 8][centos-8-dependencies]
 * [Ubuntu 14.04][ubuntu-14-04-dependencies]
 * [Ubuntu 16.04][ubuntu-16-04-dependencies]
 * [Ubuntu 18.04][ubuntu-18-04-dependencies]
@@ -221,6 +222,7 @@ specific language governing permissions and limitations under the License.
 [Provide your input]: http://goo.gl/forms/ihKC5uEQr6
 [centos-6-dependencies]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies
 [centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
+[centos-8-dependencies]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies
 [ubuntu-14-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies
 [ubuntu-16-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies
 [ubuntu-18-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies
