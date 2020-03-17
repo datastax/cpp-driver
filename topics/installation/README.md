@@ -2,7 +2,7 @@
 
 ## Packages
 
-Pre-built packages are available for CentOS 6/7, Ubuntu 14.04/16.04/18.04 and
+Pre-built packages are available for CentOS 6/7/8, Ubuntu 14.04/16.04/18.04 and
 Windows 7 SP1 and above.
 
 ### CentOS
@@ -23,6 +23,10 @@ Windows 7 SP1 and above.
   <tr>
    <td>CentOS 7</td>
    <td>http://downloads.datastax.com/cpp-driver/centos/7/cassandra</td>
+  </tr>
+  <tr>
+   <td>CentOS 8</td>
+   <td>http://downloads.datastax.com/cpp-driver/centos/8/cassandra</td>
   </tr>
   </tbody>
 </table>
@@ -47,6 +51,10 @@ CentOS doesn't have up-to-date versions of libuv so we provide current packages.
   <tr>
    <td>CentOS 7</td>
    <td>http://downloads.datastax.com/cpp-driver/centos/7/dependencies</td>
+  </tr>
+  <tr>
+   <td>CentOS 8</td>
+   <td>http://downloads.datastax.com/cpp-driver/centos/8/dependencies</td>
   </tr>
   </tbody>
 </table>

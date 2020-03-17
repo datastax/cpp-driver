@@ -8,6 +8,7 @@ Packages are available for the following platforms:
 
 * [CentOS 6][cpp-driver-centos6]
 * [CentOS 7][cpp-driver-centos7]
+* [CentOS 8][cpp-driver-centos8]
 * [Ubuntu 14.04 LTS][cpp-driver-ubuntu14-04]
 * [Ubuntu 16.04 LTS][cpp-driver-ubuntu16-04]
 * [Ubuntu 18.04 LTS][cpp-driver-ubuntu18-04]
@@ -20,6 +21,7 @@ and can be found under the "dependencies" directory for each platform:
 
 * [CentOS 6][cpp-driver-dependencies-centos6]
 * [CentOS 7][cpp-driver-dependencies-centos7]
+* [CentOS 8][cpp-driver-dependencies-centos8]
 * [Ubuntu 14.04 LTS][cpp-driver-dependencies-ubuntu14-04]
 * [Ubuntu 16.04 LTS][cpp-driver-dependencies-ubuntu16-04]
 * [Ubuntu 18.04 LTS][cpp-driver-dependencies-ubuntu18-04]
@@ -260,12 +262,14 @@ with other drivers. The schedule for these features can be found on [JIRA].
 
 [cpp-driver-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/cassandra
 [cpp-driver-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/cassandra
+[cpp-driver-centos8]: http://downloads.datastax.com/cpp-driver/centos/8/cassandra
 [cpp-driver-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/cassandra
 [cpp-driver-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/cassandra
 [cpp-driver-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/cassandra
 [cpp-driver-windows]: http://downloads.datastax.com/cpp-driver/windows/cassandra
 [cpp-driver-dependencies-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies/
 [cpp-driver-dependencies-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/
+[cpp-driver-dependencies-centos8]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies/
 [cpp-driver-dependencies-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/
 [cpp-driver-dependencies-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/
 [cpp-driver-dependencies-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/
