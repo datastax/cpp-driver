@@ -233,7 +233,7 @@ if (CASS_INSTALL_HEADER_IN_SUBDIR)
     set(INSTALL_HEADER_DIR "include/${CASS_INSTALL_HEADER_SUBDIR_NAME}")
   else()
     # Default subdir location is 'include/cassandra'
-    set(INSTALL_HEADER_DIR "include/${PROJECT_NAME_STRING}")
+    set(INSTALL_HEADER_DIR "include/cassandra")
   endif()
 else()
   # Default header install location is 'include'
