@@ -44,4 +44,8 @@ CassError NoSslContext::set_private_key(const char* key, size_t key_length, cons
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
+CassError NoSslContext::set_default_verify_paths() {
+  return CASS_ERROR_LIB_NOT_IMPLEMENTED;
+}
+
 SslContext::Ptr NoSslContextFactory::create() { return SslContext::Ptr(new NoSslContext()); }

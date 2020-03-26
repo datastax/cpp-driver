@@ -599,6 +599,16 @@ CassError OpenSslContext::set_private_key(const char* key, size_t key_length, co
   return CASS_OK;
 }
 
+CassError OpenSslContext::set_default_verify_paths()
+{
+  int rc = SSL_CTX_set_default_verify_paths(ssl_ctx_);
+  if (!rc) {
+    ssl_log_errors("Unable to load default verification paths");
+    return CASS_ERROR_SSL_INVALID_CERT;
+  }
+  return CASS_OK;
+}
+
 SslContext::Ptr OpenSslContextFactory::create() { return SslContext::Ptr(new OpenSslContext()); }
 
 namespace openssl {
