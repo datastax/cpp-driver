@@ -620,9 +620,11 @@ void free(void* ptr, const char* file, int line) { Memory::free(ptr); }
 void OpenSslContextFactory::internal_init() {
   CRYPTO_set_mem_functions(openssl::malloc, openssl::realloc, openssl::free);
 
+ #if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_library_init();
   SSL_load_error_strings();
   OpenSSL_add_all_algorithms();
+  #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   // We have to set the lock/id callbacks for use of OpenSSL thread safety.
@@ -654,15 +656,19 @@ void OpenSslContextFactory::internal_thread_cleanup() {
 }
 
 void OpenSslContextFactory::internal_cleanup() {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   RAND_cleanup();
   ENGINE_cleanup();
+#endif
   CONF_modules_unload(1);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   CONF_modules_free();
   EVP_cleanup();
   ERR_free_strings();
   CRYPTO_cleanup_all_ex_data();
   CRYPTO_set_locking_callback(NULL);
   CRYPTO_set_id_callback(NULL);
+#endif
 #if OPENSSL_VERSION_NUMBER < 0x10100000L && OPENSSL_VERSION_NUMBER > 0x10002000L
   SSL_COMP_free_compression_methods();
 #endif
