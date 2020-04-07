@@ -185,6 +185,27 @@ TEST(ReplicationStrategyUnitTest, Simple) {
   }
 }
 
+TEST(ReplicationStrategyUnitTest, SimpleNumHostsLessThanReplicationFactor) {
+  MockTokenMap<Murmur3Partitioner> token_map;
+
+  token_map.init_simple_strategy(3);
+
+  MockTokenMap<Murmur3Partitioner>::Token t1 = 0;
+
+  // To reproduce the issue the number of tokens needs to be greater than
+  // (or equal to) the RF because the RF is bounded by the number of tokens.
+  token_map.add_token(t1, "1.0.0.1");
+  token_map.add_token(100, "1.0.0.1");
+  token_map.add_token(200, "1.0.0.1");
+  token_map.add_token(300, "1.0.0.1");
+
+  token_map.build_replicas();
+
+  const CopyOnWriteHostVec& hosts = token_map.find_hosts(t1);
+  ASSERT_TRUE(hosts && hosts->size() == 1);
+  check_host((*hosts)[0], "1.0.0.1");
+}
+
 TEST(ReplicationStrategyUnitTest, NetworkTopology) {
   MockTokenMap<Murmur3Partitioner> token_map;
 

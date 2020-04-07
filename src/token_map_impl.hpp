@@ -516,19 +516,20 @@ void ReplicationStrategy<Partitioner>::build_replicas_simple(const TokenHostVec&
   if (it == replication_factors_.end()) {
     return;
   }
-  size_t num_replicas = std::min<size_t>(it->second.count, tokens.size());
+  const size_t num_tokens = tokens.size();
+  const size_t num_replicas = std::min<size_t>(it->second.count, num_tokens);
   for (typename TokenHostVec::const_iterator i = tokens.begin(), end = tokens.end(); i != end;
        ++i) {
     CopyOnWriteHostVec replicas(new HostVec());
     replicas->reserve(num_replicas);
     typename TokenHostVec::const_iterator token_it = i;
-    do {
+    for (size_t j = 0; j < num_tokens && replicas->size() < num_replicas; ++j) {
       add_replica(replicas, Host::Ptr(Host::Ptr(token_it->second)));
       ++token_it;
       if (token_it == tokens.end()) {
         token_it = tokens.begin();
       }
-    } while (replicas->size() < num_replicas);
+    }
     result.push_back(TokenReplicas(i->first, replicas));
   }
 }
