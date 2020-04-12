@@ -196,7 +196,7 @@ TEST_F(ConnectionUnitTest, Ssl) {
 TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
   const String host = "127.0.0.1";
   const int verification_flags = CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY;
-  const char* cert_path = "cassandra-unit-test.cert";
+  const String cert_path = std::tmpnam(nullptr);
 
   mockssandra::SimpleCluster cluster(simple());
   const String cert = cluster.use_ssl(host);
@@ -217,13 +217,14 @@ TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
       << "Verification succeeded without certificate.";
 
   // Generate certificate as file (which is used by our mock cluster) and import it
-  std::ofstream cert_buffer(cert_path);
+  std::ofstream cert_buffer(cert_path.c_str());
   cert_buffer << cert;
   cert_buffer.close();
-  ASSERT_EQ(uv_os_setenv("SSL_CERT_FILE", cert_path), 0) << "Failed to prepare openssl environment";
+  ASSERT_EQ(uv_os_setenv("SSL_CERT_FILE", cert_path.c_str()), 0)
+      << "Failed to prepare openssl environment";
   ASSERT_EQ(settings.socket_settings.ssl_context->set_default_verify_paths(), CASS_OK)
       << "Failed to import default / system SSL certificates.";
-  ASSERT_EQ(std::remove(cert_path), 0) << "Failed to cleanup temporary certificate file.";
+  ASSERT_EQ(std::remove(cert_path.c_str()), 0) << "Failed to cleanup temporary certificate file.";
 
   // Ensure verification succeeds with this certificate.
   State state;
