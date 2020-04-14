@@ -220,7 +220,7 @@ TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
   std::ofstream cert_buffer(cert_path.c_str());
   cert_buffer << cert;
   cert_buffer.close();
-  ASSERT_EQ(setenv("SSL_CERT_FILE", cert_path.c_str(), 1), 0)
+  ASSERT_EQ(::setenv("SSL_CERT_FILE", cert_path.c_str(), 1), 0)
       << "Failed to prepare openssl environment";
   std::cout << "Debug SslDefaultVerifyPaths: SSL_CERT_FILE " << cert_path << " " << cert << std::endl;
   for (const auto var: {"SSL_CERT_FILE", "SSL_CERT_DIR"}) {
