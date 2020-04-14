@@ -37,7 +37,7 @@ namespace {
 
 static void setenv(const std::string& name, const std::string& value) {
 #ifdef _WIN32
-  putenv(const_cast<char*>(std::string(name + "=" + value).c_str()));
+  _putenv(const_cast<char*>(std::string(name + "=" + value).c_str()));
 #else
   ::setenv(name.c_str(), value.c_str(), 1);
 #endif
@@ -244,7 +244,6 @@ TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
   }
   ASSERT_EQ(settings.socket_settings.ssl_context->set_default_verify_paths(), CASS_OK)
       << "Failed to import default / system SSL certificates.";
-  ASSERT_EQ(std::remove(cert_path.c_str()), 0) << "Failed to cleanup temporary certificate file.";
 
   // Ensure verification succeeds with this certificate.
   State state;
@@ -254,6 +253,7 @@ TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
   connector1->with_settings(settings)->connect(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
   EXPECT_EQ(state.status, STATUS_SUCCESS);
+  ASSERT_EQ(std::remove(cert_path.c_str()), 0) << "Failed to cleanup temporary certificate file.";
 }
 
 TEST_F(ConnectionUnitTest, Refused) {
