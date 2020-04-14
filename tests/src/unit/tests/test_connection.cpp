@@ -33,6 +33,18 @@
 using namespace datastax::internal;
 using namespace datastax::internal::core;
 
+namespace {
+
+static void setenv(const std::string& name, const std::string& value) {
+#ifdef _WIN32
+  putenv(const_cast<char*>(std::string(name + "=" + value).c_str()));
+#else
+  ::setenv(name.c_str(), value.c_str(), 1);
+#endif
+}
+
+}
+
 class ConnectionUnitTest : public LoopTest {
 public:
   enum Status {
@@ -220,8 +232,7 @@ TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
   std::ofstream cert_buffer(cert_path.c_str());
   cert_buffer << cert;
   cert_buffer.close();
-  ASSERT_EQ(::setenv("SSL_CERT_FILE", cert_path.c_str(), 1), 0)
-      << "Failed to prepare openssl environment";
+  setenv("SSL_CERT_FILE", cert_path.c_str());
   std::cout << "Debug SslDefaultVerifyPaths: SSL_CERT_FILE " << cert_path << " " << cert << std::endl;
   for (const auto var: {"SSL_CERT_FILE", "SSL_CERT_DIR"}) {
     const char* value = std::getenv(var);
