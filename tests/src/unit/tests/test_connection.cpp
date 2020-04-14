@@ -222,6 +222,15 @@ TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
   cert_buffer.close();
   ASSERT_EQ(uv_os_setenv("SSL_CERT_FILE", cert_path.c_str()), 0)
       << "Failed to prepare openssl environment";
+  std::cout << "Debug SslDefaultVerifyPaths: SSL_CERT_FILE " << cert_path << " " << cert << std::endl;
+  for (const auto var: {"SSL_CERT_FILE", "SSL_CERT_DIR"}) {
+    const char* value = std::getenv(var);
+    if (value == nullptr) {
+      std::cout << "Debug SslDefaultVerifyPaths: Env " << var << " is not set!" << std::endl;
+      continue;
+    }
+    std::cout << "Debug SslDefaultVerifyPaths: Env " << var << " " << value << std::endl;
+  }
   ASSERT_EQ(settings.socket_settings.ssl_context->set_default_verify_paths(), CASS_OK)
       << "Failed to import default / system SSL certificates.";
   ASSERT_EQ(std::remove(cert_path.c_str()), 0) << "Failed to cleanup temporary certificate file.";
