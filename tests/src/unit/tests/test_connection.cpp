@@ -35,12 +35,23 @@ using namespace datastax::internal::core;
 
 namespace {
 
-static void setenv(const std::string& name, const std::string& value) {
+void setenv(const std::string& name, const std::string& value) {
 #ifdef _WIN32
   _putenv(const_cast<char*>(std::string(name + "=" + value).c_str()));
 #else
   ::setenv(name.c_str(), value.c_str(), 1);
 #endif
+}
+
+String current_dir()
+{
+  char buffer[256];
+#ifdef _WIN32
+  _getcwd(buffer, 256);
+#else
+  getcwd(buffer, 256);
+#endif
+  return buffer;
 }
 
 }
@@ -208,7 +219,7 @@ TEST_F(ConnectionUnitTest, Ssl) {
 TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
   const String host = "127.0.0.1";
   const int verification_flags = CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY;
-  const String cert_path = std::tmpnam(nullptr);
+  const String cert_path = "tmp.cassandra.unit-test.cert";
 
   mockssandra::SimpleCluster cluster(simple());
   const String cert = cluster.use_ssl(host);
@@ -228,11 +239,14 @@ TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
   EXPECT_EQ(connect_rc, Connector::CONNECTION_ERROR_SSL_VERIFY)
       << "Verification succeeded without certificate.";
 
+  const String cwd = current_dir();
+
   // Generate certificate as file (which is used by our mock cluster) and import it
   std::ofstream cert_buffer(cert_path.c_str());
   cert_buffer << cert;
   cert_buffer.close();
   setenv("SSL_CERT_FILE", cert_path.c_str());
+  setenv("SSL_CERT_DIR", cwd.c_str());
   std::cout << "Debug SslDefaultVerifyPaths: SSL_CERT_FILE " << cert_path << " " << cert << std::endl;
   for (const auto var: {"SSL_CERT_FILE", "SSL_CERT_DIR"}) {
     const char* value = std::getenv(var);
