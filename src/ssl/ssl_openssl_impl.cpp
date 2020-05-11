@@ -620,11 +620,11 @@ void free(void* ptr, const char* file, int line) { Memory::free(ptr); }
 void OpenSslContextFactory::internal_init() {
   CRYPTO_set_mem_functions(openssl::malloc, openssl::realloc, openssl::free);
 
- #if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_library_init();
   SSL_load_error_strings();
   OpenSSL_add_all_algorithms();
-  #endif
+#endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   // We have to set the lock/id callbacks for use of OpenSSL thread safety.
