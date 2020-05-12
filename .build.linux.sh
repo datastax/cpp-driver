@@ -15,7 +15,7 @@
 #  limitations under the License.
 ##
 
-configure_environment() {
+configure_testing_environment() {
   if ! grep -lq "127.254.254.254" /etc/hosts; then
     printf "\n\n%s\n" "127.254.254.254  cpp-driver.hostname." | sudo tee -a /etc/hosts
   fi
@@ -33,7 +33,7 @@ install_libuv() {(
     [[ -d build ]] && rm -rf build
     mkdir build
 
-    if [ "${OS_NAME}" = "ubuntu" ]; then
+    if [ "${OS_DISTRO}" = "ubuntu" ]; then
       ./build_deb.sh ${LIBUV_VERSION}
     else
       ./build_rpm.sh ${LIBUV_VERSION}
@@ -43,7 +43,7 @@ install_libuv() {(
   [[ -d packages ]] || mkdir packages
   find libuv-packaging/build -type f \( -name "*.deb" -o -name "*.rpm" \) -exec mv {} packages \;
 
-  if [ "${OS_NAME}" = "ubuntu" ]; then
+  if [ "${OS_DISTRO}" = "ubuntu" ]; then
     sudo dpkg -i packages/libuv*.deb
   else
     sudo rpm -U --force packages/libuv*.rpm
@@ -66,7 +66,7 @@ install_driver() {(
     [[ -d build ]] && rm -rf build
     mkdir build
 
-    if [ "${OS_NAME}" = "ubuntu" ]; then
+    if [ "${OS_DISTRO}" = "ubuntu" ]; then
       ./build_deb.sh
     else
       ./build_rpm.sh
@@ -76,7 +76,7 @@ install_driver() {(
   [[ -d packages ]] || mkdir packages
   find build -type f \( -name "*.deb" -o -name "*.rpm" \) -exec mv {} packages \;
 
-  if [ "${OS_NAME}" = "ubuntu" ]; then
+  if [ "${OS_DISTRO}" = "ubuntu" ]; then
     sudo dpkg -i packages/*cpp-driver*.deb
   else
     sudo rpm -i packages/*cpp-driver*.rpm

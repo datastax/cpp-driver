@@ -20,13 +20,9 @@
 #set -n #Check Syntax
 set -e #Fail fast on non-zero exit status
 
-WORKER_INFORMATION=($(echo ${OS_VERSION} | tr "/" " "))
-OS_NAME=${WORKER_INFORMATION[0]}
-RELEASE=${WORKER_INFORMATION[1]}
-SHA=$(echo ${GIT_COMMIT} | cut -c1-7)
-
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-if [ "${OS_NAME}" = "osx" ]; then
+
+if [ "${OS_DISTRO}" = "osx" ]; then
   LIB_SUFFIX="dylib"
   PROCS=$(sysctl -n hw.logicalcpu)
   . ${SCRIPT_DIR}/.build.osx.sh

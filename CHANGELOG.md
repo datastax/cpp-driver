@@ -1,3 +1,15 @@
+2.15.2
+===========
+
+Bug Fixes
+--------
+* [CPP-917] Infinite loop in token map calculation when using SimpleStrategy and RF > number of
+  nodes
+
+Community
+--------
+* Fix compatibility with OpenSSL 1.1 (SeverinLeonhardt)
+
 2.15.1
 ===========
 

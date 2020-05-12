@@ -15,7 +15,7 @@
 #  limitations under the License.
 ##
 
-configure_environment() {
+configure_testing_environment() {
   true
 }
 
