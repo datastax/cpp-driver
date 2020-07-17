@@ -436,9 +436,6 @@ OpenSslSession::OpenSslSession(const Address& address, const String& hostname,
     , incoming_bio_(rb::RingBufferBio::create(&incoming_state_))
     , outgoing_bio_(rb::RingBufferBio::create(&outgoing_state_)) {
   SSL_set_bio(ssl_, incoming_bio_, outgoing_bio_);
-#if DEBUG_SSL
-  SSL_CTX_set_info_callback(ssl_ctx, ssl_info_callback);
-#endif
   SSL_set_connect_state(ssl_);
 
   if (!sni_server_name_.empty()) {
@@ -542,6 +539,11 @@ OpenSslContext::OpenSslContext()
     , trusted_store_(X509_STORE_new()) {
   SSL_CTX_set_cert_store(ssl_ctx_, trusted_store_);
   SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, ssl_no_verify_callback);
+  // Limit to TLS 1.2 for now. TLS 1.3 has broken the handshake code.
+  SSL_CTX_set_max_proto_version(ssl_ctx_, TLS1_2_VERSION);
+#if DEBUG_SSL
+  SSL_CTX_set_info_callback(ssl_ctx_, ssl_info_callback);
+#endif
 }
 
 OpenSslContext::~OpenSslContext() { SSL_CTX_free(ssl_ctx_); }
