@@ -186,7 +186,8 @@ void ClusterConnector::on_resolve(ClusterMetadataResolver* resolver) {
 }
 
 void ClusterConnector::on_connect(ControlConnector* connector) {
-  if (!connector->is_ok() && !connector->is_canceled()) {
+  // Ignore logging protocol errors here because they're handled below
+  if (!connector->is_ok() && !connector->is_canceled() && !connector->is_invalid_protocol()) {
     LOG_ERROR(
         "Unable to establish a control connection to host %s because of the following error: %s",
         connector->address().to_string().c_str(), connector->error_message().c_str());
@@ -283,7 +284,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
       on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Unable to find supported protocol version");
       return;
     }
-    LOG_WARN("Host %s does not support protocol version %s. "
+    LOG_INFO("Host %s does not support protocol version %s. "
              "Trying protocol version %s...",
              connector->address().to_string().c_str(),
              connector->protocol_version().to_string().c_str(), lower_version.to_string().c_str());
