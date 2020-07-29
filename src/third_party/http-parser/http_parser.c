@@ -474,7 +474,7 @@ static struct {
 };
 #undef HTTP_STRERROR_GEN
 
-int http_message_needs_eof(const http_parser *parser);
+static int http_message_needs_eof(const http_parser *parser);
 
 /* Our URL parser.
  *
