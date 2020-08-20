@@ -19,6 +19,7 @@
 
 #include "aligned_storage.hpp"
 #include "macros.hpp"
+#include "ref_counted.hpp"
 
 #include <new>
 #include <stddef.h>
@@ -39,6 +40,14 @@ public:
     typedef MemberInvoker<F, T> MemberInvoker;
     STATIC_ASSERT(sizeof(Storage) >= sizeof(MemberInvoker));
     STATIC_ASSERT(ALIGN_OF(Storage) >= ALIGN_OF(MemberInvoker));
+  }
+
+  template <class F, class T>
+  Callback(F func, SharedRefPtr<T> ptr)
+      : invoker_(new (&storage_) MemberPtrInvoker<F, T>(func, ptr)) {
+    typedef MemberInvoker<F, T> MemberPtrInvoker;
+    STATIC_ASSERT(sizeof(Storage) >= sizeof(MemberPtrInvoker));
+    STATIC_ASSERT(ALIGN_OF(Storage) >= ALIGN_OF(MemberPtrInvoker));
   }
 
   template <class F>
@@ -96,6 +105,20 @@ private:
     T* object;
   };
 
+  template <class F, class T>
+  struct MemberPtrInvoker : public Invoker {
+    MemberPtrInvoker(F func, const SharedRefPtr<T>& ptr)
+        : func(func)
+        , ptr(ptr) {}
+
+    R invoke(const Arg& arg) const { return (ptr.get()->*func)(arg); }
+
+    Invoker* copy(Storage* storage) { return new (storage) MemberPtrInvoker<F, T>(func, ptr); }
+
+    F func;
+    SharedRefPtr<T> ptr;
+  };
+
   template <class F>
   struct FunctionInvoker : public Invoker {
     FunctionInvoker(F func)
@@ -132,6 +155,11 @@ private:
 template <class R, class Arg, class T>
 Callback<R, Arg> bind_callback(R (T::*func)(Arg), T* object) {
   return Callback<R, Arg>(func, object);
+}
+
+template <class R, class Arg, class T>
+Callback<R, Arg> bind_callback(R (T::*func)(Arg), const SharedRefPtr<T>& ptr) {
+  return Callback<R, Arg>(func, ptr);
 }
 
 template <class R, class Arg>
