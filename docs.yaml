@@ -69,7 +69,7 @@ rules:
 
 versions:
   - name: "2.15"
-    ref: 2.15.3
+    ref: 40e8268b7750dacafe6662563d9873269d26f6c7
   - name: "2.14"
     ref: 2.14.0
   - name: "2.13"
