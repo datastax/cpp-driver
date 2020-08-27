@@ -8,7 +8,7 @@ Cassandra Query Language v3. This driver can also be used with other DataStax
 products:
 
 * [DataStax Enterprise]
-* [DataStax Constellation]
+* [DataStax Astra]
 
 ## Getting the Driver
 
@@ -82,7 +82,7 @@ dependencies for a specific platform.
   * [DSE geospatial types]
   * DSE [proxy authentication][DSE Proxy Authentication] and [proxy execution][DSE Proxy Execution]
   * [DSE DateRange]
-* Support for [DataStax Constellation] Cloud Data Platform
+* Support for [DataStax Astra] Cloud Data Platform
 
 ## Compatibility
 
@@ -229,7 +229,7 @@ specific language governing permissions and limitations under the License.
 [ubuntu-16-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies
 [ubuntu-18-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies
 [windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
-[DataStax Constellation]: https://constellation.datastax.com
+[DataStax Astra]: https://astra.datastax.com
 [Kerberos]: https://web.mit.edu/kerberos
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures

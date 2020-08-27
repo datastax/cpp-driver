@@ -40,7 +40,7 @@ __\*\*__ Use the `CASS_USE_OPENSSL` CMake option to enable/disable OpenSSL
          within the driver; defaults to `On`.
 
 __\*\*\*__ Use the `CASS_USE_ZLIB` CMake option to enable/disable zlib support.
-           Disabling this option will disable DataStax Constellation support
+           Disabling this option will disable DataStax Astra support
            within the driver; defaults to `On`.
 
 ## Linux/Mac OS
