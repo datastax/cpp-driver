@@ -130,7 +130,7 @@ public:
     writer.Key("username");
     writer.String("DataStax");
     writer.Key("password");
-    writer.String("Constellation");
+    writer.String("Astra");
     writer.Key("host");
     writer.String(host.c_str());
     writer.Key("port");
@@ -175,7 +175,7 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1) {
 
   EXPECT_TRUE(cloud_config.load(creds_zip_file(), &config));
   EXPECT_EQ("DataStax", cloud_config.username());
-  EXPECT_EQ("Constellation", cloud_config.password());
+  EXPECT_EQ("Astra", cloud_config.password());
   EXPECT_EQ("cloud.datastax.com", cloud_config.host());
   EXPECT_EQ(1443, cloud_config.port());
   EXPECT_EQ(ca_cert(), cloud_config.ca_cert());
@@ -223,7 +223,7 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingHost) {
   writer.Key("username");
   writer.String("DataStax");
   writer.Key("password");
-  writer.String("Constellation");
+  writer.String("Astra");
   writer.Key("port");
   writer.Int(1443);
   writer.EndObject();
@@ -241,7 +241,7 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingPort) {
   writer.Key("username");
   writer.String("DataStax");
   writer.Key("password");
-  writer.String("Constellation");
+  writer.String("Astra");
   writer.Key("host");
   writer.String("cloud.datastax.com");
   writer.EndObject();
