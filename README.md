@@ -110,11 +110,6 @@ __Disclaimer__: DataStax products do not support big-endian systems.
 * JIRA: https://datastax-oss.atlassian.net/browse/CPP
 * Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 
-## Feedback Requested
-
-**Help us focus our efforts!** [Provide your input] on the C/C++ Driver Platform
-and Runtime Survey (we kept it short).
-
 ## Examples
 
 The driver includes several examples in the [examples] directory.
@@ -221,7 +216,6 @@ specific language governing permissions and limitations under the License.
 [API]: http://docs.datastax.com/en/developer/cpp-driver/latest/api
 [Getting Started]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics
 [Building]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/building
-[Provide your input]: http://goo.gl/forms/ihKC5uEQr6
 [centos-6-dependencies]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies
 [centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
 [centos-8-dependencies]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies
