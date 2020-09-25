@@ -185,6 +185,7 @@ const char* RequestCallback::state_string() const {
     case REQUEST_STATE_FINISHED:
       return "FINISHED";
   }
+  return "INVALID";
 }
 
 SimpleRequestCallback::SimpleRequestCallback(const String& query, uint64_t request_timeout_ms)
