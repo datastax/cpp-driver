@@ -226,7 +226,7 @@ CassError cass_statement_bind_string_by_name(CassStatement* statement, const cha
 CassError cass_statement_bind_string_by_name_n(CassStatement* statement, const char* name,
                                                size_t name_length, const char* value,
                                                size_t value_length) {
-  return statement->set(StringRef(name, name_length), CassString(value, SAFE_STRLEN(value)));
+  return statement->set(StringRef(name, name_length), CassString(value, value_length));
 }
 
 CassError cass_statement_bind_custom(CassStatement* statement, size_t index, const char* class_name,
