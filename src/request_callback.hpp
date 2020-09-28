@@ -189,6 +189,8 @@ public:
   State state() const { return state_; }
   void set_state(State next_state);
 
+  const char* state_string() const;
+
   ResponseMessage* read_before_write_response() const { return read_before_write_response_.get(); }
 
   void set_read_before_write_response(ResponseMessage* response) {
