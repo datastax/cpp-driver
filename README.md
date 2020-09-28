@@ -1,5 +1,3 @@
-:warning: **The C/C++ driver is in maintenance mode. We are still accepting pull-requests and we will occasionally release critical bug fixes, but no ongoing active development is being done currently.**
-
 # DataStax C/C++ Driver for Apache Cassandra® and DataStax Products
 
 A modern, feature-rich and highly tunable C/C++ client library for
