@@ -622,7 +622,7 @@ void free(void* ptr, const char* file, int line) { Memory::free(ptr); }
 } // namespace openssl
 
 void OpenSslContextFactory::internal_init() {
-  CRYPTO_set_mem_functions(openssl::malloc, openssl::realloc, openssl::free);
+  //CRYPTO_set_mem_functions(openssl::malloc, openssl::realloc, openssl::free);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_library_init();
@@ -662,9 +662,9 @@ void OpenSslContextFactory::internal_thread_cleanup() {
 void OpenSslContextFactory::internal_cleanup() {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   RAND_cleanup();
-  ENGINE_cleanup();
+  //ENGINE_cleanup();
 #endif
-  CONF_modules_unload(1);
+  //CONF_modules_unload(1);
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   CONF_modules_free();
   EVP_cleanup();
