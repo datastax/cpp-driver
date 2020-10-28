@@ -286,9 +286,10 @@ void SocketConnector::on_resolve(Resolver* resolver) {
     const AddressVec& addresses(resolver->addresses());
     LOG_DEBUG("Resolved the addresses %s for hostname %s", to_string(addresses).c_str(),
               hostname_.c_str());
-    resolved_address_ = Address(
-        addresses[resolved_address_offset_.fetch_add(MEMORY_ORDER_RELAXED) % addresses.size()],
-        address_.server_name()); // Keep the server name for debugging
+
+    size_t offset = resolved_address_offset_.fetch_add(1, MEMORY_ORDER_RELAXED);
+    resolved_address_ = Address(addresses[offset % addresses.size()],
+                                address_.server_name()); // Keep the server name for debugging
     internal_connect(resolver->loop());
   } else if (is_canceled() || resolver->is_canceled()) {
     finish();
