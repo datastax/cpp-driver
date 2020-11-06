@@ -496,11 +496,7 @@ public:
     } else if (*this == "5.1.16") {
       return CassVersion("3.11.4-5116");
     } else if (*this >= "5.1.17" && *this < "6.0.0") {
-      if (*this > "5.1.17") {
-        std::cerr << "Cassandra Version is not Defined: "
-                  << "Add Cassandra version for DSE v" << this->to_string() << std::endl;
-      }
-      return CassVersion("3.11.4-5117");
+      return CassVersion("3.11.4");
     } else if (*this >= "6.0.0" && *this < "6.7.0") {
       return CassVersion(
           "3.11.2-5111"); // Versions before DSE 6.7 erroneously return they support Cassandra 4.0.0
