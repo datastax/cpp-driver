@@ -614,8 +614,7 @@ pipeline {
                    'centos/8-64/cpp',
                    'ubuntu/trusty64/cpp',
                    'ubuntu/xenial64/cpp',
-                   'ubuntu/bionic64/cpp',
-                   'osx/high-sierra'
+                   'ubuntu/bionic64/cpp'
           }
         }
 
