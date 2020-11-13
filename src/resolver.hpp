@@ -73,6 +73,15 @@ public:
 
     inc_ref(); // For the event loop
 
+    // If no hints are provided then use a default filter.
+    struct addrinfo default_hints;
+    if (hints == NULL) {
+      hints = &default_hints;
+      memset(hints, 0, sizeof(struct addrinfo));
+      hints->ai_family = AF_UNSPEC;
+      hints->ai_socktype = SOCK_STREAM;
+    }
+
     if (timeout > 0) {
       timer_.start(loop, timeout, bind_callback(&Resolver::on_timeout, this));
     }
