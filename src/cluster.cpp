@@ -504,7 +504,7 @@ void Cluster::internal_notify_host_up(const Address& address) {
     return; // Ignore host
   }
 
-  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_up, this))) {
+  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_up, Cluster::Ptr(this)))) {
     notify_host_up_after_prepare(host);
   }
 }
@@ -597,7 +597,7 @@ void Cluster::notify_host_add(const Host::Ptr& host) {
     return; // Ignore host
   }
 
-  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_add, this))) {
+  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_add, Cluster::Ptr(this)))) {
     notify_host_add_after_prepare(host);
   }
 }
