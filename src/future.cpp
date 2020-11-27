@@ -163,6 +163,17 @@ CassError cass_future_custom_payload_item(CassFuture* future, size_t index, cons
   return CASS_OK;
 }
 
+const CassNode* cass_future_coordinator(CassFuture* future) {
+  if (future->type() != Future::FUTURE_TYPE_RESPONSE) {
+    return NULL;
+  }
+  const Address& node = static_cast<ResponseFuture*>(future->from())->address();
+  if (!node.is_valid()) {
+    return NULL;
+  }
+  return CassNode::to(&node);
+}
+
 } // extern "C"
 
 bool Future::set_callback(Future::Callback callback, void* data) {

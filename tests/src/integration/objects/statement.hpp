@@ -261,6 +261,13 @@ public:
   }
 
   /**
+   * Set node to run statement on use `CassNode` type.
+   *
+   * @param node
+   */
+  void set_node(const CassNode* node) { ASSERT_EQ(CASS_OK, cass_statement_set_node(get(), node)); }
+
+  /**
    * Set the paging size for the statement.
    *
    * @param page_size

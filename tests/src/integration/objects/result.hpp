@@ -220,6 +220,8 @@ public:
     return std::string(token, token_length);
   }
 
+  const CassNode* coordinator() { return cass_future_coordinator(future_.get()); }
+
 private:
   /**
    * Future wrapped object
