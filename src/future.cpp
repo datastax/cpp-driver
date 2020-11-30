@@ -168,10 +168,7 @@ const CassNode* cass_future_coordinator(CassFuture* future) {
     return NULL;
   }
   const Address& node = static_cast<ResponseFuture*>(future->from())->address();
-  if (!node.is_valid()) {
-    return NULL;
-  }
-  return CassNode::to(&node);
+  return node.is_valid() ? CassNode::to(&node) : NULL;
 }
 
 } // extern "C"

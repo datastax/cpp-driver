@@ -171,11 +171,6 @@ CassError cass_statement_set_host_inet(CassStatement* statement, const CassInet*
   return CASS_OK;
 }
 
-CassError cass_statement_set_host_address(CassStatement* statement, const CassNode* node) {
-  statement->set_host(*node->from());
-  return CASS_OK;
-}
-
 CassError cass_statement_set_node(CassStatement* statement, const CassNode* node) {
   if (node == NULL) {
     return CASS_ERROR_LIB_BAD_PARAMS;
