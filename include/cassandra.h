@@ -227,6 +227,14 @@ typedef struct CassResult_ CassResult;
  */
 typedef struct CassErrorResult_ CassErrorResult;
 
+
+/**
+ * An object that represents a cluster node.
+ *
+ * @struct CassNode
+ */
+typedef struct CassNode_ CassNode;
+
 /**
  * An object used to iterate over a group of rows, columns or collection values.
  *
@@ -5002,6 +5010,21 @@ cass_future_custom_payload_item(CassFuture* future,
                                 const cass_byte_t** value,
                                 size_t* value_size);
 
+/**
+ * Gets the node that acted as coordinator for this query. If the future is not
+ * ready this method will wait for the future to be set.
+ *
+ * @param future
+ * @return The coordinator node that handled the query. The lifetime of this
+ * object is the same as the result object it came from. NULL can be returned
+ * if the future is not a response future or if an error occurs before a
+ * coordinator responds.
+ *
+ * @see cass_statement_set_node()
+ */
+CASS_EXPORT const CassNode*
+cass_future_coordinator(CassFuture* future);
+
 /***********************************************************************************
  *
  * Statement
@@ -5394,6 +5417,21 @@ CASS_EXPORT CassError
 cass_statement_set_host_inet(CassStatement* statement,
                              const CassInet* host,
                              int port);
+
+/**
+ * Same as cass_statement_set_host(), but using the `CassNode` type. This can
+ * be used to re-query the same coordinator when used with the result of
+ * `cass_future_coordinator()`
+ *
+ * @param statement
+ * @param address
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_future_coordinator()
+ */
+CASS_EXPORT CassError
+cass_statement_set_node(CassStatement* statement,
+                        const CassNode* node);
 
 /**
  * Binds null to a query or bound statement at the specified index.

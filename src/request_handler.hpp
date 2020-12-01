@@ -119,7 +119,7 @@ public:
     return false;
   }
 
-  Address address() {
+  const Address& address() {
     ScopedMutex lock(&mutex_);
     internal_wait(lock);
     return address_;
