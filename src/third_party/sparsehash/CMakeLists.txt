@@ -65,7 +65,8 @@ foreach(LOCATION hash_map;ext/hash_map)
 endforeach(LOCATION)
 
 if(NOT HASH_NAMESPACE)
-  message(FATAL_ERROR "Unable to determine the standard hash namespace")
+  message(WARNING "Unable to determine the standard hash namespace, will use 'std'")
+  set(HASH_NAMESPACE "std")
 endif()
 
 foreach(LOCATION functional;tr1/functional;ext/hash_fun.h;ext/stl_hash_fun.h;hash_fun.h;stl_hash_fun.h;stl/_hash_fun.h)
@@ -85,7 +86,8 @@ foreach(LOCATION functional;tr1/functional;ext/hash_fun.h;ext/stl_hash_fun.h;has
 endforeach(LOCATION)
 
 if(NOT HASH_FUN_H)
-  message(FATAL_ERROR "Unable to find standard hash header file")
+  message(WARNING "Unable to find standard hash header file, will use 'functional'")
+  set(HASH_FUN_H "functional")
 endif()
 
 message(STATUS "Using hash header <${HASH_FUN_H}> and namespace \"${HASH_NAMESPACE}\"")

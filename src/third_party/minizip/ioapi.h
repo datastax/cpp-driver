@@ -18,6 +18,14 @@
 
 */
 
+#ifndef OF /* function prototypes */
+#  ifdef STDC
+#    define OF(args)  args
+#  else
+#    define OF(args)  ()
+#  endif
+#endif
+
 #ifndef _ZLIBIOAPI64_H
 #define _ZLIBIOAPI64_H
 
