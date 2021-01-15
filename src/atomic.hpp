@@ -19,6 +19,24 @@
 
 #include "driver_config.hpp"
 
+#if !defined(THREAD_SANITIZER)
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define THREAD_SANITIZER 1
+#endif
+#elif defined(__SANITIZE_THREAD__)
+#define THREAD_SANITIZER 1
+#endif
+#endif
+
+// Annotations for atomic_thread_fence, see https://github.com/google/sanitizers/issues/1352
+#ifdef THREAD_SANITIZER
+extern "C" {
+void __tsan_acquire(void *addr);
+void __tsan_release(void *addr);
+}
+#endif
+
 #if defined(HAVE_BOOST_ATOMIC)
 #include "atomic/atomic_boost.hpp"
 #elif defined(HAVE_STD_ATOMIC)

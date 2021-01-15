@@ -43,6 +43,9 @@ public:
     assert(new_ref_count >= 1);
     if (new_ref_count == 1) {
       atomic_thread_fence(MEMORY_ORDER_ACQUIRE);
+#ifdef THREAD_SANITIZER
+      __tsan_acquire(const_cast<void *>(static_cast<const void*>(this)));
+#endif
       delete static_cast<const T*>(this);
     }
   }
