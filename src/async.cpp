@@ -16,18 +16,23 @@
 
 #include "async.hpp"
 
+#include <assert.h>
+
 using namespace datastax::internal::core;
 
-Async::Async()
-    : handle_(NULL) {}
+Async::Async() {}
 
 Async::~Async() { close_handle(); }
 
 int Async::start(uv_loop_t* loop, const Async::Callback& callback) {
-  if (handle_ == NULL) {
-    handle_ = new AllocatedT<uv_async_t>();
-    handle_->data = this;
-    int rc = uv_async_init(loop, handle_, on_async);
+  auto holder = std::atomic_load(&handle_ptr_);
+  if (!holder) {
+    holder = std::make_shared<Handle>();
+    holder->handle_->data = this;
+    int rc = uv_async_init(loop, holder->handle_, on_async);
+    auto prev = std::atomic_exchange(&handle_ptr_, holder);
+    assert(!prev);
+    (void) prev;
     if (rc != 0) return rc;
   }
   callback_ = callback;
@@ -35,19 +40,19 @@ int Async::start(uv_loop_t* loop, const Async::Callback& callback) {
 }
 
 void Async::send() {
-  if (handle_ == NULL) return;
-  uv_async_send(handle_);
+  auto handle_holder = std::atomic_load(&handle_ptr_);
+  if (!handle_holder) return;
+  uv_async_send(handle_holder->handle_);
 }
 
 void Async::close_handle() {
-  if (handle_ == NULL) return;
-  uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
-  handle_ = NULL;
+  std::atomic_store(&handle_ptr_, {});
 }
 
 bool Async::is_running() const {
-  if (handle_ == NULL) return false;
-  return uv_is_active(reinterpret_cast<uv_handle_t*>(handle_)) != 0;
+  auto handle_holder = std::atomic_load(&handle_ptr_);
+  if (!handle_holder) return false;
+  return uv_is_active(reinterpret_cast<uv_handle_t*>(handle_holder->handle_)) != 0;
 }
 
 void Async::on_async(uv_async_t* handle) {

@@ -21,6 +21,8 @@
 #include "callback.hpp"
 #include "macros.hpp"
 
+#include <memory>
+
 #include <uv.h>
 
 namespace datastax { namespace internal { namespace core {
@@ -63,14 +65,24 @@ public:
   bool is_running() const;
 
 public:
-  uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
+  uv_loop_t* loop() {
+    auto holder = std::atomic_load(&handle_ptr_);
+    return holder ? holder->handle_->loop : NULL;
+  }
 
 private:
   static void on_async(uv_async_t* handle);
   static void on_close(uv_handle_t* handle);
 
 private:
-  AllocatedT<uv_async_t>* handle_;
+  struct Handle
+  {
+    AllocatedT<uv_async_t>* handle_;
+    Handle() : handle_(new AllocatedT<uv_async_t>()) {}
+    ~Handle() { uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close); };
+  };
+
+  std::shared_ptr<Handle> handle_ptr_;
   Callback callback_;
 
 private:
