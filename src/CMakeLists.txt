@@ -171,7 +171,7 @@ if(CASS_BUILD_STATIC)
     $<TARGET_OBJECTS:http-parser_static>
     $<TARGET_OBJECTS:minizip_static>)
   target_link_libraries(cassandra_static ${CASS_LIBS})
-  target_include_directories(cassandra_static PRIVATE ${INCLUDE_DIRS} ${CASS_INCLUDES})
+  target_include_directories(cassandra_static PRIVATE ${INCLUDE_DIRS} ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
 
   set_target_properties(cassandra_static PROPERTIES OUTPUT_NAME cassandra_static)
   set_target_properties(cassandra_static PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
