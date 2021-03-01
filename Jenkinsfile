@@ -571,21 +571,6 @@ pipeline {
       description: 'CI testing server version(s) to utilize for scheduled test runs of the driver (<strong>DO NOT CHANGE THIS SELECTION</strong>)')
   }
 
-  triggers {
-    parameterizedCron("""
-      # Every weeknight (Monday - Friday) around 12:00 AM
-      H 0 * * 1-5 %CI_SCHEDULE=WEEKNIGHTS;CI_SCHEDULE_SERVER_VERSIONS=ALL;OS_VERSION=centos/8-64/cpp;INTEGRATION_TESTS_FILTER=CassandraTypes/*:DseTypes/*
-      H 0 * * 1-5 %CI_SCHEDULE=WEEKNIGHTS;CI_SCHEDULE_SERVER_VERSIONS=ALL;OS_VERSION=ubuntu/bionic64/cpp;INTEGRATION_TESTS_FILTER=CassandraTypes/*:DseTypes/*
-      # Every weekend (Saturday) around 12:00 AM
-      H 0 * * 6 %CI_SCHEDULE=WEEKENDS;CI_SCHEDULE_SERVER_VERSIONS=3.11 dse-5.1 dse-6.0 dse-6.7;OS_VERSION=centos/8-64/cpp
-      H 0 * * 6 %CI_SCHEDULE=WEEKENDS;CI_SCHEDULE_SERVER_VERSIONS=3.11 dse-5.1 dse-6.0 dse-6.7;OS_VERSION=ubuntu/bionic64/cpp
-      H 0 * * 6 %CI_SCHEDULE=WEEKENDS;ADHOC_BUILD_TYPE=BUILD-DOCUMENTS
-      # Every month on the first around 12:00 AM
-      # H 0 1 * * %CI_SCHEDULE=MONTHLY;CI_SCHEDULE_SERVER_VERSIONS=4.0 ddac-5.1 dse-6.8;OS_VERSION=centos/8-64/cpp
-      # H 0 1 * * %CI_SCHEDULE=MONTHLY;CI_SCHEDULE_SERVER_VERSIONS=4.0 ddac-5.1 dse-6.8;OS_VERSION=ubuntu/bionic64/cpp
-    """)
-  }
-
   environment {
     LIBUV_VERSION = "${params.LIBUV_VERSION}"
     CCM_ENVIRONMENT_SHELL = '/usr/local/bin/ccm_environment.sh'
