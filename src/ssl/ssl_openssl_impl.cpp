@@ -228,22 +228,6 @@ end:
   return ret;
 }
 
-static X509* load_cert(const char* cert, size_t cert_size) {
-  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_size);
-  if (bio == NULL) {
-    return NULL;
-  }
-
-  X509* x509 = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
-  if (x509 == NULL) {
-    ssl_log_errors("Unable to load certificate");
-  }
-
-  BIO_free_all(bio);
-
-  return x509;
-}
-
 static EVP_PKEY* load_key(const char* key, size_t key_size, const char* password) {
   BIO* bio = BIO_new_mem_buf(const_cast<char*>(key), key_size);
   if (bio == NULL) {
@@ -556,13 +540,30 @@ SslSession* OpenSslContext::create_session(const Address& address, const String&
 }
 
 CassError OpenSslContext::add_trusted_cert(const char* cert, size_t cert_length) {
-  X509* x509 = load_cert(cert, cert_length);
-  if (x509 == NULL) {
+  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_length);
+  if (bio == NULL) {
     return CASS_ERROR_SSL_INVALID_CERT;
   }
 
-  X509_STORE_add_cert(trusted_store_, x509);
-  X509_free(x509);
+  int num_certs = 0;
+
+  // Iterate over the bio, reading out as many certificates as possible.
+  for (X509* cert = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
+       cert != NULL;
+       cert = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL))
+  {
+    X509_STORE_add_cert(trusted_store_, cert);
+    X509_free(cert);
+    num_certs++;
+  }
+
+  BIO_free_all(bio);
+
+  // If no certificates were read from the bio, that is an error.
+  if (num_certs == 0) {
+    ssl_log_errors("Unable to load certificate(s)");
+    return CASS_ERROR_SSL_INVALID_CERT;
+  }
 
   return CASS_OK;
 }
