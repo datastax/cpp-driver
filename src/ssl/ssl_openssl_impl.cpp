@@ -489,8 +489,8 @@ void OpenSslSession::verify() {
         return;
     }
   } else if (verify_flags_ &
-             CASS_SSL_VERIFY_PEER_IDENTITY_DNS) { // Match using hostnames (including wildcards)
-    switch (OpenSslVerifyIdentity::match_dns(peer_cert, hostname_)) {
+             CASS_SSL_VERIFY_PEER_IDENTITY_DNS) { // Match using the server name (including wildcards)
+    switch (OpenSslVerifyIdentity::match_dns(peer_cert, sni_server_name_)) {
       case OpenSslVerifyIdentity::MATCH:
         // Success
         break;

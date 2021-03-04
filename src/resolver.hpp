@@ -47,8 +47,9 @@ public:
     SUCCESS
   };
 
-  Resolver(const String& hostname, int port, const Callback& callback)
+  Resolver(const String& hostname, int port, const Callback& callback, const String& server_name)
       : hostname_(hostname)
+      , server_name_(server_name)
       , port_(port)
       , status_(NEW)
       , callback_(callback) {
@@ -139,7 +140,7 @@ private:
   bool init_addresses(struct addrinfo* res) {
     bool status = false;
     do {
-      Address address(res->ai_addr);
+      Address address(res->ai_addr, server_name_);
       if (address.is_valid_and_resolved()) {
         addresses_.push_back(address);
         status = true;
@@ -153,6 +154,7 @@ private:
   uv_getaddrinfo_t req_;
   Timer timer_;
   String hostname_;
+  String server_name_;
   int port_;
   Status status_;
   int uv_status_;
@@ -175,10 +177,11 @@ public:
   const Resolver::Vec& resolvers() { return resolvers_; }
 
   void resolve(uv_loop_t* loop, const String& host, int port, uint64_t timeout,
-               struct addrinfo* hints = NULL) {
+               const String& server_name, struct addrinfo* hints = NULL) {
     inc_ref();
     Resolver::Ptr resolver(
-        new Resolver(host, port, bind_callback(&MultiResolver::on_resolve, this)));
+        new Resolver(host, port, bind_callback(&MultiResolver::on_resolve, this),
+                     server_name));
     resolver->resolve(loop, timeout, hints);
     resolvers_.push_back(resolver);
     remaining_++;
