@@ -1,3 +1,27 @@
+2.16.0
+===========
+
+Features
+--------
+* [PR #489] Add API to get/set coordinator node
+
+Bug Fixes
+--------
+* [CPP-924] Pure virtual function called when Session object is being destructed
+* [PR #488] Only using a single resolved IP when connecting with hostname
+* [PR #494] Use correct `Host:` header when calling metadata service (Astra)
+
+Other
+---------
+* [CPP-933] Reduce the log severity of protocol negotiation errors/warnings
+
+2.15.3
+===========
+
+Bug Fixes
+--------
+* [CPP-922] Limit to TLS 1.2
+
 2.15.2
 ===========
 
