@@ -51,7 +51,7 @@ private:
     OStringStream ss;
 
     ss << "GET / HTTP/1.0\r\n"
-       << "Host: " HTTP_MOCK_SERVER_IP << ":" << HTTP_MOCK_SERVER_PORT << "\r\n"
+       << "Host: " HTTP_MOCK_SERVER_IP "\r\n"
        << "User-Agent: cpp-driver/" << driver_version() << "\r\nAccept: */*\r\n\r\n";
 
     return ss.str();
