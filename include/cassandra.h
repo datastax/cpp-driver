@@ -5014,6 +5014,8 @@ cass_future_custom_payload_item(CassFuture* future,
  * Gets the node that acted as coordinator for this query. If the future is not
  * ready this method will wait for the future to be set.
  *
+ * @public @memberof CassFuture
+ *
  * @param future
  * @return The coordinator node that handled the query. The lifetime of this
  * object is the same as the result object it came from. NULL can be returned
@@ -5422,6 +5424,8 @@ cass_statement_set_host_inet(CassStatement* statement,
  * Same as cass_statement_set_host(), but using the `CassNode` type. This can
  * be used to re-query the same coordinator when used with the result of
  * `cass_future_coordinator()`
+ *
+ * @public @memberof CassStatement
  *
  * @param statement
  * @param address
