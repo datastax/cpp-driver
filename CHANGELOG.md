@@ -13,7 +13,7 @@ Bug Fixes
 
 Other
 ---------
-* [CPP-933] Reduce the log severity of protocol negotiation errors/warnings
+* [CPP-923] Reduce the log severity of protocol negotiation errors/warnings
 
 2.15.3
 ===========
