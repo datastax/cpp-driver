@@ -68,8 +68,10 @@ rules:
   use_path_nav_files_only: true
 
 versions:
+  - name: "2.16"
+    ref: 70812a0b5d21fb3e7f6c6e98a76f0a688d0c8a69 
   - name: "2.15"
-    ref: 40e8268b7750dacafe6662563d9873269d26f6c7
+    ref: 2.15.3
   - name: "2.14"
     ref: 2.14.0
   - name: "2.13"
