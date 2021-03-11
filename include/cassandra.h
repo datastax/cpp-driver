@@ -5428,7 +5428,7 @@ cass_statement_set_host_inet(CassStatement* statement,
  * @public @memberof CassStatement
  *
  * @param statement
- * @param address
+ * @param node
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_future_coordinator()
