@@ -214,6 +214,7 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener, EventLoop
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(); it != policies.end(); ++it) {
     // Initialize the load balancing policies
     (*it)->init(connected_host, hosts, random, local_dc);
+    (*it)->register_handles(event_loop_->loop());
   }
 
   listener_->on_connect(this);
@@ -308,6 +309,10 @@ void RequestProcessor::on_requires_flush() {
 }
 
 void RequestProcessor::on_close(ConnectionPoolManager* manager) {
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin();
+       it != load_balancing_policies_.end(); ++it) {
+    (*it)->close_handles();
+  }
   async_.close_handle();
   prepare_.close_handle();
   timer_.stop();
