@@ -1819,8 +1819,7 @@ void UseKeyspace::on_run(Request* request) const {
       String keyspace(query.substr(query.find_first_not_of(" \t", 3)));
       for (Vector<String>::const_iterator it = keyspaces.begin(), end = keyspaces.end(); it != end;
            ++it) {
-        String temp(*it);
-        if (keyspace == escape_id(temp)) {
+        if (keyspace == escape_id(*it)) {
           String body;
           encode_int32(RESULT_SET_KEYSPACE, &body);
           encode_string(*it, &body);

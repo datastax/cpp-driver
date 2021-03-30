@@ -126,12 +126,12 @@ static bool is_quoted_id(const String& str) {
   return str.empty();
 }
 
-String& escape_id(String& str) { 
+String escape_id(const String& str) {
   // add quotes only to unqoted strings and containing upper case chars
-  if (!is_quoted_id(str) && !is_lowercase(str)) {
-    str = "\"" + str + "\"";
+  if (is_quoted_id(str) || is_lowercase(str)) {
+    return str;
   }
-  return str;
+  return "\"" + str + "\"";
 }
 
 int32_t get_pid() {

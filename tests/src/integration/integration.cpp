@@ -320,7 +320,7 @@ void Integration::drop_type(const std::string& type_name) {
 
 bool Integration::use_keyspace(const std::string& keyspace_name) {
   std::stringstream use_keyspace_query;
-  use_keyspace_query << "USE " << keyspace_name;
+  use_keyspace_query << "USE " << escape_id(keyspace_name);
   session_.execute(use_keyspace_query.str());
   if (this->HasFailure()) {
     return false;
