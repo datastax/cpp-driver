@@ -289,7 +289,7 @@ Statement::Statement(const Prepared* prepared)
   // If the keyspace wasn't explictly set then attempt to set it using the
   // prepared statement's result metadata.
   if (keyspace().empty()) {
-    set_keyspace(prepared->result()->quoted_keyspace());
+    set_keyspace(prepared->result()->keyspace().to_string());
   }
 }
 

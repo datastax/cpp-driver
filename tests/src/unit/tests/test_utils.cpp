@@ -35,11 +35,26 @@ TEST(UtilsUnitTest, EscapeId) {
   s = "aBc";
   EXPECT_EQ(escape_id(s), String("\"aBc\""));
 
+  s = "\"aBc\"";
+  EXPECT_EQ(escape_id(s), String("\"aBc\""));
+
+  s = " \"aBc\" ";
+  EXPECT_EQ(escape_id(s), String(" \"aBc\" "));
+
+  s = "a_c";
+  EXPECT_EQ(escape_id(s), String("a_c"));
+
+  s = "Abc_Def";
+  EXPECT_EQ(escape_id(s), String("\"Abc_Def\""));
+
   s = "\"";
-  EXPECT_EQ(escape_id(s), String("\"\"\"\""));
+  EXPECT_EQ(escape_id(s), String("\""));
+
+  s = "";
+  EXPECT_EQ(escape_id(s), String(""));
 
   s = "a\"Bc";
-  EXPECT_EQ(escape_id(s), String("\"a\"\"Bc\""));
+  EXPECT_EQ(escape_id(s), String("\"a\"Bc\""));
 }
 
 TEST(UtilsUnitTest, NumLeadingZeros) {
