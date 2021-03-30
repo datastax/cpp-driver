@@ -116,14 +116,14 @@ static bool is_lowercase(const String& str) {
 }
 
 static bool is_quoted_id(const String& str) {
-  // do not quote blank spaces 
+  // ignore spaces
   String::const_iterator b = std::find_if_not(str.begin(), str.end(), ::isspace);
   if (b != str.end() && *b == '"') {
     String::const_reverse_iterator e = std::find_if_not(str.rbegin(), str.rend(), ::isspace);
     return (*e == '"');
   }
-  // do not quote empty string
-  return str.empty();
+  // do not quote empty, or spaces only  strings
+  return b == str.end() || str.empty();
 }
 
 String escape_id(const String& str) {

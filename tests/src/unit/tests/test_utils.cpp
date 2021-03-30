@@ -29,6 +29,9 @@ using datastax::internal::num_leading_zeros;
 TEST(UtilsUnitTest, EscapeId) {
   String s;
 
+  s = "   ";
+  EXPECT_EQ(escape_id(s), String("   "));
+
   s = "abc";
   EXPECT_EQ(escape_id(s), String("abc"));
 
