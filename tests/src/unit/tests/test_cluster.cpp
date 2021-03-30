@@ -421,7 +421,7 @@ TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
 
   connector->with_settings(settings)->connect(event_loop());
 
-  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME*2));
   EXPECT_FALSE(connect_future->error());
   EXPECT_GE(
       logging_criteria_count(),
