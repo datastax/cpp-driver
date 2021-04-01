@@ -101,7 +101,7 @@ String implode(const Vector<String>& vec, const char delimiter /* = ' ' */) {
   return str;
 }
 
-bool not_isspace(int c) { return !::isspace(c); }
+static bool not_isspace(int c) { return !::isspace(c); }
 
 String& trim(String& str) {
   // Trim front
@@ -112,38 +112,27 @@ String& trim(String& str) {
 }
 
 static bool is_lowercase(const String& str) {
-  if (str.empty()) return true;
-
-  char c = str[0];
-  if (!(c >= 'a' && c <= 'z')) return false;
-
-  for (String::const_iterator it = str.begin() + 1, end = str.end(); it != end; ++it) {
-    char c = *it;
-    if (!((c >= '0' && c <= '9') || (c == '_') || (c >= 'a' && c <= 'z'))) {
-      return false;
-    }
-  }
-  return true;
+  return str.end() == std::find_if(str.begin(), str.end(), ::isupper);
 }
 
-static String& quote_id(String& str) {
-  String temp(str);
-  str.clear();
-  str.push_back('"');
-  for (String::const_iterator i = temp.begin(), end = temp.end(); i != end; ++i) {
-    if (*i == '"') {
-      str.push_back('"');
-      str.push_back('"');
-    } else {
-      str.push_back(*i);
-    }
+static bool is_quoted_id(const String& str) {
+  // ignore spaces
+  String::const_iterator b = std::find_if_not(str.begin(), str.end(), ::isspace);
+  if (b != str.end() && *b == '"') {
+    String::const_reverse_iterator e = std::find_if_not(str.rbegin(), str.rend(), ::isspace);
+    return (*e == '"');
   }
-  str.push_back('"');
-
-  return str;
+  // do not quote empty, or spaces only  strings
+  return b == str.end() || str.empty();
 }
 
-String& escape_id(String& str) { return is_lowercase(str) ? str : quote_id(str); }
+String escape_id(const String& str) {
+  // add quotes only to unqoted strings and containing upper case chars
+  if (is_quoted_id(str) || is_lowercase(str)) {
+    return str;
+  }
+  return "\"" + str + "\"";
+}
 
 int32_t get_pid() {
 #if (defined(WIN32) || defined(_WIN32))
