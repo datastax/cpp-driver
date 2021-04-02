@@ -49,16 +49,21 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row, const char* n
 
 namespace datastax { namespace internal { namespace core {
 
-bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& output) {
+bool decode_row(Decoder& decoder, const ResultResponse* result,
+                OutputValueVec& output) {
   output.clear();
-  output.reserve(result->column_count());
-  for (int i = 0; i < result->column_count(); ++i) {
-    Value value;
-    const ColumnDefinition& def = result->metadata()->get_column_definition(i);
-    CHECK_RESULT(decoder.decode_value(def.data_type, value));
-    output.push_back(value);
+  const int column_count = result->column_count();
+  if (column_count > 0) {
+    output.reserve(column_count);
+    const SharedRefPtr<ResultMetadata>& metadata = result->metadata();
+    for (int i = 0; i < column_count; ++i) {
+      const ColumnDefinition& def = metadata->get_column_definition(i);
+      Value value = decoder.decode_value(def.data_type);
+      if (value.data_type()) {
+        output.push_back(value);
+      } else return false;
+    }
   }
-
   return true;
 }
 

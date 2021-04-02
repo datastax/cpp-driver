@@ -35,7 +35,8 @@ bool CollectionIterator::decode_value() {
     data_type = collection_->primary_data_type();
   }
 
-  return decoder_.decode_value(data_type, value_, true);
+  value_ = decoder_.decode_value(data_type);
+  return !!value_.data_type();
 }
 
 bool TupleIterator::next() {
@@ -43,5 +44,7 @@ bool TupleIterator::next() {
     return false;
   }
   current_ = next_++;
-  return decoder_.decode_value(*current_, value_);
+
+  value_ = decoder_.decode_value(*current_);
+  return !!value_.data_type();
 }

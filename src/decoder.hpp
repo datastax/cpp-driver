@@ -558,8 +558,7 @@ public:
   bool decode_write_type(CassWriteType& output);
   bool decode_warnings(WarningVec& output);
 
-  bool decode_value(const DataType::ConstPtr& data_type, Value& output,
-                    bool is_inside_collection = false);
+  Value  decode_value(const DataType::ConstPtr& data_type);
 
 protected:
   // Testing only
