@@ -1,3 +1,10 @@
+2.16.1
+===========
+
+Bug Fixes
+--------
+* [CPP-924] Latency aware policy never activates because minimum latency isn't updated for request processors
+
 2.16.0
 ===========
 
