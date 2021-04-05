@@ -126,14 +126,15 @@ TEST_F(SessionBaseUnitTest, SimpleEmptyKeyspaceWithoutRandom) {
 }
 
 TEST_F(SessionBaseUnitTest, CaseSensitiveUnquotedKeyspace) {
- mockssandra::SimpleCluster cluster(simple());
- ASSERT_EQ(cluster.start_all(), 0);
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
   config.contact_points().push_back(Address("127.0.0.1", 9042));
   TestSessionBase session_base;
 
-  // test api level unqoted keyspace name, i.e. cass_session_connect_keyspace(..., ..., "CaseSensitive");
+  // test api level unqoted keyspace name, i.e. cass_session_connect_keyspace(..., ...,
+  // "CaseSensitive");
   Future::Ptr connect_future(session_base.connect(config, "CaseSensitive"));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(session_base.state(), SessionBase::SESSION_STATE_CONNECTED);
