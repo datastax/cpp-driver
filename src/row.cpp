@@ -58,7 +58,7 @@ bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& 
     for (int i = 0; i < column_count; ++i) {
       const ColumnDefinition& def = metadata->get_column_definition(i);
       Value value = decoder.decode_value(def.data_type);
-      if (value.data_type()) {
+      if (value.is_valid()) {
         output.push_back(value);
       } else
         return false;

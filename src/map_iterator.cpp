@@ -22,7 +22,7 @@ bool MapIterator::decode_pair() {
   key_ = decoder_.decode_value(map_->primary_data_type());
   if (key_.data_type()) {
     value_ = decoder_.decode_value(map_->secondary_data_type());
-    return !!value_.data_type();
+    return value_.is_valid();
   }
   return false;
 }
