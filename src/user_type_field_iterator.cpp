@@ -25,5 +25,6 @@ bool UserTypeFieldIterator::next() {
     return false;
   }
   current_ = next_++;
-  return decoder_.decode_value(current_->type, value_);
+  value_ = decoder_.decode_value(current_->type);
+  return value_.is_valid();
 }

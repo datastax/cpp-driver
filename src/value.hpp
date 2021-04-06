@@ -51,6 +51,8 @@ public:
   ProtocolVersion protocol_version() const { return decoder_.protocol_version(); }
   int64_t size() const { return (is_null_ ? -1 : decoder_.remaining()); }
 
+  bool is_valid() const { return !!data_type_; }
+
   CassValueType value_type() const {
     if (!data_type_) {
       return CASS_VALUE_TYPE_UNKNOWN;
