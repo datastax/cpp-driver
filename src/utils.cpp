@@ -117,9 +117,9 @@ static bool is_lowercase(const String& str) {
 
 static bool is_quoted_id(const String& str) {
   // ignore spaces
-  String::const_iterator b = std::find_if_not(str.begin(), str.end(), ::isspace);
+  String::const_iterator b = std::find_if(str.begin(), str.end(), not_isspace);
   if (b != str.end() && *b == '"') {
-    String::const_reverse_iterator e = std::find_if_not(str.rbegin(), str.rend(), ::isspace);
+    String::const_reverse_iterator e = std::find_if(str.rbegin(), str.rend(), not_isspace);
     return (*e == '"');
   }
   // do not quote empty, or spaces only  strings
