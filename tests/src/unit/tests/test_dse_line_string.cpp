@@ -36,8 +36,11 @@ public:
   void TearDown() { dse_line_string_free(line_string); }
 
   const CassValue* to_value() {
+    // Value can not take a temporary for DataType,
+    // normally DataType lifecycle is dictated by the response object
+    static const DataType::ConstPtr data_type(new CustomType(DSE_LINE_STRING_TYPE));
     char* data = const_cast<char*>(reinterpret_cast<const char*>(line_string->bytes().data()));
-    value = Value(DataType::ConstPtr(new CustomType(DSE_LINE_STRING_TYPE)),
+    value = Value(data_type,
                   Decoder(data, line_string->bytes().size(), 0)); // Protocol version not used
     return CassValue::to(&value);
   }

@@ -36,8 +36,11 @@ public:
   void TearDown() { dse_polygon_free(polygon); }
 
   const CassValue* to_value() {
+    // Value can not take a temporary for DataType,
+    // normally DataType lifecycle is dictated by the response object
+    static const DataType::ConstPtr data_type(new CustomType(DSE_POLYGON_TYPE));
     char* data = const_cast<char*>(reinterpret_cast<const char*>(polygon->bytes().data()));
-    value = Value(DataType::ConstPtr(new CustomType(DSE_POLYGON_TYPE)),
+    value = Value(data_type,
                   Decoder(data, polygon->bytes().size(), 0)); // Protocol version not used
     return CassValue::to(&value);
   }
