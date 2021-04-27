@@ -29,7 +29,7 @@ bool CollectionIterator::next() {
 bool CollectionIterator::decode_value() {
   if (collection_->value_type() == CASS_VALUE_TYPE_MAP) {
     const DataType::ConstPtr& data_type =
-        ((index_ & 1) == 0) ? collection_->primary_data_type() : collection_->secondary_data_type();
+        (index_ % 2 == 0) ? collection_->primary_data_type() : collection_->secondary_data_type();
     value_ = decoder_.decode_value(data_type);
   } else {
     value_ = decoder_.decode_value(collection_->primary_data_type());
