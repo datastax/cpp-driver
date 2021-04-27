@@ -28,7 +28,8 @@ namespace datastax { namespace internal { namespace core {
 class Value {
 public:
   Value()
-      : count_(0)
+      : data_type_(&empty_data_type_)
+      , count_(0)
       , is_null_(false) {}
 
   // Used for "null" values
@@ -126,7 +127,7 @@ public:
 
 private:
   static const DataType::ConstPtr empty_data_type_;
-  const DataType::ConstPtr* data_type_ = &empty_data_type_;
+  const DataType::ConstPtr* data_type_;
   int32_t count_;
   Decoder decoder_;
   bool is_null_;
