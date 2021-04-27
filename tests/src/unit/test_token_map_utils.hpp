@@ -105,6 +105,8 @@ typedef datastax::internal::Vector<ColumnMetadata> ColumnMetadataVec;
 typedef datastax::internal::Vector<String> TokenVec;
 typedef datastax::internal::Vector<Murmur3Partitioner::Token> Murmur3TokenVec;
 
+static std::vector<ResultResponse::Ptr> responsesCache;
+
 class RowResultResponseBuilder : protected BufferBuilder {
 public:
   RowResultResponseBuilder(const ColumnMetadataVec& column_metadata)
@@ -207,12 +209,15 @@ public:
   ResultResponse* finish() {
     encode_at(row_count_index_, row_count_);
     Decoder decoder(data(), size(), CASS_PROTOCOL_VERSION);
-    result_response_.decode(decoder);
-    return &result_response_;
+    result_response_.reset(new ResultResponse());
+    result_response_->decode(decoder);
+    // keep the response alive, metadata is referenced in the Value objects
+    responsesCache.push_back(result_response_);
+    return result_response_.get();
   }
 
 private:
-  ResultResponse result_response_;
+  ResultResponse::Ptr result_response_;
   size_t row_count_index_;
   int32_t row_count_;
 };
