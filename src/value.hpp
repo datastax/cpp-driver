@@ -33,7 +33,7 @@ public:
 
   // Used for "null" values
   Value(const DataType::ConstPtr& data_type)
-      : data_type_(data_type)
+      : data_type_(&data_type)
       , count_(0)
       , is_null_(true) {}
 
@@ -42,7 +42,7 @@ public:
 
   // Used for collections and schema metadata collections (converted from JSON)
   Value(const DataType::ConstPtr& data_type, int32_t count, Decoder decoder)
-      : data_type_(data_type)
+      : data_type_(&data_type)
       , count_(count)
       , decoder_(decoder)
       , is_null_(false) {}
@@ -51,30 +51,30 @@ public:
   ProtocolVersion protocol_version() const { return decoder_.protocol_version(); }
   int64_t size() const { return (is_null_ ? -1 : decoder_.remaining()); }
 
-  bool is_valid() const { return !!data_type_; }
+  bool is_valid() const { return !!data_type(); }
 
   CassValueType value_type() const {
-    if (!data_type_) {
-      return CASS_VALUE_TYPE_UNKNOWN;
+    if (data_type()) {
+      return data_type()->value_type();
     }
-    return data_type_->value_type();
+    return CASS_VALUE_TYPE_UNKNOWN;
   }
 
-  const DataType::ConstPtr& data_type() const { return data_type_; }
+  const DataType::ConstPtr& data_type() const { return *data_type_; }
 
   CassValueType primary_value_type() const {
     const DataType::ConstPtr& primary(primary_data_type());
-    if (!primary) {
-      return CASS_VALUE_TYPE_UNKNOWN;
+    if (primary) {
+      return primary->value_type();
     }
-    return primary->value_type();
+    return CASS_VALUE_TYPE_UNKNOWN;
   }
 
   const DataType::ConstPtr& primary_data_type() const {
-    if (!data_type_ || !data_type_->is_collection()) {
+    if (!data_type() || !data_type()->is_collection()) {
       return DataType::NIL;
     }
-    const CollectionType::ConstPtr& collection_type(data_type_);
+    const CollectionType::ConstPtr& collection_type(data_type());
     if (collection_type->types().size() < 1) {
       return DataType::NIL;
     }
@@ -83,17 +83,17 @@ public:
 
   CassValueType secondary_value_type() const {
     const DataType::ConstPtr& secondary(secondary_data_type());
-    if (!secondary) {
-      return CASS_VALUE_TYPE_UNKNOWN;
+    if (secondary) {
+      return secondary->value_type();
     }
-    return secondary->value_type();
+    return CASS_VALUE_TYPE_UNKNOWN;
   }
 
   const DataType::ConstPtr& secondary_data_type() const {
-    if (!data_type_ || !data_type_->is_map()) {
+    if (!data_type() || !data_type()->is_map()) {
       return DataType::NIL;
     }
-    const CollectionType::ConstPtr& collection_type(data_type_);
+    const CollectionType::ConstPtr& collection_type(data_type());
     if (collection_type->types().size() < 2) {
       return DataType::NIL;
     }
@@ -103,23 +103,19 @@ public:
   bool is_null() const { return is_null_; }
 
   bool is_collection() const {
-    if (!data_type_) return false;
-    return data_type_->is_collection();
+    return data_type() && data_type()->is_collection();
   }
 
   bool is_map() const {
-    if (!data_type_) return false;
-    return data_type_->is_map();
+    return data_type() && data_type()->is_map();
   }
 
   bool is_tuple() const {
-    if (!data_type_) return false;
-    return data_type_->is_tuple();
+    return data_type() && data_type()->is_tuple();
   }
 
   bool is_user_type() const {
-    if (!data_type_) return false;
-    return data_type_->is_user_type();
+    return data_type() && data_type()->is_user_type();
   }
 
   int32_t count() const { return count_; }
@@ -137,7 +133,8 @@ public:
   StringVec as_stringlist() const;
 
 private:
-  DataType::ConstPtr data_type_;
+  static const DataType::ConstPtr empty_data_type_;
+  const DataType::ConstPtr* data_type_ = &empty_data_type_;
   int32_t count_;
   Decoder decoder_;
   bool is_null_;
