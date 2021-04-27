@@ -200,21 +200,21 @@ Value::Value(const DataType::ConstPtr& data_type, Decoder decoder)
     , decoder_(decoder)
     , is_null_(false) {
 
-  switch(data_type->value_type()) {
-  case CASS_VALUE_TYPE_TUPLE: {
-    SharedRefPtr<const CompositeType> composite_type(data_type);
-    count_ = composite_type->types().size();
-    break;
-  }
-  case CASS_VALUE_TYPE_UDT: {
-    UserType::ConstPtr user_type(data_type);
-    count_ = user_type->fields().size();
-    break;
-  }
-  default:
-    assert(!data_type->is_collection());
-    count_ = 0;
-    break;
+  switch (data_type->value_type()) {
+    case CASS_VALUE_TYPE_TUPLE: {
+      SharedRefPtr<const CompositeType> composite_type(data_type);
+      count_ = composite_type->types().size();
+      break;
+    }
+    case CASS_VALUE_TYPE_UDT: {
+      UserType::ConstPtr user_type(data_type);
+      count_ = user_type->fields().size();
+      break;
+    }
+    default:
+      assert(!data_type->is_collection());
+      count_ = 0;
+      break;
   }
 }
 
