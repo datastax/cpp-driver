@@ -199,11 +199,11 @@ Value::Value(const DataType::ConstPtr& data_type, Decoder decoder)
     , is_null_(false) {
   assert(!data_type->is_collection());
   if (data_type->is_tuple()) {
-    SharedRefPtr<const CompositeType> composite_type(data_type);
-    count_ = composite_type->types().size();
+    const CompositeType& composite_type = static_cast<const CompositeType&>(*data_type);
+    count_ = composite_type.types().size();
   } else if (data_type->is_user_type()) {
-    UserType::ConstPtr user_type(data_type);
-    count_ = user_type->fields().size();
+    const UserType& user_type = static_cast<const UserType&>(*data_type);
+    count_ = user_type.fields().size();
   } else {
     count_ = 0;
   }

@@ -87,6 +87,19 @@ public:
     return *this;
   }
 
+#if defined(__cpp_rvalue_references)
+  SharedRefPtr<T>& operator=(SharedRefPtr<T>&& ref) noexcept {
+    if (ptr_ != NULL) {
+      ptr_->dec_ref();
+    }
+    ptr_ = ref.ptr_;
+    ref.ptr_ = NULL;
+    return *this;
+  }
+
+  SharedRefPtr(SharedRefPtr<T>&& ref) noexcept : ptr_(ref.ptr_) { ref.ptr_ = NULL; }
+#endif
+
   ~SharedRefPtr() {
     if (ptr_ != NULL) {
       ptr_->dec_ref();
