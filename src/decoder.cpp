@@ -148,10 +148,12 @@ Value Decoder::decode_value(const DataType::ConstPtr& data_type) {
     remaining_ -= size;
 
     int32_t count = 0;
-    if (data_type->is_collection() && !decoder.decode_int32(count)) {
-      return Value();
+    if (!data_type->is_collection()) {
+      return Value(data_type, decoder);
+    } else if (decoder.decode_int32(count)) {
+      return Value(data_type, count, decoder);
     }
-    return Value(data_type, count, decoder);
+    return Value();
   }
   return Value(data_type);
 }
