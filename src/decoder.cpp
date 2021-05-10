@@ -158,6 +158,18 @@ Value Decoder::decode_value(const DataType::ConstPtr& data_type) {
   return Value(data_type);
 }
 
+bool Decoder::decode_value(Value& value) {
+  int32_t size = 0;
+  if (!decode_int32(size)) return false;
+  if (size >= 0) {
+    Decoder decoder(input_, size, protocol_version_);
+    input_ += size;
+    remaining_ -= size;
+    return value.update(decoder);
+  }
+  return false;
+}
+
 void Decoder::notify_error(const char* detail, size_t bytes) const {
   if (strlen(type_) == 0) {
     LOG_ERROR("Expected at least %u byte%s to decode %s value", static_cast<unsigned int>(bytes),

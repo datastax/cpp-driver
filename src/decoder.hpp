@@ -559,6 +559,7 @@ public:
   bool decode_warnings(WarningVec& output);
 
   Value decode_value(const DataType::ConstPtr& data_type);
+  bool decode_value(Value& value);
 
 protected:
   // Testing only

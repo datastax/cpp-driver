@@ -50,10 +50,17 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row, const char* n
 namespace datastax { namespace internal { namespace core {
 
 bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& output) {
-  output.clear();
   const int column_count = result->column_count();
   if (column_count > 0) {
-    output.reserve(column_count);
+
+    if (size_t(column_count) == output.size()) {
+      for (int i = 0; i < column_count; ++i) {
+        if (!decoder.decode_value(output[i])) return false;
+      }
+      return true;
+    }
+
+    output.clear(); output.reserve(column_count);
     const SharedRefPtr<ResultMetadata>& metadata = result->metadata();
     for (int i = 0; i < column_count; ++i) {
       const ColumnDefinition& def = metadata->get_column_definition(i);
