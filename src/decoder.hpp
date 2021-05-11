@@ -562,7 +562,7 @@ public:
   bool update_value(Value& value);
 
   bool is_null() const { return input_ == NULL;}
-;
+
 protected:
   // Testing only
   inline const char* buffer() const { return input_; }
