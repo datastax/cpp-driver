@@ -51,6 +51,7 @@ private:
 };
 
 bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& output);
+bool decode_next_row(Decoder& decoder, OutputValueVec& output);
 
 }}} // namespace datastax::internal::core
 

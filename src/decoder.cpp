@@ -158,7 +158,7 @@ Value Decoder::decode_value(const DataType::ConstPtr& data_type) {
   return Value(data_type);
 }
 
-bool Decoder::decode_value(Value& value) {
+bool Decoder::update_value(Value& value) {
   int32_t size = 0;
   if (decode_int32(size)) {
     if (size >= 0) {

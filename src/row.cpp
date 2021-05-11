@@ -50,32 +50,24 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row, const char* n
 namespace datastax { namespace internal { namespace core {
 
 bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& output) {
-  const int column_count = result->column_count();
-  if (column_count > 0) {
-
-    if (size_t(column_count) == output.size()) {
-      for (int i = 0; i < column_count; ++i) {
-        if (!decoder.decode_value(output[i])) {
-          output.clear();
-          return false;
-        }
-      }
-      return true;
-    }
-
-    output.clear(); output.reserve(column_count);
-    const SharedRefPtr<ResultMetadata>& metadata = result->metadata();
-    for (int i = 0; i < column_count; ++i) {
-      const ColumnDefinition& def = metadata->get_column_definition(i);
-      Value value = decoder.decode_value(def.data_type);
-      if (value.is_valid()) {
-        output.push_back(value);
-      } else
-        return false;
-    }
+  output.clear();
+  for (int i = 0; i < result->column_count(); ++i) {
+    const ColumnDefinition& def = result->metadata()->get_column_definition(i);
+    Value value = decoder.decode_value(def.data_type);
+    if (value.is_valid()) {
+      output.push_back(value);
+    } else return false;
   }
   return true;
 }
+
+bool decode_next_row(Decoder& decoder, OutputValueVec& output) {
+  const size_t column_count = output.size();
+  for (size_t i = 0; i < column_count; ++i) {
+    if (!decoder.update_value(output[i])) return false;
+  }
+  return true;
+} 
 
 }}} // namespace datastax::internal::core
 
