@@ -56,7 +56,8 @@ bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& 
     Value value = decoder.decode_value(def.data_type);
     if (value.is_valid()) {
       output.push_back(value);
-    } else return false;
+    } else
+      return false;
   }
   return true;
 }
@@ -67,7 +68,7 @@ bool decode_next_row(Decoder& decoder, OutputValueVec& output) {
     if (!decoder.update_value(output[i])) return false;
   }
   return true;
-} 
+}
 
 }}} // namespace datastax::internal::core
 

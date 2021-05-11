@@ -561,7 +561,7 @@ public:
   Value decode_value(const DataType::ConstPtr& data_type);
   bool update_value(Value& value);
 
-  bool is_null() const { return input_ == NULL;}
+  bool is_null() const { return input_ == NULL; }
 
 protected:
   // Testing only

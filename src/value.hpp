@@ -139,7 +139,7 @@ public:
 private:
   friend class Decoder;
   bool update(const Decoder& decoder);
- 
+
 private:
   DataType::ConstPtr data_type_;
   int32_t count_;
