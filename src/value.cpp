@@ -211,13 +211,15 @@ Value::Value(const DataType::ConstPtr& data_type, Decoder decoder)
 
 bool Value::update(const Decoder& decoder) {
   decoder_ = decoder;
-  int32_t count = 0;
-  if (data_type_->is_collection()) {
-    if (decoder_.decode_int32(count)) {
-      count_ = count;
-    } else return false;
+  if (!decoder_.is_null()) {
+    if (data_type_->is_collection()) {
+      return decoder_.decode_int32(count_);
+    }
+  } else {
+    count_ = 0;
+    is_null_ = true;
   }
-  return false;
+  return true;
 }
 
 bool Value::as_bool() const {

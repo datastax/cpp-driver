@@ -55,7 +55,10 @@ bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& 
 
     if (size_t(column_count) == output.size()) {
       for (int i = 0; i < column_count; ++i) {
-        if (!decoder.decode_value(output[i])) return false;
+        if (!decoder.decode_value(output[i])) {
+          output.clear();
+          return false;
+        }
       }
       return true;
     }

@@ -75,6 +75,15 @@ public:
       , remaining_(length)
       , type_("") {}
 
+  Decoder& operator=(const Decoder& other) {
+    protocol_version_ = other.protocol_version_;
+    input_ = other.input_;
+    length_ = other.length_;
+    remaining_ = other.remaining_;
+    type_ = other.type_;
+    return *this;
+  }
+
   void maybe_log_remaining() const;
 
   inline String as_string() const { return String(input_, remaining_); }
@@ -561,6 +570,8 @@ public:
   Value decode_value(const DataType::ConstPtr& data_type);
   bool decode_value(Value& value);
 
+  bool is_null() const { return input_ == NULL;}
+;
 protected:
   // Testing only
   inline const char* buffer() const { return input_; }

@@ -160,11 +160,14 @@ Value Decoder::decode_value(const DataType::ConstPtr& data_type) {
 
 bool Decoder::decode_value(Value& value) {
   int32_t size = 0;
-  if (!decode_int32(size)) return false;
-  if (size >= 0) {
-    Decoder decoder(input_, size, protocol_version_);
-    input_ += size;
-    remaining_ -= size;
+  if (decode_int32(size)) {
+    if (size >= 0) {
+      Decoder decoder(input_, size, protocol_version_);
+      input_ += size;
+      remaining_ -= size;
+      return value.update(decoder);
+    }
+    Decoder decoder;
     return value.update(decoder);
   }
   return false;
