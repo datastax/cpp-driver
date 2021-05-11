@@ -35,17 +35,8 @@ public:
   }
 
   virtual bool next() {
-    if (index_ + 1 >= result_->row_count()) {
-      return false;
-    }
-
-    ++index_;
-
-    if (index_ > 0) {
-      return decode_next_row(decoder_, row_.values);
-    }
-
-    return true;
+    return (index_ + 1 < result_->row_count()) &&
+           (++index < 1 || decode_next_row(decoder_, row_.values));
   }
 
   const Row* row() const {
