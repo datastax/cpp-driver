@@ -214,11 +214,11 @@ bool Value::update(const Decoder& decoder) {
   if (!decoder_.is_null()) {
     if (data_type_->is_collection()) {
       return decoder_.decode_int32(count_);
-    } else if (data_type->is_tuple()) {
-      const CompositeType& composite_type = static_cast<const CompositeType&>(*data_type);
+    } else if (data_type_->is_tuple()) {
+      const CompositeType& composite_type = static_cast<const CompositeType&>(*data_type_);
       count_ = composite_type.types().size();
-    } else if (data_type->is_user_type()) {
-      const UserType& user_type = static_cast<const UserType&>(*data_type);
+    } else if (data_type_->is_user_type()) {
+      const UserType& user_type = static_cast<const UserType&>(*data_type_);
       count_ = user_type.fields().size();
     }
   } else {
