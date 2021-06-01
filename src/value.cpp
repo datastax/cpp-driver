@@ -225,6 +225,7 @@ bool Value::update(const Decoder& decoder) {
     count_ = 0;
     is_null_ = true;
   }
+
   return true;
 }
 
