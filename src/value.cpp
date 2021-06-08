@@ -209,6 +209,26 @@ Value::Value(const DataType::ConstPtr& data_type, Decoder decoder)
   }
 }
 
+bool Value::update(const Decoder& decoder) {
+  decoder_ = decoder;
+  if (!decoder_.is_null()) {
+    if (data_type_->is_collection()) {
+      return decoder_.decode_int32(count_);
+    } else if (data_type_->is_tuple()) {
+      const CompositeType& composite_type = static_cast<const CompositeType&>(*data_type_);
+      count_ = composite_type.types().size();
+    } else if (data_type_->is_user_type()) {
+      const UserType& user_type = static_cast<const UserType&>(*data_type_);
+      count_ = user_type.fields().size();
+    }
+  } else {
+    count_ = 0;
+    is_null_ = true;
+  }
+
+  return true;
+}
+
 bool Value::as_bool() const {
   assert(!is_null() && value_type() == CASS_VALUE_TYPE_BOOLEAN);
   bool value = false;

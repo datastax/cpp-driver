@@ -559,6 +559,9 @@ public:
   bool decode_warnings(WarningVec& output);
 
   Value decode_value(const DataType::ConstPtr& data_type);
+  bool update_value(Value& value);
+
+  bool is_null() const { return input_ == NULL; }
 
 protected:
   // Testing only

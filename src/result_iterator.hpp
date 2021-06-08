@@ -31,30 +31,17 @@ public:
       , index_(-1)
       , row_(result) {
     decoder_ = (const_cast<ResultResponse*>(result))->row_decoder();
-    row_.values.reserve(result->column_count());
+    row_.values = result_->first_row().values;
   }
 
   virtual bool next() {
-    if (index_ + 1 >= result_->row_count()) {
-      return false;
-    }
-
-    ++index_;
-
-    if (index_ > 0) {
-      return decode_row(decoder_, result_, row_.values);
-    }
-
-    return true;
+    return (index_ + 1 < result_->row_count()) &&
+           (++index_ < 1 || decode_next_row(decoder_, row_.values));
   }
 
   const Row* row() const {
     assert(index_ >= 0 && index_ < result_->row_count());
-    if (index_ > 0) {
-      return &row_;
-    } else {
-      return &result_->first_row();
-    }
+    return &row_;
   }
 
 private:
