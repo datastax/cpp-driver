@@ -55,7 +55,8 @@ public:
   static void execute(Session* session, const String& query) {
     Future::Ptr request_future(session->execute(QueryRequest::ConstPtr(new QueryRequest(query))));
     EXPECT_TRUE(request_future->wait_for(WAIT_FOR_TIME));
-    EXPECT_FALSE(request_future->error());
+    EXPECT_FALSE(request_future->error()) << cass_error_desc(request_future->error()->code) << ": "
+                                          << request_future->error()->message;
   }
 
   struct SchemaVersionCheckCounts {
@@ -191,12 +192,16 @@ TEST_F(SchemaAgreementUnitTest, Simple) {
   EXPECT_EQ(logging_criteria_count(), 1);
 
   cluster.stop(2);
+  // Give time for the session to see and react to the socket close, otherwise the next
+  // query can wind up getting a "Request timed out" error if the close happens mid-flight
+  test::Utils::msleep(100);
   execute(&session, "DROP TABLE tbl");
   EXPECT_EQ(check_counts.local_count.load(), 2);
   EXPECT_EQ(check_counts.peers_count.load(), 2);
   EXPECT_EQ(logging_criteria_count(), 2);
 
   cluster.stop(3);
+  test::Utils::msleep(100);
   execute(&session, "CREATE TABLE tbl (key text PRIMARY KEY, value text)");
   EXPECT_EQ(check_counts.local_count.load(), 3);
   EXPECT_EQ(check_counts.peers_count.load(), 3);
