@@ -65,6 +65,10 @@ CassError cass_ssl_set_private_key_n(CassSsl* ssl, const char* key, size_t key_l
   return ssl->set_private_key(key, key_length, password, password_length);
 }
 
+CassError cass_ssl_set_default_verify_paths(CassSsl* ssl) {
+  return ssl->set_default_verify_paths();
+}
+
 } // extern "C"
 
 template <class T>

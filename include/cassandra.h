@@ -4687,6 +4687,18 @@ cass_ssl_set_private_key_n(CassSsl* ssl,
                            const char* password,
                            size_t password_length);
 
+/**
+ * Configures the context to use the default directories
+ * for finding certification authority certificates.
+ *
+ * @public @memberof CassSsl
+ *
+ * @param[in] ssl
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_set_default_verify_paths(CassSsl* ssl);
+
 /***********************************************************************************
  *
  * Authenticator

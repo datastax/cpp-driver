@@ -165,6 +165,19 @@ cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
 cass_ssl_free(ssl);
 ```
 
+System wide certificate authorities can be enabled as well:
+
+```c
+CassSsl* ssl = cass_ssl_new();
+
+// Use system default directories for finding certificate authorities.
+cass_ssl_set_default_verify_paths(ssl);
+
+/* ... */
+
+cass_ssl_free(ssl);
+```
+
 #### Enabling Cassandra identity verification
 
 If a unique certificate has been generated for each Cassandra node with the IP address or domain name in the CN or SAN fields, you also need to enable identity verification.

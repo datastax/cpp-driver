@@ -40,6 +40,7 @@ public:
   virtual CassError set_cert(const char* cert, size_t cert_length);
   virtual CassError set_private_key(const char* key, size_t key_length, const char* password,
                                     size_t password_length);
+  virtual CassError set_default_verify_paths();
 };
 
 class NoSslContextFactory : public SslContextFactoryBase<NoSslContextFactory> {
