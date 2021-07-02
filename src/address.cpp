@@ -75,8 +75,9 @@ Address::Address(const uint8_t* address, uint8_t address_length, int port)
   }
 }
 
-Address::Address(const struct sockaddr* addr)
-    : family_(UNRESOLVED)
+Address::Address(const struct sockaddr* addr, const String& server_name)
+    : server_name_(server_name)
+    , family_(UNRESOLVED)
     , port_(0) {
   if (addr->sa_family == AF_INET) {
     const struct sockaddr_in* addr_in = reinterpret_cast<const struct sockaddr_in*>(addr);

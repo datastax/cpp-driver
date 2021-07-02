@@ -31,8 +31,9 @@ public:
       : status_(Resolver::NEW) {}
 
   Resolver::Ptr create(const String& hostname, int port = 9042) {
+    // Use the hostname as the TLS server name.
     return Resolver::Ptr(
-        new Resolver(hostname, port, bind_callback(&ResolverUnitTest::on_resolve, this)));
+        new Resolver(hostname, port, bind_callback(&ResolverUnitTest::on_resolve, this), hostname));
   }
 
   MultiResolver::Ptr create_multi() {
@@ -108,9 +109,9 @@ TEST_F(ResolverUnitTest, Cancel) {
 
 TEST_F(ResolverUnitTest, Multi) {
   MultiResolver::Ptr resolver(create_multi());
-  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT);
-  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT);
-  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT);
+  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT, "localhost");
+  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT, "localhost");
+  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT, "localhost");
   run_loop();
   ASSERT_EQ(3u, resolvers().size());
   for (Resolver::Vec::const_iterator it = resolvers().begin(), end = resolvers().end(); end != it;
@@ -130,9 +131,9 @@ TEST_F(ResolverUnitTest, MultiTimeout) {
   starve_thread_pool(200);
 
   // Use shortest possible timeout for all requests
-  resolver->resolve(loop(), "localhost", 9042, 1);
-  resolver->resolve(loop(), "localhost", 9042, 1);
-  resolver->resolve(loop(), "localhost", 9042, 1);
+  resolver->resolve(loop(), "localhost", 9042, 1, "localhost");
+  resolver->resolve(loop(), "localhost", 9042, 1, "localhost");
+  resolver->resolve(loop(), "localhost", 9042, 1, "localhost");
 
   run_loop();
   ASSERT_EQ(3u, resolvers().size());
@@ -145,9 +146,9 @@ TEST_F(ResolverUnitTest, MultiTimeout) {
 
 TEST_F(ResolverUnitTest, MultiInvalid) {
   MultiResolver::Ptr resolver(create_multi());
-  resolver->resolve(loop(), "doesnotexist1.dne", 9042, RESOLVE_TIMEOUT);
-  resolver->resolve(loop(), "doesnotexist2.dne", 9042, RESOLVE_TIMEOUT);
-  resolver->resolve(loop(), "doesnotexist3.dne", 9042, RESOLVE_TIMEOUT);
+  resolver->resolve(loop(), "doesnotexist1.dne", 9042, RESOLVE_TIMEOUT, "doesnotexist1.dne");
+  resolver->resolve(loop(), "doesnotexist2.dne", 9042, RESOLVE_TIMEOUT, "doesnotexist2.dne");
+  resolver->resolve(loop(), "doesnotexist3.dne", 9042, RESOLVE_TIMEOUT, "doesnotexist3.dne");
   run_loop();
   ASSERT_EQ(3u, resolvers().size());
   for (Resolver::Vec::const_iterator it = resolvers().begin(), end = resolvers().end(); end != it;
@@ -159,9 +160,9 @@ TEST_F(ResolverUnitTest, MultiInvalid) {
 
 TEST_F(ResolverUnitTest, MultiCancel) {
   MultiResolver::Ptr resolver(create_multi());
-  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT);
-  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT);
-  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT);
+  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT, "localhost");
+  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT, "localhost");
+  resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT, "localhost");
   resolver->cancel();
   run_loop();
   ASSERT_EQ(3u, resolvers().size());

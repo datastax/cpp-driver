@@ -198,7 +198,8 @@ public:
     } else {
       bool match = false;
       do {
-        Address address(res->ai_addr);
+        // Use a blank server name as it's not needed here.
+        Address address(res->ai_addr, String());
         if (address.is_valid_and_resolved() && address == Address(DNS_IP_ADDRESS, 8888)) {
           match = true;
           break;
