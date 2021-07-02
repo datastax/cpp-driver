@@ -87,7 +87,7 @@ Future::Ptr SessionBase::connect(const Config& config, const String& keyspace) {
   LOG_INFO("Session id is %s", to_string(session_id_).c_str());
 
   config_ = config.new_instance();
-  connect_keyspace_ = keyspace;
+  connect_keyspace_ = escape_id(keyspace);
   connect_future_ = future;
   state_ = SESSION_STATE_CONNECTING;
 

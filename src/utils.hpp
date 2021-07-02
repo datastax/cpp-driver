@@ -69,7 +69,7 @@ String implode(const Vector<String>& vec, const char delimiter = ',');
 
 String& trim(String& str);
 
-String& escape_id(String& str);
+String escape_id(const String& str);
 
 inline size_t num_leading_zeros(int64_t value) {
   if (value == 0) return 64;
