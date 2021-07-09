@@ -146,7 +146,7 @@ RequestProcessorSettings::RequestProcessorSettings()
     , max_tracing_wait_time_ms(CASS_DEFAULT_MAX_TRACING_DATA_WAIT_TIME_MS)
     , retry_tracing_wait_time_ms(CASS_DEFAULT_RETRY_TRACING_DATA_WAIT_TIME_MS)
     , tracing_consistency(CASS_DEFAULT_TRACING_CONSISTENCY)
-    , address_factory(new DefaultAddressFactory()) {
+    , address_factory(new AddressFactory()) {
   profiles.set_empty_key("");
 }
 

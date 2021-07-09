@@ -1,3 +1,4 @@
+// clang-format off
 
 #line 1 "wkt.rl"
 /*

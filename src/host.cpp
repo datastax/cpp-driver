@@ -123,9 +123,6 @@ void Host::set(const Row* row, bool use_tokens) {
       if (dse_server_version_ < VersionNumber(6, 7, 0)) {
         server_version_ = VersionNumber(3, 11, 0);
       }
-    } else {
-      LOG_WARN("Invalid DSE version string \"%s\" on host %s", dse_version_str.c_str(),
-               address().to_string().c_str());
     }
   }
 
@@ -153,6 +150,18 @@ void Host::set(const Row* row, bool use_tokens) {
                "If this is incorrect you should configure a specific interface for rpc_address on "
                "the server.",
                address_string_.c_str());
+      v = row->get_by_name("listen_address"); // Available in system.local
+      if (v && !v->is_null()) {
+        v->decoder().as_inet(v->size(), address_.port(), &rpc_address_);
+      } else {
+        v = row->get_by_name("peer"); // Available in system.peers
+        if (v && !v->is_null()) {
+          v->decoder().as_inet(v->size(), address_.port(), &rpc_address_);
+        }
+      }
+      if (!rpc_address_.is_valid()) {
+        LOG_WARN("Unable to set rpc_address from either listen_address or peer");
+      }
     }
   } else {
     LOG_WARN("No rpc_address for host %s in system.local or system.peers.",
@@ -160,30 +169,32 @@ void Host::set(const Row* row, bool use_tokens) {
   }
 }
 
+static CassInet to_inet(const Host::Ptr& host) {
+  CassInet address;
+  if (host->address().is_resolved()) {
+    address.address_length = host->address().to_inet(address.address);
+  } else {
+    address.address_length = host->rpc_address().to_inet(&address.address);
+  }
+  return address;
+}
+
 ExternalHostListener::ExternalHostListener(const CassHostListenerCallback callback, void* data)
     : callback_(callback)
     , data_(data) {}
 
 void ExternalHostListener::on_host_up(const Host::Ptr& host) {
-  CassInet address;
-  address.address_length = host->address().to_inet(address.address);
-  callback_(CASS_HOST_LISTENER_EVENT_UP, address, data_);
+  callback_(CASS_HOST_LISTENER_EVENT_UP, to_inet(host), data_);
 }
 
 void ExternalHostListener::on_host_down(const Host::Ptr& host) {
-  CassInet address;
-  address.address_length = host->address().to_inet(address.address);
-  callback_(CASS_HOST_LISTENER_EVENT_DOWN, address, data_);
+  callback_(CASS_HOST_LISTENER_EVENT_DOWN, to_inet(host), data_);
 }
 
 void ExternalHostListener::on_host_added(const Host::Ptr& host) {
-  CassInet address;
-  address.address_length = host->address().to_inet(address.address);
-  callback_(CASS_HOST_LISTENER_EVENT_ADD, address, data_);
+  callback_(CASS_HOST_LISTENER_EVENT_ADD, to_inet(host), data_);
 }
 
 void ExternalHostListener::on_host_removed(const Host::Ptr& host) {
-  CassInet address;
-  address.address_length = host->address().to_inet(address.address);
-  callback_(CASS_HOST_LISTENER_EVENT_REMOVE, address, data_);
+  callback_(CASS_HOST_LISTENER_EVENT_REMOVE, to_inet(host), data_);
 }
