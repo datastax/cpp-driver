@@ -174,7 +174,7 @@ LockedHostMap::const_iterator LockedHostMap::find(const Address& address) const 
     // If this is from an event (not SNI) and we're using SNI addresses then fallback to using the
     // "rpc_address" to compare.
     for (HostMap::const_iterator i = hosts_.begin(), end = hosts_.end(); i != end; ++i) {
-      if (i->second->rpc_address().equals(address, false)) {
+      if (i->second->rpc_address() == address) {
         return i;
       }
     }

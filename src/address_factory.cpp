@@ -87,11 +87,11 @@ bool SniAddressFactory::create(const Row* peers_row, const Host::Ptr& connected_
 
 bool SniAddressFactory::is_peer(const Row* peers_row, const Host::Ptr& connected_host,
                                 const Address& expected) {
-  const Value* peer_value = peers_row->get_by_name("peer");
-  Address peer_address;
-  if (!peer_value || !peer_value->decoder().as_inet(
-                         peer_value->size(), connected_host->address().port(), &peer_address)) {
+  const Value* value = peers_row->get_by_name("rpc_address");
+  Address rpc_address;
+  if (!value || !value->decoder().as_inet(
+        value->size(), connected_host->address().port(), &rpc_address)) {
     return false;
   }
-  return peer_address.equals(expected, false);
+  return rpc_address == expected;
 }
