@@ -204,14 +204,13 @@ Value::Value(const DataType::ConstPtr& data_type, Decoder decoder)
   } else if (data_type->is_user_type()) {
     const UserType& user_type = static_cast<const UserType&>(*data_type);
     count_ = user_type.fields().size();
-  } else {
-    count_ = 0;
   }
 }
 
 bool Value::update(const Decoder& decoder) {
   decoder_ = decoder;
-  if (!decoder_.is_null()) {
+  is_null_ = decoder_.is_null();
+  if (!is_null_) {
     if (data_type_->is_collection()) {
       return decoder_.decode_int32(count_);
     } else if (data_type_->is_tuple()) {
@@ -223,9 +222,7 @@ bool Value::update(const Decoder& decoder) {
     }
   } else {
     count_ = 0;
-    is_null_ = true;
   }
-
   return true;
 }
 
