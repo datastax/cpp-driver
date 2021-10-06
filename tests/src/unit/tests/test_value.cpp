@@ -115,14 +115,14 @@ TEST(ValueUnitTest, NullInNextRow) {
   DataType::ConstPtr data_type(new DataType(CASS_VALUE_TYPE_INT));
 
   // Size (int32_t) and contents of element
-  const signed char input[8] = {0,  0,  0,  4,  0, 0, 0, 2};
+  const signed char input[8] = { 0, 0, 0, 4, 0, 0, 0, 2 };
   Decoder decoder((const char*)input, 12);
 
   // init with a non null column in a row
   Value value(data_type, 2, decoder);
   EXPECT_FALSE(value.is_null());
 
-  const signed char null_input[4] = {-1, 1, 1, 1};
+  const signed char null_input[4] = { -1, 1, 1, 1 };
   Decoder null_decoder((const char*)null_input, 4);
 
   // simulate next row null value in the column
