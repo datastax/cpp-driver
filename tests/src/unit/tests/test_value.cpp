@@ -111,6 +111,30 @@ TEST(ValueUnitTest, BadDecimal) {
             CASS_ERROR_LIB_NOT_ENOUGH_DATA);
 }
 
+TEST(ValueUnitTest, NullInNextRow) {
+  DataType::ConstPtr data_type(new DataType(CASS_VALUE_TYPE_INT));
+
+  // Size (int32_t) and contents of element
+  const signed char input[8] = { 0, 0, 0, 4, 0, 0, 0, 2 };
+  Decoder decoder((const char*)input, 12);
+
+  // init with a non null column in a row
+  Value value(data_type, 2, decoder);
+  EXPECT_FALSE(value.is_null());
+
+  const signed char null_input[4] = { -1, 1, 1, 1 };
+  Decoder null_decoder((const char*)null_input, 4);
+
+  // simulate next row null value in the column
+  null_decoder.update_value(value);
+  EXPECT_TRUE(value.is_null());
+
+  // next row non null value check is_null() returns correct value
+  Decoder decoder2((const char*)input, 12);
+  decoder2.update_value(value);
+  EXPECT_FALSE(value.is_null());
+}
+
 TEST(ValueUnitTest, NullElementInCollectionList) {
   const signed char input[12] = {
     -1, -1, -1, -1,            // Element 1 is NULL
