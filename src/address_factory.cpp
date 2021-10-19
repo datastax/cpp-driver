@@ -89,8 +89,8 @@ bool SniAddressFactory::is_peer(const Row* peers_row, const Host::Ptr& connected
                                 const Address& expected) {
   const Value* value = peers_row->get_by_name("rpc_address");
   Address rpc_address;
-  if (!value || !value->decoder().as_inet(
-        value->size(), connected_host->address().port(), &rpc_address)) {
+  if (!value ||
+      !value->decoder().as_inet(value->size(), connected_host->address().port(), &rpc_address)) {
     return false;
   }
   return rpc_address == expected;
