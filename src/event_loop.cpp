@@ -61,7 +61,8 @@ EventLoop::~EventLoop() {
       uv_run(loop(), UV_RUN_DEFAULT);
       rc = uv_loop_close(loop());
       if (rc != 0) {
-        LOG_INFO("Event loop still has pending handles");
+        uv_print_all_handles(loop(), stderr);
+        LOG_ERROR("Event loop still has pending handles");
       }
     }
   }
