@@ -454,9 +454,10 @@ void Cluster::on_reconnect(ControlConnector* connector) {
 
 void Cluster::internal_close() {
   is_closing_ = true;
+  bool was_timer_running = timer_.is_running();
+  timer_.stop();
   monitor_reporting_timer_.stop();
-  if (timer_.is_running()) {
-    timer_.stop();
+  if (was_timer_running) {
     handle_close();
   } else if (reconnector_) {
     reconnector_->cancel();
