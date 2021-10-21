@@ -20,8 +20,8 @@
 
 using namespace datastax::internal::core;
 
-bool DefaultAddressFactory::create(const Row* peers_row, const Host::Ptr& connected_host,
-                                   Address* output) {
+bool AddressFactory::create(const Row* peers_row, const Host::Ptr& connected_host,
+                            Address* output) {
   Address connected_address = connected_host->address();
   const Value* peer_value = peers_row->get_by_name("peer");
   const Value* rpc_value = peers_row->get_by_name("rpc_address");
@@ -59,6 +59,12 @@ bool DefaultAddressFactory::create(const Row* peers_row, const Host::Ptr& connec
   return true;
 }
 
+bool AddressFactory::is_peer(const Row* peers_row, const Host::Ptr& connected_host,
+                             const Address& expected) {
+  Address address;
+  return create(peers_row, connected_host, &address) && address == expected;
+}
+
 bool SniAddressFactory::create(const Row* peers_row, const Host::Ptr& connected_host,
                                Address* output) {
   CassUuid host_id;
@@ -77,4 +83,15 @@ bool SniAddressFactory::create(const Row* peers_row, const Host::Ptr& connected_
   *output = Address(connected_host->address().hostname_or_address(),
                     connected_host->address().port(), to_string(host_id));
   return true;
+}
+
+bool SniAddressFactory::is_peer(const Row* peers_row, const Host::Ptr& connected_host,
+                                const Address& expected) {
+  const Value* value = peers_row->get_by_name("rpc_address");
+  Address rpc_address;
+  if (!value ||
+      !value->decoder().as_inet(value->size(), connected_host->address().port(), &rpc_address)) {
+    return false;
+  }
+  return rpc_address == expected;
 }

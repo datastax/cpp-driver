@@ -169,7 +169,17 @@ LockedHostMap::LockedHostMap(const HostMap& hosts)
 LockedHostMap::~LockedHostMap() { uv_mutex_destroy(&mutex_); }
 
 LockedHostMap::const_iterator LockedHostMap::find(const Address& address) const {
-  return hosts_.find(address);
+  HostMap::const_iterator it = hosts_.find(address);
+  if (it == hosts_.end()) {
+    // If this is from an event (not SNI) and we're using SNI addresses then fallback to using the
+    // "rpc_address" to compare.
+    for (HostMap::const_iterator i = hosts_.begin(), end = hosts_.end(); i != end; ++i) {
+      if (i->second->rpc_address() == address) {
+        return i;
+      }
+    }
+  }
+  return it;
 }
 
 Host::Ptr LockedHostMap::get(const Address& address) const {
@@ -633,7 +643,7 @@ void Cluster::notify_host_remove(const Address& address) {
     notify_or_record(ClusterEvent(ClusterEvent::HOST_DOWN, host));
   }
 
-  hosts_.erase(address);
+  hosts_.erase(it->first);
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
                                                 end = load_balancing_policies_.end();
        it != end; ++it) {
