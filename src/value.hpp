@@ -118,7 +118,7 @@ public:
     return data_type_ && data_type_->is_user_type();
   }
 
-  int32_t count() const { return count_ * is_null_; }
+  int32_t count() const { return count_ * !is_null_; }
 
   StringRef to_string_ref() const {
     if (is_null()) return StringRef();
