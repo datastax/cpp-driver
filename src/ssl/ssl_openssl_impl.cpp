@@ -91,7 +91,11 @@ static void ssl_log_errors(const char* context) {
   const char* data;
   int flags;
   int err;
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+  while ((err = ERR_get_error_all(NULL, NULL, NULL, &data, &flags)) != 0) {
+#else
   while ((err = ERR_get_error_line_data(NULL, NULL, &data, &flags)) != 0) {
+#endif
     char buf[256];
     ERR_error_string_n(err, buf, sizeof(buf));
     LOG_ERROR("%s: %s:%s", context, buf, (flags & ERR_TXT_STRING) ? data : "");
@@ -104,7 +108,11 @@ static String ssl_error_string() {
   int flags;
   int err;
   String error;
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+  while ((err = ERR_get_error_all(NULL, NULL, NULL, &data, &flags)) != 0) {
+#else
   while ((err = ERR_get_error_line_data(NULL, NULL, &data, &flags)) != 0) {
+#endif
     char buf[256];
     ERR_error_string_n(err, buf, sizeof(buf));
     if (!error.empty()) error.push_back(',');
