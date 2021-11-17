@@ -108,8 +108,10 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, ProtocolVersions) {
 CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidEmptyCredentials) {
   CHECK_FAILURE;
 
-  // Iterate over all known/supported protocol versions
   logger_.add_critera("Key may not be empty");
+  logger_.add_critera("Password must not be null");
+
+  // Iterate over all known/supported protocol versions
   for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION; i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
        ++i) {
     /*
@@ -118,8 +120,8 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidEmptyCredentials) {
      * a simple form. This test serves to characterize what is there presently.
      */
     Session session = connect_using_credentials(i, "", "");
-    ASSERT_EQ(session.connect_error_code(), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
-    ASSERT_EQ(logger_.count(), 2u);
+    ASSERT_EQ(session.connect_error_code(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
+    ASSERT_GT(logger_.count(), 0u);
     logger_.reset_count();
   }
 }
@@ -139,8 +141,10 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidEmptyCredentials) {
 CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidNullUsernameCredentials) {
   CHECK_FAILURE;
 
-  // Iterate over all known/supported protocol versions
   logger_.add_critera("Key may not be empty");
+  logger_.add_critera("Authentication ID must not be null");
+
+  // Iterate over all known/supported protocol versions
   for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION; i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
        ++i) {
     /*
@@ -149,8 +153,8 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidNullUsernameCredentials
      * a simple form. This test serves to characterize what is there presently.
      */
     Session session = connect_using_credentials(i, NULL, "pass");
-    ASSERT_EQ(session.connect_error_code(), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
-    ASSERT_EQ(logger_.count(), 2u);
+    ASSERT_EQ(session.connect_error_code(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
+    ASSERT_GT(logger_.count(), 0u);
     logger_.reset_count();
   }
 }
@@ -170,8 +174,10 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidNullUsernameCredentials
 CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidNullPasswordCredentials) {
   CHECK_FAILURE;
 
-  // Iterate over all known/supported protocol versions
   logger_.add_critera("and/or password are incorrect");
+  logger_.add_critera("Password must not be null");
+
+  // Iterate over all known/supported protocol versions
   for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION; i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
        ++i) {
     /*
@@ -181,7 +187,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidNullPasswordCredentials
      */
     Session session = connect_using_credentials(i, "user", NULL);
     ASSERT_EQ(session.connect_error_code(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
-    ASSERT_GE(logger_.count(), 1u);
+    ASSERT_GT(logger_.count(), 0u);
     logger_.reset_count();
   }
 }
