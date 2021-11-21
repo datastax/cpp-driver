@@ -102,21 +102,13 @@ public:
 
   bool is_null() const { return is_null_; }
 
-  bool is_collection() const {
-    return data_type_ && data_type_->is_collection();
-  }
+  bool is_collection() const { return data_type_ && data_type_->is_collection(); }
 
-  bool is_map() const {
-    return data_type_ && data_type_->is_map();
-  }
+  bool is_map() const { return data_type_ && data_type_->is_map(); }
 
-  bool is_tuple() const {
-    return data_type_ && data_type_->is_tuple();
-  }
+  bool is_tuple() const { return data_type_ && data_type_->is_tuple(); }
 
-  bool is_user_type() const {
-    return data_type_ && data_type_->is_user_type();
-  }
+  bool is_user_type() const { return data_type_ && data_type_->is_user_type(); }
 
   int32_t count() const { return count_ * !is_null_; }
 

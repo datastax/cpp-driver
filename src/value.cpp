@@ -211,7 +211,7 @@ bool Value::update(const Decoder& decoder) {
   decoder_ = decoder;
   is_null_ = decoder_.is_null();
   if (!is_null_ && data_type_->is_collection()) {
-      return decoder_.decode_int32(count_);
+    return decoder_.decode_int32(count_);
   }
   return true;
 }
