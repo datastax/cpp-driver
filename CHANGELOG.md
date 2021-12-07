@@ -1,3 +1,12 @@
+2.16.2
+===========
+
+Bug Fixes
+--------
+* [CPP-946] Core dump on unclean event loop shutdown
+* [PR #513] Fix SNI events
+* [PR #518] Replace deprecated function for OpenSSL >= 3.0
+
 2.16.1
 ===========
 
