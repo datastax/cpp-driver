@@ -2565,8 +2565,8 @@ cass_cluster_set_use_schema(CassCluster* cluster,
 /**
  * Enable/Disable retrieving hostnames for IP addresses using reverse IP lookup.
  *
- * This is useful for authentication (Kerberos) or encryption (SSL) services
- * that require a valid hostname for verification.
+ * @deprecated Do not use. Using reverse DNS lookup to verify the certificate
+ * does not protect against man-in-the-middle attacks.
  *
  * <b>Default:</b> cass_false (disabled).
  *
@@ -2578,9 +2578,9 @@ cass_cluster_set_use_schema(CassCluster* cluster,
  *
  * @see cass_cluster_set_resolve_timeout()
  */
-CASS_EXPORT CassError
+CASS_EXPORT CASS_DEPRECATED(CassError
 cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
-                                         cass_bool_t enabled);
+                                         cass_bool_t enabled));
 
 /**
  * Enable/Disable the randomization of the contact points list.
@@ -4598,9 +4598,9 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches the certificate's
  * common name or one of its subject alternative names. This implies the
  * certificate is also present.
- * CASS_SSL_VERIFY_PEER_IDENTITY_DNS - Hostname matches the certificate's
- * common name or one of its subject alternative names. This implies the
- * certificate is also present. Hostname resolution must also be enabled.
+ * CASS_SSL_VERIFY_PEER_IDENTITY_DNS -  Do not use. The requires the use of
+ * reverse DNS lookup which in not sufficient to protect against
+ * man-in-the-middle attacks.
  *
  * <b>Default:</b> CASS_SSL_VERIFY_PEER_CERT
  *
@@ -4610,7 +4610,6 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * @param[in] flags
  * @return CASS_OK if successful, otherwise an error occurred
  *
- * @see cass_cluster_set_use_hostname_resolution()
  */
 CASS_EXPORT void
 cass_ssl_set_verify_flags(CassSsl* ssl,
