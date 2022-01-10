@@ -177,7 +177,7 @@ cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_
 
 ```
 
-**Important:** This section use to suggest using reverse DNS lookup as a way to validate the peer's certificate i.e. using `CASS_SSL_VERIFY_PEER_IDENTITY_DNS` with `cass_cluster_set_use_hostname_resolution(cluster, cass_true)`.  This is susceptible to man-in-the-middle (MITM) attacks and is no longer recommended. 
+**Important:** Previous versions of this section suggested using reverse DNS lookup as a way to validate the peer's certificate i.e. using `CASS_SSL_VERIFY_PEER_IDENTITY_DNS` with `cass_cluster_set_use_hostname_resolution(cluster, cass_true)`, but this is susceptible to man-in-the-middle (MITM) attacks and is no longer recommended. 
 
 ```c
 /* DO NOT USE THE FOLLOWING. IT IS SUSCEPTIBLE TO MITM ATTACKS: */

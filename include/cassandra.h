@@ -2566,7 +2566,7 @@ cass_cluster_set_use_schema(CassCluster* cluster,
  * Enable/Disable retrieving hostnames for IP addresses using reverse IP lookup.
  *
  * @deprecated Do not use. Using reverse DNS lookup to verify the certificate
- * does not protect against man-in-the-middle attacks.
+ * does not protect against man-in-the-middle attacks. 
  *
  * <b>Default:</b> cass_false (disabled).
  *
@@ -4598,8 +4598,8 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches the certificate's
  * common name or one of its subject alternative names. This implies the
  * certificate is also present.
- * CASS_SSL_VERIFY_PEER_IDENTITY_DNS -  Do not use. The requires the use of
- * reverse DNS lookup which in not sufficient to protect against
+ * CASS_SSL_VERIFY_PEER_IDENTITY_DNS -  Do not use. This option requires the
+ * use of reverse DNS lookup which is not sufficient to protect against
  * man-in-the-middle attacks.
  *
  * <b>Default:</b> CASS_SSL_VERIFY_PEER_CERT
