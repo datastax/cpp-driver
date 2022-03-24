@@ -65,6 +65,10 @@ CassError cass_ssl_set_private_key_n(CassSsl* ssl, const char* key, size_t key_l
   return ssl->set_private_key(key, key_length, password, password_length);
 }
 
+CassError cass_ssl_set_min_protocol_version(CassSsl* ssl, CassSslTlsVersion min_version) {
+  return ssl->set_min_protocol_version(min_version);
+}
+
 } // extern "C"
 
 template <class T>

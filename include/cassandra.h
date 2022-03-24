@@ -629,6 +629,12 @@ typedef enum CassSslVerifyFlags_ {
   CASS_SSL_VERIFY_PEER_IDENTITY_DNS = 0x04
 } CassSslVerifyFlags;
 
+typedef enum CassSslTlsVersion_ {
+  CASS_SSL_VERSION_TLS1   = 0x00,
+  CASS_SSL_VERSION_TLS1_1 = 0x01,
+  CASS_SSL_VERSION_TLS1_2 = 0x02,
+} CassSslTlsVersion;
+
 typedef enum CassProtocolVersion_ {
   CASS_PROTOCOL_VERSION_V1    = 0x01, /**< Deprecated */
   CASS_PROTOCOL_VERSION_V2    = 0x02, /**< Deprecated */
@@ -4686,6 +4692,20 @@ cass_ssl_set_private_key_n(CassSsl* ssl,
                            size_t key_length,
                            const char* password,
                            size_t password_length);
+
+/**
+ * Set minimum supported client-side protocol version. This will prevent the
+ * connection using protocol versions earlier than the specified one. Useful
+ * for preventing TLS downgrade attacks.
+ *
+ * @public @memberof CassSsl
+ *
+ * @param[in] ssl
+ * @param[in] min_version
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_ssl_set_min_protocol_version(CassSsl* ssl, CassSslTlsVersion min_version);
 
 /***********************************************************************************
  *
