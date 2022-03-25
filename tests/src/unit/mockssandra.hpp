@@ -175,6 +175,7 @@ public:
 
   bool use_ssl(const String& key, const String& cert, const String& ca_cert = "",
                bool require_client_cert = false);
+  void weaken_ssl();
 
   void listen(EventLoopGroup* event_loop_group);
   int wait_listen();
@@ -1161,6 +1162,7 @@ public:
   ~Cluster();
 
   String use_ssl(const String& cn = "");
+  void weaken_ssl();
 
   int start_all(EventLoopGroup* event_loop_group);
   void start_all_async(EventLoopGroup* event_loop_group);
@@ -1264,7 +1266,8 @@ class SimpleEchoServer {
 public:
   SimpleEchoServer()
       : factory_(new EchoClientConnectionFactory())
-      , event_loop_group_(1) {}
+      , event_loop_group_(1)
+      , ssl_weaken_(false) {}
 
   ~SimpleEchoServer() { close(); }
 
@@ -1281,6 +1284,8 @@ public:
     return ssl_cert_;
   }
 
+  void weaken_ssl() { ssl_weaken_ = true; }
+
   void use_connection_factory(internal::ClientConnectionFactory* factory) {
     factory_.reset(factory);
   }
@@ -1290,6 +1295,11 @@ public:
     if (!ssl_key_.empty() && !ssl_cert_.empty() && !server_->use_ssl(ssl_key_, ssl_cert_)) {
       return -1;
     }
+
+    if (ssl_weaken_) {
+      server_->weaken_ssl();
+    }
+
     server_->listen(&event_loop_group_);
     return server_->wait_listen();
   }
@@ -1316,6 +1326,7 @@ private:
   internal::ServerConnection::Ptr server_;
   String ssl_key_;
   String ssl_cert_;
+  bool ssl_weaken_;
 };
 
 } // namespace mockssandra

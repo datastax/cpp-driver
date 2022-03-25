@@ -135,6 +135,8 @@ public:
     return settings;
   }
 
+  void weaken_ssl() { server_.weaken_ssl(); }
+
   void listen(const Address& address = Address("127.0.0.1", 8888)) {
     ASSERT_EQ(server_.listen(address), 0);
   }
@@ -408,4 +410,23 @@ TEST_F(SocketUnitTest, SslVerifyIdentityDns) {
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
+}
+
+TEST_F(SocketUnitTest, SslEnforceTlsVersion) {
+  SocketSettings settings(use_ssl("127.0.0.1"));
+  weaken_ssl();
+
+  listen();
+
+  settings.ssl_context->set_min_protocol_version(CASS_SSL_VERSION_TLS1_2);
+
+  bool is_closed;
+  SocketConnector::Ptr connector(
+      new SocketConnector(Address("127.0.0.1", 8888), bind_callback(on_socket_closed, &is_closed)));
+
+  connector->with_settings(settings)->connect(loop());
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_TRUE(is_closed);
 }
