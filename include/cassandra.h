@@ -4602,6 +4602,12 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * use of reverse DNS lookup which is not sufficient to protect against
  * man-in-the-middle attacks.
  *
+ * Notes:
+ * - CASS_SSL_VERIFY_PEER_IDENTITY and CASS_SSL_VERIFY_PEER_IDENTITY_DNS are
+ *   mutually exclusive options.
+ * - The certificate Common Name is only checked against the IP address or
+ *   hostname if there are no Subject Alternative Names in the certificate.
+ *
  * <b>Default:</b> CASS_SSL_VERIFY_PEER_CERT
  *
  * @public @memberof CassSsl

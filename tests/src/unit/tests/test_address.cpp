@@ -17,9 +17,11 @@
 #include <gtest/gtest.h>
 
 #include "address.hpp"
+#include "string.hpp"
 
 using datastax::internal::core::Address;
 using datastax::internal::core::AddressSet;
+using datastax::String;
 
 TEST(AddressUnitTest, FromString) {
   EXPECT_TRUE(Address("127.0.0.1", 9042).is_resolved());
@@ -64,14 +66,14 @@ TEST(AddressUnitTest, CompareIPv6) {
 TEST(AddressUnitTest, ToSockAddrIPv4) {
   Address expected("127.0.0.1", 9042);
   Address::SocketStorage storage;
-  Address actual(expected.to_sockaddr(&storage));
+  Address actual(expected.to_sockaddr(&storage), String());
   EXPECT_EQ(expected, actual);
 }
 
 TEST(AddressUnitTest, ToSockAddrIPv6) {
   Address expected("::1", 9042);
   Address::SocketStorage storage;
-  Address actual(expected.to_sockaddr(&storage));
+  Address actual(expected.to_sockaddr(&storage), String());
   EXPECT_EQ(expected, actual);
 }
 

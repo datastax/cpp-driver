@@ -635,7 +635,7 @@ private:
               new MultiResolver(bind_callback(&StartupMessageHandler::on_resolve, this)));
         }
         resolver->resolve(connection_->loop(), contact_point.hostname_or_address(), port,
-                          config_.resolve_timeout_ms());
+                          config_.resolve_timeout_ms(), contact_point.server_name());
       }
     }
 
@@ -668,7 +668,8 @@ private:
     Address::SocketStorage name;
     int namelen = sizeof(name);
     if (uv_tcp_getsockname(tcp, name.addr(), &namelen) == 0) {
-      Address address(name.addr());
+      // Pass a blank server name as this is a temporary address.
+      Address address(name.addr(), String());
       if (address.is_valid_and_resolved()) {
         return address.to_string();
       }

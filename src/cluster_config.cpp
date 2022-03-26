@@ -131,7 +131,8 @@ CassError cass_cluster_set_contact_points_n(CassCluster* cluster, const char* co
     explode(String(contact_points, contact_points_length), exploded);
     for (Vector<String>::const_iterator it = exploded.begin(), end = exploded.end(); it != end;
          ++it) {
-      cluster->config().contact_points().push_back(Address(*it, -1));
+      // Treat the address string as the server name.
+      cluster->config().contact_points().push_back(Address(*it, -1, *it));
     }
   }
   return CASS_OK;

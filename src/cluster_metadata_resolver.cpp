@@ -39,13 +39,13 @@ private:
       int port = it->port() <= 0 ? port_ : it->port();
 
       if (it->is_resolved()) {
-        resolved_contact_points_.push_back(Address(it->hostname_or_address(), port));
+        resolved_contact_points_.push_back(Address(it->hostname_or_address(), port, it->server_name()));
       } else {
         if (!resolver_) {
           resolver_.reset(
               new MultiResolver(bind_callback(&DefaultClusterMetadataResolver::on_resolve, this)));
         }
-        resolver_->resolve(loop, it->hostname_or_address(), port, resolve_timeout_ms_);
+        resolver_->resolve(loop, it->hostname_or_address(), port, resolve_timeout_ms_, it->server_name());
       }
     }
 

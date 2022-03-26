@@ -73,7 +73,7 @@ public:
   Address(const Address& other, const String& server_name);
   Address(const String& hostname_or_address, int port, const String& server_name = String());
   Address(const uint8_t* address, uint8_t address_length, int port);
-  Address(const struct sockaddr* addr);
+  Address(const struct sockaddr* addr, const String& server_name);
 
   bool equals(const Address& other, bool with_port = true) const;
 

@@ -120,11 +120,11 @@ void SocketConnector::connect(uv_loop_t* loop) {
     hostname_ = address_.hostname_or_address();
 
     resolver_.reset(new Resolver(hostname_, address_.port(),
-                                 bind_callback(&SocketConnector::on_resolve, this)));
+                                 bind_callback(&SocketConnector::on_resolve, this),
+                                 address_.server_name()));
     resolver_->resolve(loop, settings_.resolve_timeout_ms);
   } else {
     resolved_address_ = address_;
-
     if (settings_.hostname_resolution_enabled) { // Run hostname resolution then connect.
       name_resolver_.reset(
           new NameResolver(address_, bind_callback(&SocketConnector::on_name_resolve, this)));
