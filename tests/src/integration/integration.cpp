@@ -148,6 +148,10 @@ void Integration::SetUp() {
   data_center_nodes.push_back(number_dc2_nodes_);
 
   if (is_ccm_requested_) {
+    #if defined(__GNUC__) || defined(__INTEL_COMPILER)
+    #  pragma GCC diagnostic push
+    #  pragma GCC diagnostic ignored "-Wcatch-value"
+    #endif
     try {
       // Create and start the CCM cluster (if not already created)
       ccm_ = new CCM::Bridge(
@@ -186,10 +190,14 @@ void Integration::SetUp() {
       if (is_session_requested_ && is_ccm_start_requested_) {
         connect();
       }
-    } catch (CCM::BridgeException be) {
+    }
+    catch (CCM::BridgeException be) {
       // Issue creating the CCM bridge instance (force failure)
       FAIL() << be.what();
     }
+    #if defined(__GNUC__) || defined(__INTEL_COMPILER)
+    #  pragma GCC diagnostic pop
+    #endif
   }
 }
 
