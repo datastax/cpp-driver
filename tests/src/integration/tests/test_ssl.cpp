@@ -179,23 +179,7 @@ CASSANDRA_INTEGRATION_TEST_F(SslTests, VerifyPeerMultipleCerts) {
 
   Ssl ssl;
   ssl.with_verify_flags(CASS_SSL_VERIFY_PEER_CERT);
-  ssl.add_trusted_cert(SslCertificates::combined_pem());
-
-  Cluster cluster = default_cluster().with_ssl(ssl);
-  connect(cluster);
-  write_and_read();
-}
-
-/**
- * Ensures SSL connection verifying peer/server certificate and identity while performing write and
- * read operations.
- */
-CASSANDRA_INTEGRATION_TEST_F(SslTests, VerifyPeerIdentityMultipleCerts) {
-  CHECK_FAILURE;
-
-  Ssl ssl;
-  ssl.with_verify_flags(CASS_SSL_VERIFY_PEER_IDENTITY);
-  ssl.add_trusted_cert(SslCertificates::combined_pem());
+  ssl.add_trusted_cert(SslCertificates::multi_cert_pem());
 
   Cluster cluster = default_cluster().with_ssl(ssl);
   connect(cluster);
