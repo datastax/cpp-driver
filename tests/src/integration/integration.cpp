@@ -190,8 +190,7 @@ void Integration::SetUp() {
       if (is_session_requested_ && is_ccm_start_requested_) {
         connect();
       }
-    }
-    catch (CCM::BridgeException be) {
+    } catch (CCM::BridgeException be) {
       // Issue creating the CCM bridge instance (force failure)
       FAIL() << be.what();
     }
