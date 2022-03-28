@@ -18,5 +18,12 @@
 
 using namespace test::driver;
 
+#if defined(__GNUC__) || defined(__INTEL_COMPILER)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 DowngradingConsistencyRetryPolicy::DowngradingConsistencyRetryPolicy()
     : RetryPolicy(cass_retry_policy_downgrading_consistency_new()) {}
+#if defined(__GNUC__) || defined(__INTEL_COMPILER)
+#  pragma GCC diagnostic pop
+#endif
