@@ -171,6 +171,22 @@ CASSANDRA_INTEGRATION_TEST_F(SslTests, VerifyPeerIdentity) {
 }
 
 /**
+ * Ensures SSL connection verifying peer/server certificate while performing write and read
+ * operations.
+ */
+CASSANDRA_INTEGRATION_TEST_F(SslTests, VerifyPeerMultipleCerts) {
+  CHECK_FAILURE;
+
+  Ssl ssl;
+  ssl.with_verify_flags(CASS_SSL_VERIFY_PEER_CERT);
+  ssl.add_trusted_cert(SslCertificates::multi_cert_pem());
+
+  Cluster cluster = default_cluster().with_ssl(ssl);
+  connect(cluster);
+  write_and_read();
+}
+
+/**
  * Ensures that when one node (in this case the whole cluster) is terminated and restarted the
  * driver will reconnect without throwing errors. Each stage (connect and reconnect) write and read
  * operations are performed.

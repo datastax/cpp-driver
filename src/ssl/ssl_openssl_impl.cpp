@@ -560,10 +560,8 @@ CassError OpenSslContext::add_trusted_cert(const char* cert, size_t cert_length)
   int num_certs = 0;
 
   // Iterate over the bio, reading out as many certificates as possible.
-  for (X509* cert = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
-       cert != NULL;
-       cert = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL))
-  {
+  for (X509* cert = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL); cert != NULL;
+       cert = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL)) {
     X509_STORE_add_cert(trusted_store_, cert);
     X509_free(cert);
     num_certs++;
