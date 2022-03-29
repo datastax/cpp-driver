@@ -206,28 +206,28 @@ public:
     return *this;
   }
 
-  /**
-   * Enable/Disable the use of hostname resolution
-   *
-   * This is useful for authentication (Kerberos) or encryption (SSL)
-   * services that require a valid hostname for verification.
-   *
-   * @param enable True if hostname resolution should be enabled; false
-   *               otherwise (default: true)
-   * @return Cluster object
-   */
-  #if defined(__GNUC__) || defined(__INTEL_COMPILER)
-  #  pragma GCC diagnostic push
-  #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  #endif
+/**
+ * Enable/Disable the use of hostname resolution
+ *
+ * This is useful for authentication (Kerberos) or encryption (SSL)
+ * services that require a valid hostname for verification.
+ *
+ * @param enable True if hostname resolution should be enabled; false
+ *               otherwise (default: true)
+ * @return Cluster object
+ */
+#if defined(__GNUC__) || defined(__INTEL_COMPILER)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
   Cluster& with_hostname_resolution(bool enable = true) {
     EXPECT_EQ(CASS_OK, cass_cluster_set_use_hostname_resolution(
                            get(), (enable == true ? cass_true : cass_false)));
     return *this;
   }
-  #if defined(__GNUC__) || defined(__INTEL_COMPILER)
-  #  pragma GCC diagnostic pop
-  #endif
+#if defined(__GNUC__) || defined(__INTEL_COMPILER)
+#pragma GCC diagnostic pop
+#endif
 
   /**
    * Sets the number of I/O threads. This is the number of threads that will
