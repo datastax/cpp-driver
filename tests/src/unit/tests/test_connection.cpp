@@ -23,12 +23,38 @@
 #include "request_callback.hpp"
 #include "ssl.hpp"
 
+#include <cstdio>
+#include <fstream>
+
 #ifdef WIN32
 #undef STATUS_TIMEOUT
 #endif
 
 using namespace datastax::internal;
 using namespace datastax::internal::core;
+
+namespace {
+
+void setenv(const std::string& name, const std::string& value) {
+#ifdef _WIN32
+  _putenv(const_cast<char*>(std::string(name + "=" + value).c_str()));
+#else
+  ::setenv(name.c_str(), value.c_str(), 1);
+#endif
+}
+
+String current_dir()
+{
+  char buffer[256];
+#ifdef _WIN32
+  _getcwd(buffer, 256);
+#else
+  getcwd(buffer, 256);
+#endif
+  return buffer;
+}
+
+}
 
 class ConnectionUnitTest : public LoopTest {
 public:
@@ -188,6 +214,60 @@ TEST_F(ConnectionUnitTest, Ssl) {
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(state.status, STATUS_SUCCESS);
+}
+
+TEST_F(ConnectionUnitTest, SslDefaultVerifyPaths) {
+  const String host = "127.0.0.1";
+  const int verification_flags = CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY;
+  const String cert_path = "tmp.cassandra.unit-test.cert";
+
+  mockssandra::SimpleCluster cluster(simple());
+  const String cert = cluster.use_ssl(host);
+  EXPECT_FALSE(cert.empty()) << "Unable to enable SSL";
+  ConnectionSettings settings;
+  settings.socket_settings.ssl_context = SslContextFactory::create();
+  settings.socket_settings.ssl_context->set_verify_flags(verification_flags);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  // Test that cert verification fails prior to calling set_default_verify_paths
+  Connector::ConnectionError connect_rc = Connector::CONNECTION_OK;
+  Connector::Ptr connector0(new Connector(Host::Ptr(new Host(Address(host, PORT))),
+                                          PROTOCOL_VERSION,
+                                          bind_callback(on_connection_error_code, &connect_rc)));
+  connector0->with_settings(settings)->connect(loop());
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_EQ(connect_rc, Connector::CONNECTION_ERROR_SSL_VERIFY)
+      << "Verification succeeded without certificate.";
+
+  const String cwd = current_dir();
+
+  // Generate certificate as file (which is used by our mock cluster) and import it
+  std::ofstream cert_buffer(cert_path.c_str());
+  cert_buffer << cert;
+  cert_buffer.close();
+  setenv("SSL_CERT_FILE", cert_path.c_str());
+  setenv("SSL_CERT_DIR", cwd.c_str());
+  std::cout << "Debug SslDefaultVerifyPaths: SSL_CERT_FILE " << cert_path << " " << cert << std::endl;
+  for (const auto var: {"SSL_CERT_FILE", "SSL_CERT_DIR"}) {
+    const char* value = std::getenv(var);
+    if (value == nullptr) {
+      std::cout << "Debug SslDefaultVerifyPaths: Env " << var << " is not set!" << std::endl;
+      continue;
+    }
+    std::cout << "Debug SslDefaultVerifyPaths: Env " << var << " " << value << std::endl;
+  }
+  ASSERT_EQ(settings.socket_settings.ssl_context->set_default_verify_paths(), CASS_OK)
+      << "Failed to import default / system SSL certificates.";
+
+  // Ensure verification succeeds with this certificate.
+  State state;
+  Connector::Ptr connector1(new Connector(Host::Ptr(new Host(Address(host, PORT))),
+                                          PROTOCOL_VERSION,
+                                          bind_callback(on_connection_connected, &state)));
+  connector1->with_settings(settings)->connect(loop());
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_EQ(state.status, STATUS_SUCCESS);
+  ASSERT_EQ(std::remove(cert_path.c_str()), 0) << "Failed to cleanup temporary certificate file.";
 }
 
 TEST_F(ConnectionUnitTest, Refused) {

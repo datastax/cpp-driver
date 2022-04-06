@@ -87,6 +87,7 @@ public:
   virtual CassError set_cert(const char* cert, size_t cert_length) = 0;
   virtual CassError set_private_key(const char* key, size_t key_length, const char* password,
                                     size_t password_length) = 0;
+  virtual CassError set_default_verify_paths() = 0;
 
 protected:
   int verify_flags_;
