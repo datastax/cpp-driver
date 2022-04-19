@@ -187,6 +187,17 @@ public:
     }
   }
 
+  /* SSL handshake failures have different error codes on different versions of
+   * OpenSSL - this accounts for both of them
+   */
+  static void on_socket_ssl_error(SocketConnector* connector, bool* is_error) {
+    SocketConnector::SocketError err = connector->error_code();
+    if ((err == SocketConnector::SOCKET_ERROR_CLOSE) ||
+        (err == SocketConnector::SOCKET_ERROR_SSL_HANDSHAKE)) {
+      *is_error = true;
+    }
+  }
+
   static void on_socket_canceled(SocketConnector* connector, bool* is_canceled) {
     if (connector->is_canceled()) {
       *is_canceled = true;
@@ -420,13 +431,13 @@ TEST_F(SocketUnitTest, SslEnforceTlsVersion) {
 
   settings.ssl_context->set_min_protocol_version(CASS_SSL_VERSION_TLS1_2);
 
-  bool is_closed;
-  SocketConnector::Ptr connector(
-      new SocketConnector(Address("127.0.0.1", 8888), bind_callback(on_socket_closed, &is_closed)));
+  bool is_error;
+  SocketConnector::Ptr connector(new SocketConnector(
+      Address("127.0.0.1", 8888), bind_callback(on_socket_ssl_error, &is_error)));
 
   connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_TRUE(is_closed);
+  EXPECT_TRUE(is_error);
 }
