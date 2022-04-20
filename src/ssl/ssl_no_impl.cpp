@@ -44,4 +44,8 @@ CassError NoSslContext::set_private_key(const char* key, size_t key_length, cons
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
+CassError NoSslContext::set_min_protocol_version(CassSslTlsVersion min_version) {
+  return CASS_ERROR_LIB_NOT_IMPLEMENTED;
+}
+
 SslContext::Ptr NoSslContextFactory::create() { return SslContext::Ptr(new NoSslContext()); }

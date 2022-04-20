@@ -41,12 +41,14 @@
     !defined(LIBRESSL_VERSION_NUMBER) // Required as OPENSSL_VERSION_NUMBER for LibreSSL is defined
                                       // as 2.0.0
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#define SSL_CAN_SET_MIN_VERSION
 #define SSL_CLIENT_METHOD TLS_client_method
 #else
 #define SSL_CLIENT_METHOD SSLv23_client_method
 #endif
 #else
 #if (LIBRESSL_VERSION_NUMBER >= 0x20302000L)
+#define SSL_CAN_SET_MIN_VERSION
 #define SSL_CLIENT_METHOD TLS_client_method
 #else
 #define SSL_CLIENT_METHOD SSLv23_client_method
@@ -613,6 +615,48 @@ CassError OpenSslContext::set_private_key(const char* key, size_t key_length, co
   EVP_PKEY_free(pkey);
 
   return CASS_OK;
+}
+
+CassError OpenSslContext::set_min_protocol_version(CassSslTlsVersion min_version) {
+#ifdef SSL_CAN_SET_MIN_VERSION
+  int method;
+  switch (min_version) {
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1:
+      method = TLS1_VERSION;
+      break;
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1_1:
+      method = TLS1_1_VERSION;
+      break;
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1_2:
+      method = TLS1_2_VERSION;
+      break;
+    default:
+      // unsupported version
+      return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  SSL_CTX_set_min_proto_version(ssl_ctx_, method);
+  return CASS_OK;
+#else
+  // If we don't have the `set_min_proto_version` function then we do this via
+  // the (deprecated in later versions) options function.
+  int options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+  switch (min_version) {
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1:
+      break;
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1_1:
+      options |= SSL_OP_NO_TLSv1;
+      break;
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1_2:
+      options |= SSL_OP_NO_TLSv1;
+      options |= SSL_OP_NO_TLSv1_1;
+      break;
+    default:
+      // unsupported version
+      return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  SSL_CTX_set_options(ssl_ctx_, options);
+  return CASS_OK;
+#endif
 }
 
 SslContext::Ptr OpenSslContextFactory::create() { return SslContext::Ptr(new OpenSslContext()); }
