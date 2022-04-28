@@ -8,6 +8,6 @@ Description: A C/C++ client driver for Apache Cassandra and DataStax Products
 Version: @DEB_VERSION_UPSTREAM@
 Requires: libuv
 Requires: openssl
-Libs: -L${libdir} -lcassandra_static -lstdc++
+Libs: -L${libdir} -lcassandra_static
 Cflags:
 URL: https://github.com/datastax/cpp-driver/
