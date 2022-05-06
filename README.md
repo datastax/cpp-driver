@@ -11,8 +11,11 @@ products:
 ## Getting the Driver
 
 Binary versions of the driver, available for multiple operating systems and
-multiple architectures, can be obtained from our [download server]. The
-source code is made available via [GitHub].
+multiple architectures, can be obtained from the appropriate download server.
+Releases up to and including 2.16.0 can be found on our
+[download server]. Subsequent releases can be found on our Artifactory
+instance; consult the release announcement on our [mailing list] for
+individual URLs. The source code is made available via [GitHub].
 
 Packages for the driver's dependencies, libuv (1.x), OpenSSL, and zlib are also
 provided under the `dependencies` directory for each platform (if applicable).
@@ -105,8 +108,8 @@ __Disclaimer__: DataStax products do not support big-endian systems.
 
 ## Getting Help
 
-* JIRA: https://datastax-oss.atlassian.net/browse/CPP
-* Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
+* JIRA: [jira]
+* Mailing List: [mailing list]
 
 ## Examples
 
@@ -214,6 +217,8 @@ specific language governing permissions and limitations under the License.
 [API]: http://docs.datastax.com/en/developer/cpp-driver/latest/api
 [Getting Started]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics
 [Building]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/building
+[jira]: https://datastax-oss.atlassian.net/browse/CPP
+[mailing list]: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 [centos-6-dependencies]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies
 [centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
 [centos-8-dependencies]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies
