@@ -129,12 +129,12 @@ TEST(TokenMapUnitTest, Murmur3MultipleTokensPerHost) {
 TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
   TestTokenMap<Murmur3Partitioner> test_murmur3;
 
-  size_t num_dcs = 3;
-  size_t num_racks = 3;
-  size_t num_hosts = 4;
+  size_t num_dcs = 2;
+  size_t num_racks = 1;
+  size_t num_hosts = 27;
   size_t num_vnodes = 256;
-  size_t replication_factor = 3;
-  size_t total_replicas = std::min(num_hosts, replication_factor) * num_dcs;
+  size_t replication_factor = 54;
+  size_t total_replicas = replication_factor;
 
   ReplicationMap replication;
   MT19937_64 rng;
@@ -166,9 +166,13 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
     }
   }
 
+  printf("Populating token map finished finished\n");
+
   // Build token map
   add_keyspace_network_topology("ks1", replication, token_map);
+  printf("Building replicas\n");
   token_map->build();
+  printf("Building replicas finished\n");
 
   const String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
