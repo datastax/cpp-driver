@@ -166,13 +166,9 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
     }
   }
 
-  printf("Populating token map finished finished\n");
-
   // Build token map
   add_keyspace_network_topology("ks1", replication, token_map);
-  printf("Building replicas\n");
   token_map->build();
-  printf("Building replicas finished\n");
 
   const String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
