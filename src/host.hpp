@@ -305,23 +305,4 @@ bool remove_host(CopyOnWriteHostVec& hosts, const Address& address);
 }}} // namespace datastax::internal::core
 
 
-namespace std {
-
-#if defined(HASH_IN_TR1) && !defined(_WIN32)
-namespace tr1 {
-#endif
-
-template <>
-struct hash<datastax::internal::core::Host*> {
-  size_t operator()(const datastax::internal::core::Host* host) const {
-    return host->address().hash_code();
-  }
-};
-
-#if defined(HASH_IN_TR1) && !defined(_WIN32)
-} // namespace tr1
-#endif
-
-} // namespace std
-
 #endif
