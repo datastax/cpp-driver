@@ -84,9 +84,6 @@ public:
         pos = tail_.load(MEMORY_ORDER_RELAXED);
       }
     }
-
-    // never taken
-    return false;
   }
 
   bool dequeue(T& data) {
@@ -120,9 +117,6 @@ public:
         pos = head_.load(MEMORY_ORDER_RELAXED);
       }
     }
-
-    // never taken
-    return false;
   }
 
   bool is_empty() const {
