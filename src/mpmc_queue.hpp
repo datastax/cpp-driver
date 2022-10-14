@@ -56,9 +56,10 @@ public:
     // buffer must be a size which is a power of 2. this also allows
     // the sequence to double as a ticket/lock.
     size_t pos = tail_.load(MEMORY_ORDER_RELAXED);
+    Node* node;
 
     for (;;) {
-      Node* node = &buffer_[pos & mask_];
+      node = &buffer_[pos & mask_];
       size_t node_seq = node->seq.load(MEMORY_ORDER_ACQUIRE);
       intptr_t dif = (intptr_t)node_seq - (intptr_t)pos;
 
@@ -69,11 +70,7 @@ public:
         // weak compare is faster, but can return spurious results
         // which in this instance is OK, because it's in the loop
         if (tail_.compare_exchange_weak(pos, pos + 1, MEMORY_ORDER_RELAXED)) {
-          // set the data
-          node->data = data;
-          // increment the sequence so that the tail knows it's accessible
-          node->seq.store(pos + 1, MEMORY_ORDER_RELEASE);
-          return true;
+          break;
         }
       } else if (dif < 0) {
         // if seq is less than head seq then it means this slot is
@@ -84,13 +81,20 @@ public:
         pos = tail_.load(MEMORY_ORDER_RELAXED);
       }
     }
+
+    // set the data
+    node->data = data;
+    // increment the sequence so that the tail knows it's accessible
+    node->seq.store(pos + 1, MEMORY_ORDER_RELEASE);
+    return true;
   }
 
   bool dequeue(T& data) {
     size_t pos = head_.load(MEMORY_ORDER_RELAXED);
+    Node* node;
 
     for (;;) {
-      Node* node = &buffer_[pos & mask_];
+      node = &buffer_[pos & mask_];
       size_t node_seq = node->seq.load(MEMORY_ORDER_ACQUIRE);
       intptr_t dif = (intptr_t)node_seq - (intptr_t)(pos + 1);
 
@@ -101,12 +105,7 @@ public:
         // weak compare is faster, but can return spurious results
         // which in this instance is OK, because it's in the loop
         if (head_.compare_exchange_weak(pos, pos + 1, MEMORY_ORDER_RELAXED)) {
-          // set the output
-          data = node->data;
-          // set the sequence to what the head sequence should be next
-          // time around
-          node->seq.store(pos + mask_ + 1, MEMORY_ORDER_RELEASE);
-          return true;
+          break;
         }
       } else if (dif < 0) {
         // if seq is less than head seq then it means this slot is
@@ -117,6 +116,13 @@ public:
         pos = head_.load(MEMORY_ORDER_RELAXED);
       }
     }
+
+    // set the output
+    data = node->data;
+    // set the sequence to what the head sequence should be next
+    // time around
+    node->seq.store(pos + mask_ + 1, MEMORY_ORDER_RELEASE);
+    return true;
   }
 
   bool is_empty() const {
