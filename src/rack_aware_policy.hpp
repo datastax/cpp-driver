@@ -1,5 +1,6 @@
 /*
   Copyright (c) DataStax, Inc.
+  Copyright (c) 2022 Kiwi.com
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,8 +15,8 @@
   limitations under the License.
 */
 
-#ifndef DATASTAX_INTERNAL_DC_AWARE_POLICY_HPP
-#define DATASTAX_INTERNAL_DC_AWARE_POLICY_HPP
+#ifndef DATASTAX_INTERNAL_RACK_AWARE_POLICY_HPP
+#define DATASTAX_INTERNAL_RACK_AWARE_POLICY_HPP
 
 #include "host.hpp"
 #include "load_balancing.hpp"
@@ -29,12 +30,11 @@
 
 namespace datastax { namespace internal { namespace core {
 
-class DCAwarePolicy : public LoadBalancingPolicy {
+class RackAwarePolicy : public LoadBalancingPolicy {
 public:
-  DCAwarePolicy(const String& local_dc = "", size_t used_hosts_per_remote_dc = 0,
-                bool skip_remote_dcs_for_local_cl = true);
+  RackAwarePolicy(const String& local_dc = "", const String &local_rack = "");
 
-  ~DCAwarePolicy();
+  ~RackAwarePolicy();
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
                     const String& local_dc, const String& local_rack);
@@ -51,31 +51,30 @@ public:
   virtual void on_host_up(const Host::Ptr& host);
   virtual void on_host_down(const Address& address);
 
-  virtual bool skip_remote_dcs_for_local_cl() const;
-  virtual size_t used_hosts_per_remote_dc() const;
   virtual const String& local_dc() const;
+  virtual const String& local_rack() const;
 
   virtual LoadBalancingPolicy* new_instance() {
-    return new DCAwarePolicy(local_dc_, used_hosts_per_remote_dc_, skip_remote_dcs_for_local_cl_);
+    return new RackAwarePolicy(local_dc_, local_rack_);
   }
 
 private:
-  class PerDCHostMap {
+  class PerKeyHostMap {
   public:
     typedef internal::Map<String, CopyOnWriteHostVec> Map;
     typedef Set<String> KeySet;
 
-    PerDCHostMap()
+    PerKeyHostMap()
         : no_hosts_(new HostVec()) {
       uv_rwlock_init(&rwlock_);
     }
-    ~PerDCHostMap() { uv_rwlock_destroy(&rwlock_); }
+    ~PerKeyHostMap() { uv_rwlock_destroy(&rwlock_); }
 
-    void add_host_to_dc(const String& dc, const Host::Ptr& host);
-    void remove_host_from_dc(const String& dc, const Host::Ptr& host);
+    void add_host_to_key(const String& key, const Host::Ptr& host);
+    void remove_host_from_key(const String& key, const Host::Ptr& host);
     bool remove_host(const Address& address);
-    const CopyOnWriteHostVec& get_hosts(const String& dc) const;
-    void copy_dcs(KeySet* dcs) const;
+    const CopyOnWriteHostVec& get_hosts(const String& key) const;
+    void copy_keys(KeySet* keys) const;
 
   private:
     Map map_;
@@ -83,24 +82,25 @@ private:
     const CopyOnWriteHostVec no_hosts_;
 
   private:
-    DISALLOW_COPY_AND_ASSIGN(PerDCHostMap);
+    DISALLOW_COPY_AND_ASSIGN(PerKeyHostMap);
   };
 
   const CopyOnWriteHostVec& get_local_dc_hosts() const;
-  void get_remote_dcs(PerDCHostMap::KeySet* remote_dcs) const;
+  void get_remote_dcs(PerKeyHostMap::KeySet* remote_dcs) const;
 
 public:
-  class DCAwareQueryPlan : public QueryPlan {
+  class RackAwareQueryPlan : public QueryPlan {
   public:
-    DCAwareQueryPlan(const DCAwarePolicy* policy, CassConsistency cl, size_t start_index);
+    RackAwareQueryPlan(const RackAwarePolicy* policy, CassConsistency cl, size_t start_index);
 
     virtual Host::Ptr compute_next();
 
   private:
-    const DCAwarePolicy* policy_;
+    const RackAwarePolicy* policy_;
     CassConsistency cl_;
     CopyOnWriteHostVec hosts_;
-    ScopedPtr<PerDCHostMap::KeySet> remote_dcs_;
+    ScopedPtr<PerKeyHostMap::KeySet> remote_racks_;
+    ScopedPtr<PerKeyHostMap::KeySet> remote_dcs_;
     size_t local_remaining_;
     size_t remote_remaining_;
     size_t index_;
@@ -111,15 +111,16 @@ private:
   AddressSet available_;
 
   String local_dc_;
-  size_t used_hosts_per_remote_dc_;
-  bool skip_remote_dcs_for_local_cl_;
+  String local_rack_;
 
-  CopyOnWriteHostVec local_dc_live_hosts_;
-  PerDCHostMap per_remote_dc_live_hosts_;
+  CopyOnWriteHostVec local_rack_live_hosts_;
+  // remote rack, local dc
+  PerKeyHostMap per_remote_rack_live_hosts_;
+  PerKeyHostMap per_remote_dc_live_hosts_;
   size_t index_;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(DCAwarePolicy);
+  DISALLOW_COPY_AND_ASSIGN(RackAwarePolicy);
 };
 
 }}} // namespace datastax::internal::core

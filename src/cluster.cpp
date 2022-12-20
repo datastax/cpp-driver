@@ -18,6 +18,7 @@
 
 #include "constants.hpp"
 #include "dc_aware_policy.hpp"
+#include "rack_aware_policy.hpp"
 #include "external.hpp"
 #include "logger.hpp"
 #include "resolver.hpp"
@@ -232,6 +233,7 @@ Cluster::Cluster(const ControlConnection::Ptr& connection, ClusterListener* list
                  const ControlConnectionSchema& schema,
                  const LoadBalancingPolicy::Ptr& load_balancing_policy,
                  const LoadBalancingPolicy::Vec& load_balancing_policies, const String& local_dc,
+		 const String& local_rack,
                  const StringMultimap& supported_options, const ClusterSettings& settings)
     : connection_(connection)
     , listener_(listener ? listener : &nop_cluster_listener__)
@@ -243,6 +245,7 @@ Cluster::Cluster(const ControlConnection::Ptr& connection, ClusterListener* list
     , connected_host_(connected_host)
     , hosts_(hosts)
     , local_dc_(local_dc)
+    , local_rack_(local_rack)
     , supported_options_(supported_options)
     , is_recording_events_(settings.disable_events_on_startup) {
   inc_ref();

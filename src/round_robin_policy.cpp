@@ -33,7 +33,7 @@ RoundRobinPolicy::RoundRobinPolicy()
 RoundRobinPolicy::~RoundRobinPolicy() { uv_rwlock_destroy(&available_rwlock_); }
 
 void RoundRobinPolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                            const String& local_dc) {
+                            const String& local_dc, const String& local_rack) {
   available_.resize(hosts.size());
   std::transform(hosts.begin(), hosts.end(), std::inserter(available_, available_.begin()),
                  GetAddress());

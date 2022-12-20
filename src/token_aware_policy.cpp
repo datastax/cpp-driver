@@ -37,7 +37,7 @@ static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& a
 }
 
 void TokenAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                            const String& local_dc) {
+                            const String& local_dc, const String& local_rack) {
   if (random != NULL) {
     if (shuffle_replicas_) {
       // Store random so that it can be used to shuffle replicas.
@@ -48,7 +48,7 @@ void TokenAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& host
       index_ = random->next(std::max(static_cast<size_t>(1), hosts.size()));
     }
   }
-  ChainedLoadBalancingPolicy::init(connected_host, hosts, random, local_dc);
+  ChainedLoadBalancingPolicy::init(connected_host, hosts, random, local_dc, local_rack);
 }
 
 QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace, RequestHandler* request_handler,
@@ -87,8 +87,8 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace, RequestHandl
 }
 
 Host::Ptr TokenAwarePolicy::TokenAwareQueryPlan::compute_next() {
-  while (remaining_ > 0) {
-    --remaining_;
+  while (remaining_local_ > 0) {
+    --remaining_local_;
     const Host::Ptr& host((*replicas_)[index_++ % replicas_->size()]);
     if (child_policy_->is_host_up(host->address()) &&
         child_policy_->distance(host) == CASS_HOST_DISTANCE_LOCAL) {
@@ -96,10 +96,28 @@ Host::Ptr TokenAwarePolicy::TokenAwareQueryPlan::compute_next() {
     }
   }
 
+  while (remaining_remote_ > 0) {
+    --remaining_remote_;
+    const Host::Ptr& host((*replicas_)[index_++ % replicas_->size()]);
+    if (child_policy_->is_host_up(host->address()) &&
+        child_policy_->distance(host) == CASS_HOST_DISTANCE_REMOTE) {
+      return host;
+    }
+  }
+
+  while (remaining_remote2_ > 0) {
+    --remaining_remote2_;
+    const Host::Ptr& host((*replicas_)[index_++ % replicas_->size()]);
+    if (child_policy_->is_host_up(host->address()) &&
+        child_policy_->distance(host) == CASS_HOST_DISTANCE_REMOTE2) {
+      return host;
+    }
+  }
+
   Host::Ptr host;
   while ((host = child_plan_->compute_next())) {
     if (!contains(replicas_, host->address()) ||
-        child_policy_->distance(host) != CASS_HOST_DISTANCE_LOCAL) {
+        child_policy_->distance(host) > CASS_HOST_DISTANCE_REMOTE2) {
       return host;
     }
   }
