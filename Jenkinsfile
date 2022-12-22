@@ -274,43 +274,6 @@ def determineBuildType() {
   return buildType
 }
 
-def notifySlack(status = 'started') {
-  // Notify Slack channel for every build except adhoc executions
-  if (params.ADHOC_BUILD_TYPE != 'BUILD-AND-EXECUTE-TESTS') {
-    // Set the global pipeline scoped environment (this is above each matrix)
-    env.BUILD_STATED_SLACK_NOTIFIED = 'true'
-
-    def buildType = determineBuildType()
-    if (buildType == 'release') {
-      buildType += "v${env.DRIVER_VERSION}"
-    }
-    buildType = buildType.capitalize()
-
-    def color = 'good' // Green
-    if (status.equalsIgnoreCase('aborted')) {
-      color = '808080' // Grey
-    } else if (status.equalsIgnoreCase('unstable')) {
-      color = 'warning' // Orange
-    } else if (status.equalsIgnoreCase('failed')) {
-      color = 'danger' // Red
-    }
-
-    def message = """Build ${status} for ${env.DRIVER_DISPLAY_NAME} [${buildType}]
-<${env.GITHUB_BRANCH_URL}|${env.BRANCH_NAME}> - <${env.RUN_DISPLAY_URL}|#${env.BUILD_NUMBER}> - <${env.GITHUB_COMMIT_URL}|${env.GIT_SHA}>"""
-    if (params.CI_SCHEDULE != 'DO-NOT-CHANGE-THIS-SELECTION') {
-      message += " - ${env.OS_VERSION}"
-    }
-    if (!status.equalsIgnoreCase('Started')) {
-      message += """
-${status} after ${currentBuild.durationString - ' and counting'}"""
-    }
-
-    slackSend color: "${color}",
-              channel: "#cpp-driver-dev-bots",
-              message: "${message}"
-  }
-}
-
 def describePerCommitStage() {
   script {
     currentBuild.displayName = "Per-Commit build of ${env.BRANCH_NAME}"
@@ -574,11 +537,6 @@ pipeline {
           stage('Initialize-Environment') {
             steps {
               initializeEnvironment()
-              script {
-                if (env.BUILD_STATED_SLACK_NOTIFIED != 'true') {
-                  notifySlack()
-                }
-              }
             }
           }
           stage('Describe-Build') {
@@ -657,20 +615,6 @@ pipeline {
           }
         }
       }
-      post {
-        aborted {
-          notifySlack('aborted')
-        }
-        success {
-          notifySlack('completed')
-        }
-        unstable {
-          notifySlack('unstable')
-        }
-        failure {
-          notifySlack('FAILED')
-        }
-      }
     }
 
     stage('Build-Release-And-Deploy') {
@@ -706,11 +650,6 @@ pipeline {
           stage('Initialize-Environment') {
             steps {
               initializeEnvironment()
-              script {
-                if (env.BUILD_STATED_SLACK_NOTIFIED != 'true') {
-                  notifySlack()
-                }
-              }
             }
           }
           stage('Describe-Release-And-Deploy') {
@@ -738,20 +677,6 @@ pipeline {
           cleanup {
             cleanWs()
           }
-        }
-      }
-      post {
-        aborted {
-          notifySlack('aborted')
-        }
-        success {
-          notifySlack('completed')
-        }
-        unstable {
-          notifySlack('unstable')
-        }
-        failure {
-          notifySlack('FAILED')
         }
       }
     }
@@ -812,11 +737,6 @@ pipeline {
           stage('Initialize-Environment') {
             steps {
               initializeEnvironment()
-              script {
-                if (env.BUILD_STATED_SLACK_NOTIFIED != 'true') {
-                  notifySlack()
-                }
-              }
             }
           }
           stage('Describe-Build') {
@@ -860,20 +780,6 @@ pipeline {
           }
         }
       }
-      post {
-        aborted {
-          notifySlack('aborted')
-        }
-        success {
-          notifySlack('completed')
-        }
-        unstable {
-          notifySlack('unstable')
-        }
-        failure {
-          notifySlack('FAILED')
-        }
-      }
     }
 
     stage('Scheduled-And-Adhoc-Build-Documents') {
@@ -910,9 +816,6 @@ pipeline {
         stage('Initialize-Environment') {
           steps {
             initializeEnvironment()
-            script {
-              notifySlack()
-            }
           }
         }
         stage('Describe-Build') {
@@ -929,20 +832,6 @@ pipeline {
               archiveArtifacts artifacts: '*-documents.tgz'
             }
           }
-        }
-      }
-      post {
-        aborted {
-          notifySlack('aborted')
-        }
-        success {
-          notifySlack('completed')
-        }
-        unstable {
-          notifySlack('unstable')
-        }
-        failure {
-          notifySlack('FAILED')
         }
       }
     }
