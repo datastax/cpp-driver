@@ -311,25 +311,6 @@ ${status} after ${currentBuild.durationString - ' and counting'}"""
   }
 }
 
-def submitCIMetrics(buildType) {
-  long durationMs = currentBuild.duration
-  long durationSec = durationMs / 1000
-  long nowSec = (currentBuild.startTimeInMillis + durationMs) / 1000
-  def branchNameNoPeriods = env.BRANCH_NAME.replaceAll('\\.', '_')
-  def durationMetric = "okr.ci.cpp.${env.DRIVER_METRIC_TYPE}.${buildType}.${branchNameNoPeriods} ${durationSec} ${nowSec}"
-
-  timeout(time: 1, unit: 'MINUTES') {
-    withCredentials([string(credentialsId: 'lab-grafana-address', variable: 'LAB_GRAFANA_ADDRESS'),
-                     string(credentialsId: 'lab-grafana-port', variable: 'LAB_GRAFANA_PORT')]) {
-      withEnv(["DURATION_METRIC=${durationMetric}"]) {
-        sh label: 'Send runtime metrics to labgrafana', script: '''#!/bin/bash -lex
-          echo "${DURATION_METRIC}" | nc -q 5 ${LAB_GRAFANA_ADDRESS} ${LAB_GRAFANA_PORT}
-        '''
-      }
-    }
-  }
-}
-
 def describePerCommitStage() {
   script {
     currentBuild.displayName = "Per-Commit build of ${env.BRANCH_NAME}"
@@ -512,11 +493,8 @@ pipeline {
                       </table>''')
     choice(
       name: 'OS_VERSION',
-      choices: ['centos/6-64/cpp',
-                'centos/7-64/cpp',
+      choices: ['centos/7-64/cpp',
                 'centos/8-64/cpp',
-                'ubuntu/trusty64/cpp',
-                'ubuntu/xenial64/cpp',
                 'ubuntu/bionic64/cpp'],
       description: '''Operating system to use for scheduled or adhoc builds
                       <table style="width:100%">
@@ -527,24 +505,12 @@ pipeline {
                           <th align="left">Description</th>
                         </tr>
                         <tr>
-                          <td><strong>centos/6-64/cpp</strong></td>
-                          <td>CentOS 6 x86_64</td>
-                        </tr>
-                        <tr>
                           <td><strong>centos/7-64/cpp</strong></td>
                           <td>CentOS 7 x86_64</td>
                         </tr>
                         <tr>
                           <td><strong>centos/8-64/cpp</strong></td>
                           <td>CentOS 8 x86_64</td>
-                        </tr>
-                        <tr>
-                          <td><strong>ubuntu/trusty64/cpp</strong></td>
-                          <td>Ubuntu 14.04 LTS x86_64</td>
-                        </tr>
-                        <tr>
-                          <td><strong>ubuntu/xenial64/cpp</strong></td>
-                          <td>Ubuntu 16.04 LTS x86_64</td>
                         </tr>
                         <tr>
                           <td><strong>ubuntu/bionic64/cpp</strong></td>
@@ -594,11 +560,8 @@ pipeline {
         axes {
           axis {
             name 'OS_VERSION'
-            values 'centos/6-64/cpp',
-                   'centos/7-64/cpp',
+            values 'centos/7-64/cpp',
                    'centos/8-64/cpp',
-                   'ubuntu/trusty64/cpp',
-                   'ubuntu/xenial64/cpp',
                    'ubuntu/bionic64/cpp'
           }
         }
@@ -695,11 +658,6 @@ pipeline {
         }
       }
       post {
-        always {
-          node('master') {
-            submitCIMetrics('commit')
-          }
-        }
         aborted {
           notifySlack('aborted')
         }
@@ -731,11 +689,8 @@ pipeline {
         axes {
           axis {
             name 'OS_VERSION'
-            values 'centos/6-64/cpp',
-                   'centos/7-64/cpp',
+            values 'centos/7-64/cpp',
                    'centos/8-64/cpp',
-                   'ubuntu/trusty64/cpp',
-                   'ubuntu/xenial64/cpp',
                    'ubuntu/bionic64/cpp'
           }
         }
@@ -786,11 +741,6 @@ pipeline {
         }
       }
       post {
-        always {
-          node('master') {
-            submitCIMetrics('release')
-          }
-        }
         aborted {
           notifySlack('aborted')
         }
