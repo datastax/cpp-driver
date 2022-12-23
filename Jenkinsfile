@@ -457,7 +457,6 @@ pipeline {
     choice(
       name: 'OS_VERSION',
       choices: ['centos/7-64/cpp',
-                'centos/8-64/cpp',
                 'ubuntu/bionic64/cpp'],
       description: '''Operating system to use for scheduled or adhoc builds
                       <table style="width:100%">
@@ -470,10 +469,6 @@ pipeline {
                         <tr>
                           <td><strong>centos/7-64/cpp</strong></td>
                           <td>CentOS 7 x86_64</td>
-                        </tr>
-                        <tr>
-                          <td><strong>centos/8-64/cpp</strong></td>
-                          <td>CentOS 8 x86_64</td>
                         </tr>
                         <tr>
                           <td><strong>ubuntu/bionic64/cpp</strong></td>
@@ -524,7 +519,6 @@ pipeline {
           axis {
             name 'OS_VERSION'
             values 'centos/7-64/cpp',
-                   'centos/8-64/cpp',
                    'ubuntu/bionic64/cpp'
           }
         }
@@ -634,7 +628,6 @@ pipeline {
           axis {
             name 'OS_VERSION'
             values 'centos/7-64/cpp',
-                   'centos/8-64/cpp',
                    'ubuntu/bionic64/cpp'
           }
         }
