@@ -72,12 +72,21 @@ void populate_hosts(size_t count, const String& rack, const String& dc, HostMap*
 }
 
 void verify_sequence(QueryPlan* qp, const Vector<size_t>& sequence) {
+  Vector<Address> actual;
   Address received;
-  for (Vector<size_t>::const_iterator it = sequence.begin(); it != sequence.end(); ++it) {
-    ASSERT_TRUE(qp->compute_next(&received));
-    EXPECT_EQ(addr_for_sequence(*it), received);
+  size_t limit = 100;
+  while (qp->compute_next(&received) && limit > 0) {
+    limit--;
+    actual.emplace_back(received);
   }
-  EXPECT_FALSE(qp->compute_next(&received));
+  if (limit == 0) {
+    FAIL() << "Iteration limit exceeded";
+  }
+  Vector<Address> expected;
+  for (Vector<size_t>::const_iterator it = sequence.begin(); it != sequence.end(); ++it) {
+    expected.emplace_back(addr_for_sequence(*it));
+  }
+  EXPECT_EQ(expected, actual);
 }
 
 typedef Map<Address, int> QueryCounts;
