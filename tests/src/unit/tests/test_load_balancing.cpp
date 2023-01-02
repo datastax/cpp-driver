@@ -107,6 +107,7 @@ QueryCounts run_policy(LoadBalancingPolicy& policy, int count, CassConsistency c
   return counts;
 }
 
+// verify_dcs checks that all hosts in counts are from expected_dc.
 void verify_dcs(const QueryCounts& counts, const HostMap& hosts, const String& expected_dc) {
   for (QueryCounts::const_iterator it = counts.begin(), end = counts.end(); it != end; ++it) {
     HostMap::const_iterator host_it = hosts.find(it->first);
@@ -115,6 +116,7 @@ void verify_dcs(const QueryCounts& counts, const HostMap& hosts, const String& e
   }
 }
 
+// verify_query_counts checks that each host was used expected_count times.
 void verify_query_counts(const QueryCounts& counts, int expected_count) {
   for (QueryCounts::const_iterator it = counts.begin(), end = counts.end(); it != end; ++it) {
     EXPECT_EQ(expected_count, it->second);
