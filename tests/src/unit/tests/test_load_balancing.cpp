@@ -93,7 +93,7 @@ typedef Map<Address, int> QueryCounts;
 
 QueryCounts run_policy(LoadBalancingPolicy& policy, int count) {
   QueryCounts counts;
-  for (int i = 0; i < 12; ++i) {
+  for (int i = 0; i < count; ++i) {
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
     Host::Ptr host(qp->compute_next());
     if (host) {
