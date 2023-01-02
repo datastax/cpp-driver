@@ -91,10 +91,14 @@ void verify_sequence(QueryPlan* qp, const Vector<size_t>& sequence) {
 
 typedef Map<Address, int> QueryCounts;
 
-QueryCounts run_policy(LoadBalancingPolicy& policy, int count) {
+QueryCounts run_policy(LoadBalancingPolicy& policy, int count, CassConsistency consistency) {
   QueryCounts counts;
   for (int i = 0; i < count; ++i) {
-    ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+    QueryRequest::Ptr request(new QueryRequest("", 0));
+    request->set_consistency(consistency);
+    SharedRefPtr<RequestHandler> request_handler(
+        new RequestHandler(request, ResponseFuture::Ptr()));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
     Host::Ptr host(qp->compute_next());
     if (host) {
       counts[host->address()] += 1;
@@ -309,7 +313,7 @@ TEST(RoundRobinLoadBalancingUnitTest, VerifyEqualDistribution) {
   policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   { // All nodes
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     ASSERT_EQ(counts.size(), 3u);
     verify_query_counts(counts, 4);
   }
@@ -317,7 +321,7 @@ TEST(RoundRobinLoadBalancingUnitTest, VerifyEqualDistribution) {
   policy.on_host_down(hosts.begin()->first);
 
   { // One node down
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     ASSERT_EQ(counts.size(), 2u);
     verify_query_counts(counts, 6);
   }
@@ -325,7 +329,7 @@ TEST(RoundRobinLoadBalancingUnitTest, VerifyEqualDistribution) {
   policy.on_host_up(hosts.begin()->second);
 
   { // All nodes again
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     ASSERT_EQ(counts.size(), 3u);
     verify_query_counts(counts, 4);
   }
@@ -333,7 +337,7 @@ TEST(RoundRobinLoadBalancingUnitTest, VerifyEqualDistribution) {
   policy.on_host_removed(hosts.begin()->second);
 
   { // One node removed
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     ASSERT_EQ(counts.size(), 2u);
     verify_query_counts(counts, 6);
   }
@@ -559,7 +563,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionLocalDc) {
   policy.init(hosts.begin()->second, hosts, NULL, "");
 
   { // All local nodes
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     verify_dcs(counts, hosts, LOCAL_DC);
     ASSERT_EQ(counts.size(), 3u);
     verify_query_counts(counts, 4);
@@ -568,7 +572,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionLocalDc) {
   policy.on_host_down(hosts.begin()->first);
 
   { // One local node down
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     verify_dcs(counts, hosts, LOCAL_DC);
     ASSERT_EQ(counts.size(), 2u);
     verify_query_counts(counts, 6);
@@ -577,7 +581,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionLocalDc) {
   policy.on_host_up(hosts.begin()->second);
 
   { // All local nodes again
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     verify_dcs(counts, hosts, LOCAL_DC);
     ASSERT_EQ(counts.size(), 3u);
     verify_query_counts(counts, 4);
@@ -586,7 +590,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionLocalDc) {
   policy.on_host_removed(hosts.begin()->second);
 
   { // One local node removed
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     verify_dcs(counts, hosts, LOCAL_DC);
     ASSERT_EQ(counts.size(), 2u);
     verify_query_counts(counts, 6);
@@ -612,7 +616,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionRemoteDc) {
   }
 
   { // All remote nodes
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     verify_dcs(counts, hosts, REMOTE_DC);
     ASSERT_EQ(counts.size(), 3u);
     verify_query_counts(counts, 4);
@@ -621,7 +625,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionRemoteDc) {
   policy.on_host_down(remote_dc_node1->address());
 
   { // One remote node down
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     verify_dcs(counts, hosts, REMOTE_DC);
     ASSERT_EQ(counts.size(), 2u);
     verify_query_counts(counts, 6);
@@ -630,7 +634,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionRemoteDc) {
   policy.on_host_up(remote_dc_node1);
 
   { // All remote nodes again
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     verify_dcs(counts, hosts, REMOTE_DC);
     ASSERT_EQ(counts.size(), 3u);
     verify_query_counts(counts, 4);
@@ -639,7 +643,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionRemoteDc) {
   policy.on_host_removed(remote_dc_node1);
 
   { // One remote node removed
-    QueryCounts counts(run_policy(policy, 12));
+    QueryCounts counts(run_policy(policy, 12, CASS_CONSISTENCY_ONE));
     verify_dcs(counts, hosts, REMOTE_DC);
     ASSERT_EQ(counts.size(), 2u);
     verify_query_counts(counts, 6);
