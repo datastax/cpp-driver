@@ -1,6 +1,11 @@
 #!groovy
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
+def get_os_distro() {
+  return sh(label: 'Assign env.OS_DISTRO based on OS env', script: '''#!/bin/bash -le
+    echo ${OS_DISTRO}''', returnStdout: true).trim()
+}
+
 def initializeEnvironment() {
   env.DRIVER_DISPLAY_NAME = 'Cassandra C/C++ Driver'
   env.DRIVER_TYPE = 'CASS'
@@ -545,7 +550,10 @@ pipeline {
             post {
               success {
                 // Allow empty results for 'osx/high-sierra' which doesn't produce packages
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/libuv*", allowEmptyArchive: true
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/libuv*", allowEmptyArchive: true
+                }
               }
             }
           }
@@ -555,12 +563,18 @@ pipeline {
             }
             post {
               success {
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/cassandra-*-tests"
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/dse-*-tests", allowEmptyArchive: true
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/cassandra-*-tests"
+                  archiveArtifacts artifacts: "${distro}/**/dse-*-tests", allowEmptyArchive: true
+                }
               }
               failure {
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeOutput.log"
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeError.log"
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/CMakeOutput.log"
+                  archiveArtifacts artifacts: "${distro}/**/CMakeError.log"
+                }
               }
             }
           }
@@ -590,7 +604,10 @@ pipeline {
             }
             post {
               success {
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/*-cpp-driver*"
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/*-cpp-driver*"
+                }
               }
             }
           }
@@ -748,8 +765,11 @@ pipeline {
             }
             post {
               failure {
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeOutput.log"
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeError.log"
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/CMakeOutput.log"
+                  archiveArtifacts artifacts: "${distro}/**/CMakeError.log"
+                }
               }
             }
           }
@@ -764,7 +784,10 @@ pipeline {
                 junit testResults: '*integration-tests-*-results.xml', allowEmptyResults: true
               }
               failure {
-                archiveArtifacts artifacts: "${env.OS_DISTRO}/**/*-integration-tests-driver-logs.tgz"
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/*-integration-tests-driver-logs.tgz"
+                }
               }
               cleanup {
                 cleanWs()
