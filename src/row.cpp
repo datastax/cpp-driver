@@ -51,14 +51,22 @@ namespace datastax { namespace internal { namespace core {
 
 bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& output) {
   output.clear();
-  output.reserve(result->column_count());
   for (int i = 0; i < result->column_count(); ++i) {
-    Value value;
     const ColumnDefinition& def = result->metadata()->get_column_definition(i);
-    CHECK_RESULT(decoder.decode_value(def.data_type, value));
-    output.push_back(value);
+    Value value = decoder.decode_value(def.data_type);
+    if (value.is_valid()) {
+      output.push_back(value);
+    } else
+      return false;
   }
+  return true;
+}
 
+bool decode_next_row(Decoder& decoder, OutputValueVec& output) {
+  const size_t column_count = output.size();
+  for (size_t i = 0; i < column_count; ++i) {
+    if (!decoder.update_value(output[i])) return false;
+  }
   return true;
 }
 

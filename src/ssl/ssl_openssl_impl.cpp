@@ -41,12 +41,14 @@
     !defined(LIBRESSL_VERSION_NUMBER) // Required as OPENSSL_VERSION_NUMBER for LibreSSL is defined
                                       // as 2.0.0
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#define SSL_CAN_SET_MIN_VERSION
 #define SSL_CLIENT_METHOD TLS_client_method
 #else
 #define SSL_CLIENT_METHOD SSLv23_client_method
 #endif
 #else
 #if (LIBRESSL_VERSION_NUMBER >= 0x20302000L)
+#define SSL_CAN_SET_MIN_VERSION
 #define SSL_CLIENT_METHOD TLS_client_method
 #else
 #define SSL_CLIENT_METHOD SSLv23_client_method
@@ -91,7 +93,13 @@ static void ssl_log_errors(const char* context) {
   const char* data;
   int flags;
   int err;
-  while ((err = ERR_get_error_line_data(NULL, NULL, &data, &flags)) != 0) {
+  while ((err =
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+              ERR_get_error_all(NULL, NULL, NULL, &data, &flags)
+#else
+              ERR_get_error_line_data(NULL, NULL, &data, &flags)
+#endif
+              ) != 0) {
     char buf[256];
     ERR_error_string_n(err, buf, sizeof(buf));
     LOG_ERROR("%s: %s:%s", context, buf, (flags & ERR_TXT_STRING) ? data : "");
@@ -104,7 +112,13 @@ static String ssl_error_string() {
   int flags;
   int err;
   String error;
-  while ((err = ERR_get_error_line_data(NULL, NULL, &data, &flags)) != 0) {
+  while ((err =
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+              ERR_get_error_all(NULL, NULL, NULL, &data, &flags)
+#else
+              ERR_get_error_line_data(NULL, NULL, &data, &flags)
+#endif
+              ) != 0) {
     char buf[256];
     ERR_error_string_n(err, buf, sizeof(buf));
     if (!error.empty()) error.push_back(',');
@@ -188,7 +202,8 @@ static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
     int r;
     unsigned long err;
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || \
+    (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x2090100fL)
     if (ctx->extra_certs != NULL) {
       sk_X509_pop_free(ctx->extra_certs, X509_free);
       ctx->extra_certs = NULL;
@@ -226,22 +241,6 @@ static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
 end:
   if (x != NULL) X509_free(x);
   return ret;
-}
-
-static X509* load_cert(const char* cert, size_t cert_size) {
-  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_size);
-  if (bio == NULL) {
-    return NULL;
-  }
-
-  X509* x509 = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
-  if (x509 == NULL) {
-    ssl_log_errors("Unable to load certificate");
-  }
-
-  BIO_free_all(bio);
-
-  return x509;
 }
 
 static EVP_PKEY* load_key(const char* key, size_t key_size, const char* password) {
@@ -436,9 +435,6 @@ OpenSslSession::OpenSslSession(const Address& address, const String& hostname,
     , incoming_bio_(rb::RingBufferBio::create(&incoming_state_))
     , outgoing_bio_(rb::RingBufferBio::create(&outgoing_state_)) {
   SSL_set_bio(ssl_, incoming_bio_, outgoing_bio_);
-#if DEBUG_SSL
-  SSL_CTX_set_info_callback(ssl_ctx, ssl_info_callback);
-#endif
   SSL_set_connect_state(ssl_);
 
   if (!sni_server_name_.empty()) {
@@ -542,6 +538,13 @@ OpenSslContext::OpenSslContext()
     , trusted_store_(X509_STORE_new()) {
   SSL_CTX_set_cert_store(ssl_ctx_, trusted_store_);
   SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, ssl_no_verify_callback);
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+  // Limit to TLS 1.2 for now. TLS 1.3 has broken the handshake code.
+  SSL_CTX_set_max_proto_version(ssl_ctx_, TLS1_2_VERSION);
+#endif
+#if DEBUG_SSL
+  SSL_CTX_set_info_callback(ssl_ctx_, ssl_info_callback);
+#endif
 }
 
 OpenSslContext::~OpenSslContext() { SSL_CTX_free(ssl_ctx_); }
@@ -552,13 +555,32 @@ SslSession* OpenSslContext::create_session(const Address& address, const String&
 }
 
 CassError OpenSslContext::add_trusted_cert(const char* cert, size_t cert_length) {
-  X509* x509 = load_cert(cert, cert_length);
-  if (x509 == NULL) {
+  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_length);
+  if (bio == NULL) {
     return CASS_ERROR_SSL_INVALID_CERT;
   }
 
-  X509_STORE_add_cert(trusted_store_, x509);
-  X509_free(x509);
+  int num_certs = 0;
+
+  // Iterate over the bio, reading out as many certificates as possible.
+  for (X509* cert = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL); cert != NULL;
+       cert = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL)) {
+    X509_STORE_add_cert(trusted_store_, cert);
+    X509_free(cert);
+    num_certs++;
+  }
+
+  // Retrieve and discard the error tht terminated the loop,
+  // so it doesn't cause the next PEM operation to fail mysteriously.
+  ERR_get_error();
+
+  BIO_free_all(bio);
+
+  // If no certificates were read from the bio, that is an error.
+  if (num_certs == 0) {
+    ssl_log_errors("Unable to load certificate(s)");
+    return CASS_ERROR_SSL_INVALID_CERT;
+  }
 
   return CASS_OK;
 }
@@ -593,6 +615,48 @@ CassError OpenSslContext::set_private_key(const char* key, size_t key_length, co
   EVP_PKEY_free(pkey);
 
   return CASS_OK;
+}
+
+CassError OpenSslContext::set_min_protocol_version(CassSslTlsVersion min_version) {
+#ifdef SSL_CAN_SET_MIN_VERSION
+  int method;
+  switch (min_version) {
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1:
+      method = TLS1_VERSION;
+      break;
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1_1:
+      method = TLS1_1_VERSION;
+      break;
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1_2:
+      method = TLS1_2_VERSION;
+      break;
+    default:
+      // unsupported version
+      return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  SSL_CTX_set_min_proto_version(ssl_ctx_, method);
+  return CASS_OK;
+#else
+  // If we don't have the `set_min_proto_version` function then we do this via
+  // the (deprecated in later versions) options function.
+  int options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+  switch (min_version) {
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1:
+      break;
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1_1:
+      options |= SSL_OP_NO_TLSv1;
+      break;
+    case CassSslTlsVersion::CASS_SSL_VERSION_TLS1_2:
+      options |= SSL_OP_NO_TLSv1;
+      options |= SSL_OP_NO_TLSv1_1;
+      break;
+    default:
+      // unsupported version
+      return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  SSL_CTX_set_options(ssl_ctx_, options);
+  return CASS_OK;
+#endif
 }
 
 SslContext::Ptr OpenSslContextFactory::create() { return SslContext::Ptr(new OpenSslContext()); }

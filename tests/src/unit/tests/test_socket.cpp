@@ -135,6 +135,8 @@ public:
     return settings;
   }
 
+  void weaken_ssl() { server_.weaken_ssl(); }
+
   void listen(const Address& address = Address("127.0.0.1", 8888)) {
     ASSERT_EQ(server_.listen(address), 0);
   }
@@ -182,6 +184,17 @@ public:
   static void on_socket_closed(SocketConnector* connector, bool* is_closed) {
     if (connector->error_code() == SocketConnector::SOCKET_ERROR_CLOSE) {
       *is_closed = true;
+    }
+  }
+
+  /* SSL handshake failures have different error codes on different versions of
+   * OpenSSL - this accounts for both of them
+   */
+  static void on_socket_ssl_error(SocketConnector* connector, bool* is_error) {
+    SocketConnector::SocketError err = connector->error_code();
+    if ((err == SocketConnector::SOCKET_ERROR_CLOSE) ||
+        (err == SocketConnector::SOCKET_ERROR_SSL_HANDSHAKE)) {
+      *is_error = true;
     }
   }
 
@@ -408,4 +421,23 @@ TEST_F(SocketUnitTest, SslVerifyIdentityDns) {
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
+}
+
+TEST_F(SocketUnitTest, SslEnforceTlsVersion) {
+  SocketSettings settings(use_ssl("127.0.0.1"));
+  weaken_ssl();
+
+  listen();
+
+  settings.ssl_context->set_min_protocol_version(CASS_SSL_VERSION_TLS1_2);
+
+  bool is_error;
+  SocketConnector::Ptr connector(new SocketConnector(
+      Address("127.0.0.1", 8888), bind_callback(on_socket_ssl_error, &is_error)));
+
+  connector->with_settings(settings)->connect(loop());
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_TRUE(is_error);
 }

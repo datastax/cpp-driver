@@ -1,6 +1,6 @@
 # Cloud
 
-## Connecting to your [DataStax Apollo database on Constellation] using a secure connection bundle
+## Connecting to [DataStax Astra Database-as-a-Service] using a secure connection bundle
 
    Use the following code snippet to connect your database:
 
@@ -43,4 +43,4 @@
   **Note:** `cass_cluster_set_contact_points()` and `cass_cluster_set_ssl()` should not used
   in conjunction with `cass_cluster_set_cloud_secure_connection_bundle()`.
 
-[DataStax Apollo database on Constellation]: https://constellation.datastax.com/
+[DataStax Astra Database-as-a-Service]: https://astra.datastax.com/

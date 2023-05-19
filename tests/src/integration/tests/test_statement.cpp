@@ -69,6 +69,31 @@ CASSANDRA_INTEGRATION_TEST_F(StatementTests, SetHostInet) {
 }
 
 /**
+ * Set node on a statement and verify that query goes to the correct node.
+ *
+ * @test_category configuration
+ * @expected_result The local "rpc_address" matches a second query to the same
+ * coordinator.
+ */
+CASSANDRA_INTEGRATION_TEST_F(StatementTests, SetNode) {
+  CHECK_FAILURE;
+
+  Statement statement("SELECT rpc_address FROM system.local");
+  Result result1 = session_.execute(statement);
+  Inet rpc_address1 = result1.first_row().column_by_name<Inet>("rpc_address");
+  const CassNode* node = result1.coordinator();
+  ASSERT_TRUE(node != NULL);
+
+  statement.set_node(node);
+
+  for (int i = 0; i < 4; ++i) {
+    Result result2 = session_.execute(statement);
+    Inet rpc_address2 = result1.first_row().column_by_name<Inet>("rpc_address");
+    ASSERT_EQ(rpc_address1, rpc_address2);
+  }
+}
+
+/**
  * Set a host on a statement that has an invalid port.
  *
  * @jira_ticket CPP-597

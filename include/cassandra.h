@@ -52,7 +52,7 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 15
+#define CASS_VERSION_MINOR 16
 #define CASS_VERSION_PATCH 2
 #define CASS_VERSION_SUFFIX ""
 
@@ -226,6 +226,14 @@ typedef struct CassResult_ CassResult;
  * @struct CassErrorResult
  */
 typedef struct CassErrorResult_ CassErrorResult;
+
+
+/**
+ * An object that represents a cluster node.
+ *
+ * @struct CassNode
+ */
+typedef struct CassNode_ CassNode;
 
 /**
  * An object used to iterate over a group of rows, columns or collection values.
@@ -620,6 +628,12 @@ typedef enum CassSslVerifyFlags_ {
   CASS_SSL_VERIFY_PEER_IDENTITY     = 0x02,
   CASS_SSL_VERIFY_PEER_IDENTITY_DNS = 0x04
 } CassSslVerifyFlags;
+
+typedef enum CassSslTlsVersion_ {
+  CASS_SSL_VERSION_TLS1   = 0x00,
+  CASS_SSL_VERSION_TLS1_1 = 0x01,
+  CASS_SSL_VERSION_TLS1_2 = 0x02
+} CassSslTlsVersion;
 
 typedef enum CassProtocolVersion_ {
   CASS_PROTOCOL_VERSION_V1    = 0x01, /**< Deprecated */
@@ -2557,8 +2571,8 @@ cass_cluster_set_use_schema(CassCluster* cluster,
 /**
  * Enable/Disable retrieving hostnames for IP addresses using reverse IP lookup.
  *
- * This is useful for authentication (Kerberos) or encryption (SSL) services
- * that require a valid hostname for verification.
+ * @deprecated Do not use. Using reverse DNS lookup to verify the certificate
+ * does not protect against man-in-the-middle attacks. 
  *
  * <b>Default:</b> cass_false (disabled).
  *
@@ -2570,9 +2584,9 @@ cass_cluster_set_use_schema(CassCluster* cluster,
  *
  * @see cass_cluster_set_resolve_timeout()
  */
-CASS_EXPORT CassError
+CASS_EXPORT CASS_DEPRECATED(CassError
 cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
-                                         cass_bool_t enabled);
+                                         cass_bool_t enabled));
 
 /**
  * Enable/Disable the randomization of the contact points list.
@@ -4590,9 +4604,9 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches the certificate's
  * common name or one of its subject alternative names. This implies the
  * certificate is also present.
- * CASS_SSL_VERIFY_PEER_IDENTITY_DNS - Hostname matches the certificate's
- * common name or one of its subject alternative names. This implies the
- * certificate is also present. Hostname resolution must also be enabled.
+ * CASS_SSL_VERIFY_PEER_IDENTITY_DNS -  Do not use. This option requires the
+ * use of reverse DNS lookup which is not sufficient to protect against
+ * man-in-the-middle attacks.
  *
  * <b>Default:</b> CASS_SSL_VERIFY_PEER_CERT
  *
@@ -4602,7 +4616,6 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * @param[in] flags
  * @return CASS_OK if successful, otherwise an error occurred
  *
- * @see cass_cluster_set_use_hostname_resolution()
  */
 CASS_EXPORT void
 cass_ssl_set_verify_flags(CassSsl* ssl,
@@ -4678,6 +4691,20 @@ cass_ssl_set_private_key_n(CassSsl* ssl,
                            size_t key_length,
                            const char* password,
                            size_t password_length);
+
+/**
+ * Set minimum supported client-side protocol version. This will prevent the
+ * connection using protocol versions earlier than the specified one. Useful
+ * for preventing TLS downgrade attacks.
+ *
+ * @public @memberof CassSsl
+ *
+ * @param[in] ssl
+ * @param[in] min_version
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_ssl_set_min_protocol_version(CassSsl* ssl, CassSslTlsVersion min_version);
 
 /***********************************************************************************
  *
@@ -5001,6 +5028,23 @@ cass_future_custom_payload_item(CassFuture* future,
                                 size_t* name_length,
                                 const cass_byte_t** value,
                                 size_t* value_size);
+
+/**
+ * Gets the node that acted as coordinator for this query. If the future is not
+ * ready this method will wait for the future to be set.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param future
+ * @return The coordinator node that handled the query. The lifetime of this
+ * object is the same as the result object it came from. NULL can be returned
+ * if the future is not a response future or if an error occurs before a
+ * coordinator responds.
+ *
+ * @see cass_statement_set_node()
+ */
+CASS_EXPORT const CassNode*
+cass_future_coordinator(CassFuture* future);
 
 /***********************************************************************************
  *
@@ -5394,6 +5438,23 @@ CASS_EXPORT CassError
 cass_statement_set_host_inet(CassStatement* statement,
                              const CassInet* host,
                              int port);
+
+/**
+ * Same as cass_statement_set_host(), but using the `CassNode` type. This can
+ * be used to re-query the same coordinator when used with the result of
+ * `cass_future_coordinator()`
+ *
+ * @public @memberof CassStatement
+ *
+ * @param statement
+ * @param node
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_future_coordinator()
+ */
+CASS_EXPORT CassError
+cass_statement_set_node(CassStatement* statement,
+                        const CassNode* node);
 
 /**
  * Binds null to a query or bound statement at the specified index.

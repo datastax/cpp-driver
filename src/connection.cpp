@@ -220,7 +220,9 @@ void Connection::on_write(int status, RequestCallback* request) {
       break;
 
     default:
-      assert(false && "Invalid request state after write finished");
+      LOG_ERROR("Invalid request state %s for stream ID %d", callback->state_string(),
+                callback->stream());
+      defunct();
       break;
   }
 }
@@ -284,7 +286,9 @@ void Connection::on_read(const char* buf, size_t size) {
               break;
 
             default:
-              assert(false && "Invalid request state after receiving response");
+              LOG_ERROR("Invalid request state %s for stream ID %d", callback->state_string(),
+                        response->stream());
+              defunct();
               break;
           }
         } else {

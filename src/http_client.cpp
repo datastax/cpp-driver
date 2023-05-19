@@ -117,7 +117,7 @@ void HttpClient::on_socket_connect(SocketConnector* connector) {
 
     OStringStream ss;
     ss << "GET " << path_ << " HTTP/1.0\r\n" // HTTP/1.0 ensures chunked responses are not sent
-       << "Host: " << socket_->address().to_string(true) << "\r\n"
+       << "Host: " << address_.to_string(false) << "\r\n"
        << "User-Agent: cpp-driver/" << driver_version() << "\r\nAccept: */*\r\n\r\n";
 
     String request = ss.str();

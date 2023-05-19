@@ -138,33 +138,39 @@ bool Decoder::decode_warnings(WarningVec& output) {
   return true;
 }
 
-bool Decoder::decode_value(const DataType::ConstPtr& data_type, Value& output,
-                           bool is_inside_collection /*= false*/) {
-  const char* buffer = NULL;
+Value Decoder::decode_value(const DataType::ConstPtr& data_type) {
   int32_t size = 0;
-
-  if (!decode_int32(size)) {
-    return false;
-  }
+  if (!decode_int32(size)) return Value();
 
   if (size >= 0) {
-    buffer = input_;
+    Decoder decoder(input_, size, protocol_version_);
     input_ += size;
     remaining_ -= size;
-    Decoder decoder(buffer, size, protocol_version_);
 
-    if (data_type->is_collection()) {
-      int32_t count;
-      if (!decoder.decode_int32(count)) return false;
-      output = Value(data_type, count, decoder);
-    } else {
-      output = Value(data_type, decoder);
+    int32_t count = 0;
+    if (!data_type->is_collection()) {
+      return Value(data_type, decoder);
+    } else if (decoder.decode_int32(count)) {
+      return Value(data_type, count, decoder);
     }
-  } else { // null value
-    output = Value(data_type);
+    return Value();
   }
+  return Value(data_type);
+}
 
-  return true;
+bool Decoder::update_value(Value& value) {
+  int32_t size = 0;
+  if (decode_int32(size)) {
+    if (size >= 0) {
+      Decoder decoder(input_, size, protocol_version_);
+      input_ += size;
+      remaining_ -= size;
+      return value.update(decoder);
+    }
+    Decoder decoder;
+    return value.update(decoder);
+  }
+  return false;
 }
 
 void Decoder::notify_error(const char* detail, size_t bytes) const {

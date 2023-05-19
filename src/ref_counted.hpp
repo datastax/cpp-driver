@@ -43,6 +43,9 @@ public:
     assert(new_ref_count >= 1);
     if (new_ref_count == 1) {
       atomic_thread_fence(MEMORY_ORDER_ACQUIRE);
+#ifdef THREAD_SANITIZER
+      __tsan_acquire(const_cast<void*>(static_cast<const void*>(this)));
+#endif
       delete static_cast<const T*>(this);
     }
   }
@@ -83,6 +86,19 @@ public:
     copy<S>(ref.ptr_);
     return *this;
   }
+
+#if defined(__cpp_rvalue_references)
+  SharedRefPtr<T>& operator=(SharedRefPtr<T>&& ref) noexcept {
+    if (ptr_ != NULL) {
+      ptr_->dec_ref();
+    }
+    ptr_ = ref.ptr_;
+    ref.ptr_ = NULL;
+    return *this;
+  }
+
+  SharedRefPtr(SharedRefPtr<T>&& ref) noexcept : ptr_(ref.ptr_) { ref.ptr_ = NULL; }
+#endif
 
   ~SharedRefPtr() {
     if (ptr_ != NULL) {

@@ -172,24 +172,28 @@ If a unique certificate has been generated for each Cassandra node with the IP a
 **NOTE:** This is disabled by default.
 
 ```c
-CassSsl* ssl = cass_ssl_new();
-
 // Add identity verification flag: CASS_SSL_VERIFY_PEER_IDENTITY (IP address)
 cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY);
 
-// Or use: CASS_SSL_VERIFY_PEER_IDENTITY_DNS (domain name)
-cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY_DNS);
 ```
 
-If using a domain name to verify the peer's identity then hostname resolution
-(reverse DNS) needs to be enabled:
-
-**NOTE:** This is also disabled by default.
+**Important:** Previous versions of this section suggested using reverse DNS lookup as a way to validate the peer's certificate i.e. using `CASS_SSL_VERIFY_PEER_IDENTITY_DNS` with `cass_cluster_set_use_hostname_resolution(cluster, cass_true)`, but this is susceptible to man-in-the-middle (MITM) attacks and is no longer recommended. 
 
 ```c
+/* DO NOT USE THE FOLLOWING. IT IS SUSCEPTIBLE TO MITM ATTACKS: */
+
+CassSsl* ssl = cass_ssl_new();
+
+cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY_DNS);
+
+/* ... */
+
 CassCluster* cluster = cass_cluster_new();
 
-// Enable reverse DNS
+/*
+This can allow an attacker to use their own certificate to fool the driver into thinking it's
+connected to the intended endpoint, but is instead connected to the attacker's endpoint.
+*/
 cass_cluster_set_use_hostname_resolution(cluster, cass_true);
 
 /* ... */

@@ -172,6 +172,22 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
   }
 }
 
+const char* RequestCallback::state_string() const {
+  switch (state_) {
+    case REQUEST_STATE_NEW:
+      return "NEW";
+    case REQUEST_STATE_WRITING:
+      return "WRITING";
+    case REQUEST_STATE_READING:
+      return "READING";
+    case REQUEST_STATE_READ_BEFORE_WRITE:
+      return "READ_BEFORE_WRITE";
+    case REQUEST_STATE_FINISHED:
+      return "FINISHED";
+  }
+  return "INVALID";
+}
+
 SimpleRequestCallback::SimpleRequestCallback(const String& query, uint64_t request_timeout_ms)
     : RequestCallback(
           RequestWrapper(Request::ConstPtr(new QueryRequest(query)), request_timeout_ms)) {}

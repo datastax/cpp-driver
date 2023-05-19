@@ -26,20 +26,15 @@ namespace datastax { namespace internal { namespace core {
 class Row;
 
 /**
- * An interface for constructing `Address` from `system.local`/`system.peers` row data.
+ * An address factory that creates `Address` using the `rpc_address` column.
  */
 class AddressFactory : public RefCounted<AddressFactory> {
 public:
   typedef SharedRefPtr<AddressFactory> Ptr;
   virtual ~AddressFactory() {}
-  virtual bool create(const Row* peers_row, const Host::Ptr& connected_host, Address* output) = 0;
-};
-
-/**
- * An address factory that creates `Address` using the `rpc_address` column.
- */
-class DefaultAddressFactory : public AddressFactory {
   virtual bool create(const Row* peers_row, const Host::Ptr& connected_host, Address* output);
+  virtual bool is_peer(const Row* peers_row, const Host::Ptr& connected_host,
+                       const Address& expected);
 };
 
 /**
@@ -48,13 +43,15 @@ class DefaultAddressFactory : public AddressFactory {
  */
 class SniAddressFactory : public AddressFactory {
   virtual bool create(const Row* peers_row, const Host::Ptr& connected_host, Address* output);
+  virtual bool is_peer(const Row* peers_row, const Host::Ptr& connected_host,
+                       const Address& expected);
 };
 
 inline AddressFactory* create_address_factory_from_config(const Config& config) {
   if (config.cloud_secure_connection_config().is_loaded()) {
     return new SniAddressFactory();
   } else {
-    return new DefaultAddressFactory();
+    return new AddressFactory();
   }
 }
 

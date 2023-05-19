@@ -307,7 +307,7 @@ static NopControlConnectionListener nop_listener__;
 ControlConnectionSettings::ControlConnectionSettings()
     : use_schema(CASS_DEFAULT_USE_SCHEMA)
     , use_token_aware_routing(CASS_DEFAULT_USE_TOKEN_AWARE_ROUTING)
-    , address_factory(new DefaultAddressFactory()) {}
+    , address_factory(new AddressFactory()) {}
 
 ControlConnectionSettings::ControlConnectionSettings(const Config& config)
     : connection_settings(config)
@@ -395,17 +395,16 @@ void ControlConnection::handle_refresh_node(RefreshNodeCallback* callback) {
   const Row* row = NULL;
   ResultIterator rows(callback->result().get());
 
-  while (rows.next() && !found_host) {
-    row = rows.row();
-    if (callback->is_all_peers) {
-      Address address;
-      bool is_valid_address = settings_.address_factory->create(row, connection_->host(), &address);
-      if (is_valid_address && callback->address == address) {
+  if (callback->is_all_peers) {
+    while (!found_host && rows.next()) {
+      row = rows.row();
+      if (settings_.address_factory->is_peer(row, connection_->host(), callback->address)) {
         found_host = true;
       }
-    } else {
-      found_host = true;
     }
+  } else if (rows.next()) {
+    row = rows.row();
+    found_host = true;
   }
 
   if (!found_host) {

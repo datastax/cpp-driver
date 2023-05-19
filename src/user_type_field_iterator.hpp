@@ -30,9 +30,9 @@ public:
   UserTypeFieldIterator(const Value* user_type_value)
       : Iterator(CASS_ITERATOR_TYPE_USER_TYPE_FIELD)
       , decoder_(user_type_value->decoder()) {
-    UserType::ConstPtr user_type(user_type_value->data_type());
-    next_ = user_type->fields().begin();
-    end_ = user_type->fields().end();
+    const UserType& user_type = static_cast<const UserType&>(*user_type_value->data_type());
+    next_ = user_type.fields().begin();
+    end_ = user_type.fields().end();
   }
 
   virtual bool next();

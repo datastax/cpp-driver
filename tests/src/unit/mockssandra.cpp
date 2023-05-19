@@ -52,12 +52,14 @@ using datastax::internal::core::UuidGen;
     !defined(LIBRESSL_VERSION_NUMBER) // Required as OPENSSL_VERSION_NUMBER for LibreSSL is defined
                                       // as 2.0.0
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#define SSL_CAN_SET_MAX_VERSION
 #define SSL_SERVER_METHOD TLS_server_method
 #else
 #define SSL_SERVER_METHOD SSLv23_server_method
 #endif
 #else
 #if (LIBRESSL_VERSION_NUMBER >= 0x20302000L)
+#define SSL_CAN_SET_MAX_VERSION
 #define SSL_SERVER_METHOD TLS_server_method
 #else
 #define SSL_SERVER_METHOD SSLv23_server_method
@@ -553,6 +555,21 @@ bool ServerConnection::use_ssl(const String& key, const String& cert,
   }
 
   return true;
+}
+
+// Weaken the SSL connection, enforcing that it can only use TLS1.0 at max.
+// This is used for testing client-side enforcement of more secure TLS
+// protocols.
+void ServerConnection::weaken_ssl() {
+  if (!ssl_context_) {
+    return;
+  }
+
+#ifdef SSL_CAN_SET_MAX_VERSION
+  SSL_CTX_set_max_proto_version(ssl_context_, TLS1_VERSION);
+#else
+  SSL_CTX_set_options(ssl_context_, SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2);
+#endif
 }
 
 using datastax::internal::core::Task;

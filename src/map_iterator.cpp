@@ -19,8 +19,12 @@
 using namespace datastax::internal::core;
 
 bool MapIterator::decode_pair() {
-  if (!decoder_.decode_value(map_->primary_data_type(), key_, true)) return false;
-  return decoder_.decode_value(map_->secondary_data_type(), value_, true);
+  key_ = decoder_.decode_value(map_->primary_data_type());
+  if (key_.data_type()) {
+    value_ = decoder_.decode_value(map_->secondary_data_type());
+    return value_.is_valid();
+  }
+  return false;
 }
 
 bool MapIterator::next() {

@@ -6,7 +6,7 @@ Cassandra Query Language v3. This driver can also be used with other DataStax
 products:
 
 * [DataStax Enterprise]
-* [DataStax Constellation]
+* [DataStax Astra]
 
 ## Getting the Driver
 
@@ -80,7 +80,7 @@ dependencies for a specific platform.
   * [DSE geospatial types]
   * DSE [proxy authentication][DSE Proxy Authentication] and [proxy execution][DSE Proxy Execution]
   * [DSE DateRange]
-* Support for [DataStax Constellation] Cloud Data Platform
+* Support for [DataStax Astra] Cloud Data Platform
 
 ## Compatibility
 
@@ -107,11 +107,6 @@ __Disclaimer__: DataStax products do not support big-endian systems.
 
 * JIRA: https://datastax-oss.atlassian.net/browse/CPP
 * Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
-
-## Feedback Requested
-
-**Help us focus our efforts!** [Provide your input] on the C/C++ Driver Platform
-and Runtime Survey (we kept it short).
 
 ## Examples
 
@@ -219,7 +214,6 @@ specific language governing permissions and limitations under the License.
 [API]: http://docs.datastax.com/en/developer/cpp-driver/latest/api
 [Getting Started]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics
 [Building]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/building
-[Provide your input]: http://goo.gl/forms/ihKC5uEQr6
 [centos-6-dependencies]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies
 [centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
 [centos-8-dependencies]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies
@@ -227,7 +221,7 @@ specific language governing permissions and limitations under the License.
 [ubuntu-16-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies
 [ubuntu-18-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies
 [windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
-[DataStax Constellation]: https://constellation.datastax.com
+[DataStax Astra]: https://astra.datastax.com
 [Kerberos]: https://web.mit.edu/kerberos
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures

@@ -1,6 +1,11 @@
 #!groovy
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
+def init_os_distro() {
+  env.OS_DISTRO = sh(label: 'Assign env.OS_DISTRO based on OS env', script: '''#!/bin/bash -le
+    echo ${OS_DISTRO}''', returnStdout: true).trim()
+}
+
 def initializeEnvironment() {
   env.DRIVER_DISPLAY_NAME = 'Cassandra C/C++ Driver'
   env.DRIVER_TYPE = 'CASS'
@@ -274,62 +279,6 @@ def determineBuildType() {
   return buildType
 }
 
-def notifySlack(status = 'started') {
-  // Notify Slack channel for every build except adhoc executions
-  if (params.ADHOC_BUILD_TYPE != 'BUILD-AND-EXECUTE-TESTS') {
-    // Set the global pipeline scoped environment (this is above each matrix)
-    env.BUILD_STATED_SLACK_NOTIFIED = 'true'
-
-    def buildType = determineBuildType()
-    if (buildType == 'release') {
-      buildType += "v${env.DRIVER_VERSION}"
-    }
-    buildType = buildType.capitalize()
-
-    def color = 'good' // Green
-    if (status.equalsIgnoreCase('aborted')) {
-      color = '808080' // Grey
-    } else if (status.equalsIgnoreCase('unstable')) {
-      color = 'warning' // Orange
-    } else if (status.equalsIgnoreCase('failed')) {
-      color = 'danger' // Red
-    }
-
-    def message = """Build ${status} for ${env.DRIVER_DISPLAY_NAME} [${buildType}]
-<${env.GITHUB_BRANCH_URL}|${env.BRANCH_NAME}> - <${env.RUN_DISPLAY_URL}|#${env.BUILD_NUMBER}> - <${env.GITHUB_COMMIT_URL}|${env.GIT_SHA}>"""
-    if (params.CI_SCHEDULE != 'DO-NOT-CHANGE-THIS-SELECTION') {
-      message += " - ${env.OS_VERSION}"
-    }
-    if (!status.equalsIgnoreCase('Started')) {
-      message += """
-${status} after ${currentBuild.durationString - ' and counting'}"""
-    }
-
-    slackSend color: "${color}",
-              channel: "#cpp-driver-dev-bots",
-              message: "${message}"
-  }
-}
-
-def submitCIMetrics(buildType) {
-  long durationMs = currentBuild.duration
-  long durationSec = durationMs / 1000
-  long nowSec = (currentBuild.startTimeInMillis + durationMs) / 1000
-  def branchNameNoPeriods = env.BRANCH_NAME.replaceAll('\\.', '_')
-  def durationMetric = "okr.ci.cpp.${env.DRIVER_METRIC_TYPE}.${buildType}.${branchNameNoPeriods} ${durationSec} ${nowSec}"
-
-  timeout(time: 1, unit: 'MINUTES') {
-    withCredentials([string(credentialsId: 'lab-grafana-address', variable: 'LAB_GRAFANA_ADDRESS'),
-                     string(credentialsId: 'lab-grafana-port', variable: 'LAB_GRAFANA_PORT')]) {
-      withEnv(["DURATION_METRIC=${durationMetric}"]) {
-        sh label: 'Send runtime metrics to labgrafana', script: '''#!/bin/bash -lex
-          echo "${DURATION_METRIC}" | nc -q 5 ${LAB_GRAFANA_ADDRESS} ${LAB_GRAFANA_PORT}
-        '''
-      }
-    }
-  }
-}
-
 def describePerCommitStage() {
   script {
     currentBuild.displayName = "Per-Commit build of ${env.BRANCH_NAME}"
@@ -512,11 +461,7 @@ pipeline {
                       </table>''')
     choice(
       name: 'OS_VERSION',
-      choices: ['centos/6-64/cpp',
-                'centos/7-64/cpp',
-                'centos/8-64/cpp',
-                'ubuntu/trusty64/cpp',
-                'ubuntu/xenial64/cpp',
+      choices: ['centos/7-64/cpp',
                 'ubuntu/bionic64/cpp'],
       description: '''Operating system to use for scheduled or adhoc builds
                       <table style="width:100%">
@@ -527,24 +472,8 @@ pipeline {
                           <th align="left">Description</th>
                         </tr>
                         <tr>
-                          <td><strong>centos/6-64/cpp</strong></td>
-                          <td>CentOS 6 x86_64</td>
-                        </tr>
-                        <tr>
                           <td><strong>centos/7-64/cpp</strong></td>
                           <td>CentOS 7 x86_64</td>
-                        </tr>
-                        <tr>
-                          <td><strong>centos/8-64/cpp</strong></td>
-                          <td>CentOS 8 x86_64</td>
-                        </tr>
-                        <tr>
-                          <td><strong>ubuntu/trusty64/cpp</strong></td>
-                          <td>Ubuntu 14.04 LTS x86_64</td>
-                        </tr>
-                        <tr>
-                          <td><strong>ubuntu/xenial64/cpp</strong></td>
-                          <td>Ubuntu 16.04 LTS x86_64</td>
                         </tr>
                         <tr>
                           <td><strong>ubuntu/bionic64/cpp</strong></td>
@@ -571,21 +500,6 @@ pipeline {
       description: 'CI testing server version(s) to utilize for scheduled test runs of the driver (<strong>DO NOT CHANGE THIS SELECTION</strong>)')
   }
 
-  triggers {
-    parameterizedCron("""
-      # Every weeknight (Monday - Friday) around 12:00 AM
-      H 0 * * 1-5 %CI_SCHEDULE=WEEKNIGHTS;CI_SCHEDULE_SERVER_VERSIONS=ALL;OS_VERSION=centos/8-64/cpp;INTEGRATION_TESTS_FILTER=CassandraTypes/*:DseTypes/*
-      H 0 * * 1-5 %CI_SCHEDULE=WEEKNIGHTS;CI_SCHEDULE_SERVER_VERSIONS=ALL;OS_VERSION=ubuntu/bionic64/cpp;INTEGRATION_TESTS_FILTER=CassandraTypes/*:DseTypes/*
-      # Every weekend (Saturday) around 12:00 AM
-      H 0 * * 6 %CI_SCHEDULE=WEEKENDS;CI_SCHEDULE_SERVER_VERSIONS=3.11 dse-5.1 dse-6.0 dse-6.7;OS_VERSION=centos/8-64/cpp
-      H 0 * * 6 %CI_SCHEDULE=WEEKENDS;CI_SCHEDULE_SERVER_VERSIONS=3.11 dse-5.1 dse-6.0 dse-6.7;OS_VERSION=ubuntu/bionic64/cpp
-      H 0 * * 6 %CI_SCHEDULE=WEEKENDS;ADHOC_BUILD_TYPE=BUILD-DOCUMENTS
-      # Every month on the first around 12:00 AM
-      H 0 1 * * %CI_SCHEDULE=MONTHLY;CI_SCHEDULE_SERVER_VERSIONS=4.0 ddac-5.1 dse-6.8;OS_VERSION=centos/8-64/cpp
-      H 0 1 * * %CI_SCHEDULE=MONTHLY;CI_SCHEDULE_SERVER_VERSIONS=4.0 ddac-5.1 dse-6.8;OS_VERSION=ubuntu/bionic64/cpp
-    """)
-  }
-
   environment {
     LIBUV_VERSION = "${params.LIBUV_VERSION}"
     CCM_ENVIRONMENT_SHELL = '/usr/local/bin/ccm_environment.sh'
@@ -609,13 +523,8 @@ pipeline {
         axes {
           axis {
             name 'OS_VERSION'
-            values 'centos/6-64/cpp',
-                   'centos/7-64/cpp',
-                   'centos/8-64/cpp',
-                   'ubuntu/trusty64/cpp',
-                   'ubuntu/xenial64/cpp',
-                   'ubuntu/bionic64/cpp',
-                   'osx/high-sierra'
+            values 'centos/7-64/cpp',
+                   'ubuntu/bionic64/cpp'
           }
         }
 
@@ -627,11 +536,6 @@ pipeline {
           stage('Initialize-Environment') {
             steps {
               initializeEnvironment()
-              script {
-                if (env.BUILD_STATED_SLACK_NOTIFIED != 'true') {
-                  notifySlack()
-                }
-              }
             }
           }
           stage('Describe-Build') {
@@ -646,6 +550,7 @@ pipeline {
             post {
               success {
                 // Allow empty results for 'osx/high-sierra' which doesn't produce packages
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/libuv*", allowEmptyArchive: true
               }
             }
@@ -656,10 +561,12 @@ pipeline {
             }
             post {
               success {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/cassandra-*-tests"
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/dse-*-tests", allowEmptyArchive: true
               }
               failure {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeOutput.log"
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeError.log"
               }
@@ -691,6 +598,7 @@ pipeline {
             }
             post {
               success {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/*-cpp-driver*"
               }
             }
@@ -708,25 +616,6 @@ pipeline {
           cleanup {
             cleanWs()
           }
-        }
-      }
-      post {
-        always {
-          node('master') {
-            submitCIMetrics('commit')
-          }
-        }
-        aborted {
-          notifySlack('aborted')
-        }
-        success {
-          notifySlack('completed')
-        }
-        unstable {
-          notifySlack('unstable')
-        }
-        failure {
-          notifySlack('FAILED')
         }
       }
     }
@@ -747,11 +636,7 @@ pipeline {
         axes {
           axis {
             name 'OS_VERSION'
-            values 'centos/6-64/cpp',
-                   'centos/7-64/cpp',
-                   'centos/8-64/cpp',
-                   'ubuntu/trusty64/cpp',
-                   'ubuntu/xenial64/cpp',
+            values 'centos/7-64/cpp',
                    'ubuntu/bionic64/cpp'
           }
         }
@@ -767,11 +652,6 @@ pipeline {
           stage('Initialize-Environment') {
             steps {
               initializeEnvironment()
-              script {
-                if (env.BUILD_STATED_SLACK_NOTIFIED != 'true') {
-                  notifySlack()
-                }
-              }
             }
           }
           stage('Describe-Release-And-Deploy') {
@@ -799,25 +679,6 @@ pipeline {
           cleanup {
             cleanWs()
           }
-        }
-      }
-      post {
-        always {
-          node('master') {
-            submitCIMetrics('release')
-          }
-        }
-        aborted {
-          notifySlack('aborted')
-        }
-        success {
-          notifySlack('completed')
-        }
-        unstable {
-          notifySlack('unstable')
-        }
-        failure {
-          notifySlack('FAILED')
         }
       }
     }
@@ -878,11 +739,6 @@ pipeline {
           stage('Initialize-Environment') {
             steps {
               initializeEnvironment()
-              script {
-                if (env.BUILD_STATED_SLACK_NOTIFIED != 'true') {
-                  notifySlack()
-                }
-              }
             }
           }
           stage('Describe-Build') {
@@ -901,6 +757,7 @@ pipeline {
             }
             post {
               failure {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeOutput.log"
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeError.log"
               }
@@ -917,6 +774,7 @@ pipeline {
                 junit testResults: '*integration-tests-*-results.xml', allowEmptyResults: true
               }
               failure {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/*-integration-tests-driver-logs.tgz"
               }
               cleanup {
@@ -924,20 +782,6 @@ pipeline {
               }
             }
           }
-        }
-      }
-      post {
-        aborted {
-          notifySlack('aborted')
-        }
-        success {
-          notifySlack('completed')
-        }
-        unstable {
-          notifySlack('unstable')
-        }
-        failure {
-          notifySlack('FAILED')
         }
       }
     }
@@ -976,9 +820,6 @@ pipeline {
         stage('Initialize-Environment') {
           steps {
             initializeEnvironment()
-            script {
-              notifySlack()
-            }
           }
         }
         stage('Describe-Build') {
@@ -995,20 +836,6 @@ pipeline {
               archiveArtifacts artifacts: '*-documents.tgz'
             }
           }
-        }
-      }
-      post {
-        aborted {
-          notifySlack('aborted')
-        }
-        success {
-          notifySlack('completed')
-        }
-        unstable {
-          notifySlack('unstable')
-        }
-        failure {
-          notifySlack('FAILED')
         }
       }
     }

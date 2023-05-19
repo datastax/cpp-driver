@@ -169,7 +169,17 @@ LockedHostMap::LockedHostMap(const HostMap& hosts)
 LockedHostMap::~LockedHostMap() { uv_mutex_destroy(&mutex_); }
 
 LockedHostMap::const_iterator LockedHostMap::find(const Address& address) const {
-  return hosts_.find(address);
+  HostMap::const_iterator it = hosts_.find(address);
+  if (it == hosts_.end()) {
+    // If this is from an event (not SNI) and we're using SNI addresses then fallback to using the
+    // "rpc_address" to compare.
+    for (HostMap::const_iterator i = hosts_.begin(), end = hosts_.end(); i != end; ++i) {
+      if (i->second->rpc_address() == address) {
+        return i;
+      }
+    }
+  }
+  return it;
 }
 
 Host::Ptr LockedHostMap::get(const Address& address) const {
@@ -454,9 +464,10 @@ void Cluster::on_reconnect(ControlConnector* connector) {
 
 void Cluster::internal_close() {
   is_closing_ = true;
+  bool was_timer_running = timer_.is_running();
+  timer_.stop();
   monitor_reporting_timer_.stop();
-  if (timer_.is_running()) {
-    timer_.stop();
+  if (was_timer_running) {
     handle_close();
   } else if (reconnector_) {
     reconnector_->cancel();
@@ -504,7 +515,7 @@ void Cluster::internal_notify_host_up(const Address& address) {
     return; // Ignore host
   }
 
-  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_up, this))) {
+  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_up, Cluster::Ptr(this)))) {
     notify_host_up_after_prepare(host);
   }
 }
@@ -597,7 +608,7 @@ void Cluster::notify_host_add(const Host::Ptr& host) {
     return; // Ignore host
   }
 
-  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_add, this))) {
+  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_add, Cluster::Ptr(this)))) {
     notify_host_add_after_prepare(host);
   }
 }
@@ -632,7 +643,7 @@ void Cluster::notify_host_remove(const Address& address) {
     notify_or_record(ClusterEvent(ClusterEvent::HOST_DOWN, host));
   }
 
-  hosts_.erase(address);
+  hosts_.erase(it->first);
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
                                                 end = load_balancing_policies_.end();
        it != end; ++it) {

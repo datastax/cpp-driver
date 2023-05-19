@@ -111,12 +111,36 @@ TEST(ValueUnitTest, BadDecimal) {
             CASS_ERROR_LIB_NOT_ENOUGH_DATA);
 }
 
+TEST(ValueUnitTest, NullInNextRow) {
+  DataType::ConstPtr data_type(new DataType(CASS_VALUE_TYPE_INT));
+
+  // Size (int32_t) and contents of element
+  const signed char input[8] = { 0, 0, 0, 4, 0, 0, 0, 2 };
+  Decoder decoder((const char*)input, 12);
+
+  // init with a non null column in a row
+  Value value(data_type, 2, decoder);
+  EXPECT_FALSE(value.is_null());
+
+  const signed char null_input[4] = { -1, 1, 1, 1 };
+  Decoder null_decoder((const char*)null_input, 4);
+
+  // simulate next row null value in the column
+  null_decoder.update_value(value);
+  EXPECT_TRUE(value.is_null());
+
+  // next row non null value check is_null() returns correct value
+  Decoder decoder2((const char*)input, 12);
+  decoder2.update_value(value);
+  EXPECT_FALSE(value.is_null());
+}
+
 TEST(ValueUnitTest, NullElementInCollectionList) {
-  const char input[12] = {
+  const signed char input[12] = {
     -1, -1, -1, -1,            // Element 1 is NULL
     0,  0,  0,  4,  0, 0, 0, 2 // Size (int32_t) and contents of element 2
   };
-  Decoder decoder(input, 12);
+  Decoder decoder((const char*)input, 12);
   DataType::ConstPtr element_data_type(new DataType(CASS_VALUE_TYPE_INT));
   CollectionType::ConstPtr data_type = CollectionType::list(element_data_type, false);
   Value value(data_type, 2, decoder);
@@ -134,13 +158,13 @@ TEST(ValueUnitTest, NullElementInCollectionList) {
 }
 
 TEST(ValueUnitTest, NullElementInCollectionMap) {
-  const char input[21] = {
+  const signed char input[21] = {
     -1, -1, -1, -1,               // Key 1 is NULL
     0,  0,  0,  4,  0,   0, 0, 2, // Size (int32_t) and contents of value 1
     0,  0,  0,  1,  'a',          // Key 2 is a
     -1, -1, -1, -1                // Value 2 is NULL
   };
-  Decoder decoder(input, 21);
+  Decoder decoder((const char*)input, 21);
   DataType::ConstPtr key_data_type(new DataType(CASS_VALUE_TYPE_TEXT));
   DataType::ConstPtr value_data_type(new DataType(CASS_VALUE_TYPE_INT));
   CollectionType::ConstPtr data_type = CollectionType::map(key_data_type, value_data_type, false);
@@ -168,11 +192,11 @@ TEST(ValueUnitTest, NullElementInCollectionMap) {
 }
 
 TEST(ValueUnitTest, NullElementInCollectionSet) {
-  const char input[12] = {
+  const signed char input[12] = {
     0,  0,  0,  4,  0, 0, 0, 2, // Size (int32_t) and contents of element 1
     -1, -1, -1, -1,             // Element 2 is NULL
   };
-  Decoder decoder(input, 12);
+  Decoder decoder((const char*)input, 12);
   DataType::ConstPtr element_data_type(new DataType(CASS_VALUE_TYPE_INT));
   CollectionType::ConstPtr data_type = CollectionType::set(element_data_type, false);
   Value value(data_type, 2, decoder);

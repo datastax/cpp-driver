@@ -1,3 +1,43 @@
+2.16.2
+===========
+
+Bug Fixes
+--------
+* [CPP-946] Core dump on unclean event loop shutdown
+* [PR #513] Fix SNI events
+* [PR #518] Replace deprecated function for OpenSSL >= 3.0
+
+2.16.1
+===========
+
+Bug Fixes
+--------
+* [CPP-935] Latency aware policy never activates because minimum latency isn't updated for request processors
+
+2.16.0
+===========
+
+Features
+--------
+* [PR #489] Add API to get/set coordinator node
+
+Bug Fixes
+--------
+* [CPP-924] Pure virtual function called when Session object is being destructed
+* [PR #488] Only using a single resolved IP when connecting with hostname
+* [PR #494] Use correct `Host:` header when calling metadata service (Astra)
+
+Other
+---------
+* [CPP-923] Reduce the log severity of protocol negotiation errors/warnings
+
+2.15.3
+===========
+
+Bug Fixes
+--------
+* [CPP-922] Limit to TLS 1.2
+
 2.15.2
 ===========
 

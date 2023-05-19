@@ -102,6 +102,8 @@ Host::Ptr LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
       return host;
     }
 
+    LOG_TRACE("Skipping %s because latency is too high %f", host->address_string().c_str(),
+              static_cast<double>(latency.average) / 1e6);
     skipped_.push_back(host);
   }
 

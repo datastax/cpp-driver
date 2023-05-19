@@ -51,6 +51,8 @@ public:
   ProtocolVersion protocol_version() const { return decoder_.protocol_version(); }
   int64_t size() const { return (is_null_ ? -1 : decoder_.remaining()); }
 
+  bool is_valid() const { return !!data_type_; }
+
   CassValueType value_type() const {
     if (!data_type_) {
       return CASS_VALUE_TYPE_UNKNOWN;
@@ -133,6 +135,10 @@ public:
   int32_t as_int32() const;
   CassUuid as_uuid() const;
   StringVec as_stringlist() const;
+
+private:
+  friend class Decoder;
+  bool update(const Decoder& decoder);
 
 private:
   DataType::ConstPtr data_type_;
