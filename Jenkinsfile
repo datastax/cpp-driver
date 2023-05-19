@@ -550,8 +550,10 @@ pipeline {
             post {
               success {
                 // Allow empty results for 'osx/high-sierra' which doesn't produce packages
-                def distro = get_os_distro()
-                archiveArtifacts artifacts: "${distro}/**/libuv*", allowEmptyArchive: true
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/libuv*", allowEmptyArchive: true
+                }
               }
             }
           }
@@ -561,14 +563,18 @@ pipeline {
             }
             post {
               success {
-                def distro = get_os_distro()
-                archiveArtifacts artifacts: "${distro}/**/cassandra-*-tests"
-                archiveArtifacts artifacts: "${distro}/**/dse-*-tests", allowEmptyArchive: true
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/cassandra-*-tests"
+                  archiveArtifacts artifacts: "${distro}/**/dse-*-tests", allowEmptyArchive: true
+                }
               }
               failure {
-                def distro = get_os_distro()
-                archiveArtifacts artifacts: "${distro}/**/CMakeOutput.log"
-                archiveArtifacts artifacts: "${distro}/**/CMakeError.log"
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/CMakeOutput.log"
+                  archiveArtifacts artifacts: "${distro}/**/CMakeError.log"
+                }
               }
             }
           }
@@ -598,8 +604,10 @@ pipeline {
             }
             post {
               success {
-                def distro = get_os_distro()
-                archiveArtifacts artifacts: "${distro}/**/*-cpp-driver*"
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/*-cpp-driver*"
+                }
               }
             }
           }
@@ -757,9 +765,11 @@ pipeline {
             }
             post {
               failure {
-                def distro = get_os_distro()
-                archiveArtifacts artifacts: "${distro}/**/CMakeOutput.log"
-                archiveArtifacts artifacts: "${distro}/**/CMakeError.log"
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/CMakeOutput.log"
+                  archiveArtifacts artifacts: "${distro}/**/CMakeError.log"
+                }
               }
             }
           }
@@ -774,8 +784,10 @@ pipeline {
                 junit testResults: '*integration-tests-*-results.xml', allowEmptyResults: true
               }
               failure {
-                def distro = get_os_distro()
-                archiveArtifacts artifacts: "${distro}/**/*-integration-tests-driver-logs.tgz"
+                script {
+                  def distro = get_os_distro()
+                  archiveArtifacts artifacts: "${distro}/**/*-integration-tests-driver-logs.tgz"
+                }
               }
               cleanup {
                 cleanWs()
