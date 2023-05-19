@@ -1,6 +1,11 @@
 #!groovy
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
+def init_os_distro() {
+  env.OS_DISTRO = sh(label: 'Assign env.OS_DISTRO based on OS env', script: '''#!/bin/bash -le
+    echo ${OS_DISTRO}''', returnStdout: true).trim()
+}
+
 def initializeEnvironment() {
   env.DRIVER_DISPLAY_NAME = 'Cassandra C/C++ Driver'
   env.DRIVER_TYPE = 'CASS'
@@ -545,6 +550,7 @@ pipeline {
             post {
               success {
                 // Allow empty results for 'osx/high-sierra' which doesn't produce packages
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/libuv*", allowEmptyArchive: true
               }
             }
@@ -555,10 +561,12 @@ pipeline {
             }
             post {
               success {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/cassandra-*-tests"
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/dse-*-tests", allowEmptyArchive: true
               }
               failure {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeOutput.log"
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeError.log"
               }
@@ -590,6 +598,7 @@ pipeline {
             }
             post {
               success {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/*-cpp-driver*"
               }
             }
@@ -748,6 +757,7 @@ pipeline {
             }
             post {
               failure {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeOutput.log"
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/CMakeError.log"
               }
@@ -764,6 +774,7 @@ pipeline {
                 junit testResults: '*integration-tests-*-results.xml', allowEmptyResults: true
               }
               failure {
+                init_os_distro()
                 archiveArtifacts artifacts: "${env.OS_DISTRO}/**/*-integration-tests-driver-logs.tgz"
               }
               cleanup {
