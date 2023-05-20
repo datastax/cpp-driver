@@ -462,6 +462,7 @@ pipeline {
     choice(
       name: 'OS_VERSION',
       choices: ['centos/7-64/cpp',
+                'rocky/8-64/cpp',
                 'rocky/9-64/cpp',
                 'ubuntu/bionic64/cpp'],
       description: '''Operating system to use for scheduled or adhoc builds
@@ -475,6 +476,10 @@ pipeline {
                         <tr>
                           <td><strong>centos/7-64/cpp</strong></td>
                           <td>CentOS 7 x86_64</td>
+                        </tr>
+                        <tr>
+                          <td><strong>rocky/8-64/cpp</strong></td>
+                          <td>Rocky Linux 8 x86_64</td>
                         </tr>
                         <tr>
                           <td><strong>rocky/9-64/cpp</strong></td>
@@ -529,6 +534,7 @@ pipeline {
           axis {
             name 'OS_VERSION'
             values 'centos/7-64/cpp',
+                   'rocky/8-64/cpp',
                    'rocky/9-64/cpp',
                    'ubuntu/bionic64/cpp'
           }
@@ -651,6 +657,7 @@ pipeline {
           axis {
             name 'OS_VERSION'
             values 'centos/7-64/cpp',
+                   'rocky/8-64/cpp',
                    'rocky/9-64/cpp',
                    'ubuntu/bionic64/cpp'
           }
