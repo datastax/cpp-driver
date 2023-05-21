@@ -69,7 +69,7 @@ def installDependencies() {
 
     install_dependencies
 
-    if [[ "${OS_DISTRO}" = "ubuntu" ]] && [[ "${OS_DISTRO_RELEASE}" = "22.04" ]]; then sleep 36000; fi
+    if [[ "${OS_DISTRO}" = "ubuntu" ]] && [[ "${OS_DISTRO_RELEASE}" > "18.04" ]]; then sleep 36000; fi
 
     if [ -d packaging/packages ]; then
       mkdir -p ${OS_DISTRO}/${OS_DISTRO_RELEASE}
