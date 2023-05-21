@@ -23,7 +23,7 @@ configure_testing_environment() {
 }
 
 install_libuv() {(
-  if [ "${OS_DISTRO}" = "ubuntu" && "${OS_DISTRO_RELEASE}" > "18.04" ]; then
+  if [[ "${OS_DISTRO}" = "ubuntu" ]] && [[ "${OS_DISTRO_RELEASE}" > "18.04" ]]; then
     true
   else
     cd packaging
