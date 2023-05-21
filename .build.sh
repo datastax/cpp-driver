@@ -81,6 +81,11 @@ build_driver() {
           -D${driver_prefix}_BUILD_UNIT_TESTS=On \
           -D${driver_prefix}_BUILD_INTEGRATION_TESTS=${BUILD_INTEGRATION_TESTS} \
           ..
+
+    # workaround an issue in jammy's version of clang-format
+    if [[ "${OS_DISTRO}" = "ubuntu" ]] && [[ "${OS_DISTRO_RELEASE}" = "22.04" ]]; then
+      clang-format -i ../src/macros.hpp
+    fi
     [[ -x $(which clang-format) ]] && make format-check
     make -j${PROCS}
   )
