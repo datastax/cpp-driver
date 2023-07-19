@@ -140,22 +140,6 @@ namespace test {
  * ssh-keygen -p \
  *         -N invalid \
  *         -f ssl/invalid/driver-private-invalid.pem
- *
- * # Building dummy PEM.  Some tests below require multiple PEM-encoded
- * # certs in order to verify that we consider all input certs (and
- * # not just the first one)
- * keytool -genkeypair -noprompt -keyalg RSA -validity 36500 \
- *        -alias dummy \
- *        -keystore ssl/keystore.jks \
- *        -storepass cassandra \
- *        -keypass cassandra \
- *        -dname "CN=1.2.3.4, OU=SomeOU, O=SomeO, L=Somewhere, ST=SomeState, C=US"
- *
- * keytool -exportcert -rfc -noprompt \
- *        -alias dummy \
- *        -keystore ssl/keystore.jks \
- *        -storepass cassandra \
- *        -file ssl/dummy.pem
  */
 
 static const unsigned char cassandra_crt[953] = {
@@ -573,31 +557,8 @@ public:
            "cAHazCFHOKxSQ/G7n+8xDx3r6jHxyE956u5jf5FRqUbaVIBMdg==\12"
            "-----END CERTIFICATE-----\12";
   }
-  static const char* dummy_pem() {
-    return "-----BEGIN CERTIFICATE-----\12"
-           "MIIDcTCCAlmgAwIBAgIEKDL8hDANBgkqhkiG9w0BAQsFADBoMQswCQYDVQQGEwJV\12"
-           "UzESMBAGA1UECBMJU29tZVN0YXRlMRIwEAYDVQQHEwlTb21ld2hlcmUxDjAMBgNV\12"
-           "BAoTBVNvbWVPMQ8wDQYDVQQLEwZTb21lT1UxEDAOBgNVBAMTBzEuMi4zLjQwIBcN\12"
-           "MjIwMzI1MjAzNzM3WhgPMjEyMjAzMDEyMDM3MzdaMGgxCzAJBgNVBAYTAlVTMRIw\12"
-           "EAYDVQQIEwlTb21lU3RhdGUxEjAQBgNVBAcTCVNvbWV3aGVyZTEOMAwGA1UEChMF\12"
-           "U29tZU8xDzANBgNVBAsTBlNvbWVPVTEQMA4GA1UEAxMHMS4yLjMuNDCCASIwDQYJ\12"
-           "KoZIhvcNAQEBBQADggEPADCCAQoCggEBAIEmKUqWeRb9WGFLjE4OVOC99643Xz2s\12"
-           "BahaHpoEvUW7r0gO6BxQ6b6KkiZbs5OfqX4MYheEUePQq3v2OJ1nAUTSiXDwCOUq\12"
-           "3ZhS9CS4NlNaIqF4MIoPxaQYqG3jhUB/fNkg9o4DgrH0DmnGd6Mgw2/hUvNGq8IW\12"
-           "JdlMgZGnX2cIhGQ0Cu/HV372IoYNotGEncyJEg/0ZiJDUyTWV91WoRY767GqIxn/\12"
-           "lROrsiTzF/xzqcBdOCaMWP3et3X+jrk/i2957mw7bYYRuD415/pHlQqQQItkrmip\12"
-           "uHJXHF8Ah0blqvFeUsBNMmzIAZblbLBbnc27tbqzUkRRjtR59suExukCAwEAAaMh\12"
-           "MB8wHQYDVR0OBBYEFCECHg0GKw4U7/NSdq7QmEXgLydVMA0GCSqGSIb3DQEBCwUA\12"
-           "A4IBAQAz5CAdtEcTa830ClNmR/FRLi0OkjmBd2neylflvQcpoMP/26vkdcf+5JqH\12"
-           "+WRemkv5X7BgkdAyiQcQXal33i7ykPFjYzH0myMfknIFvmuxexgBth0cPFOsZw3x\12"
-           "ouQSEkvVuR4q8hW77o9um0e61cTI5Qi6oToA1VXTzkwu8tcY4JcFkgskf4xRX9Qf\12"
-           "VhuoLllozdhjShd8abWvYdZZEX3EdNVjMHWojPgEvgQzjKOOMz+EbT8YsF9+Nu1p\12"
-           "INYMLWZ/2KDTcKOHEF2E0YbCbxiSEi32tjD40u39XcidA7vh0w9bHEujeqdQa9fs\12"
-           "LDeLr91cBnfxzH8fxEj4iMkyV7gj\12"
-           "-----END CERTIFICATE-----\12";
-  }
   static const char* multi_cert_pem() {
-    std::string combo = dummy_pem();
+    std::string combo = driver_invalid_pem();
     combo.append("\n");
     combo.append(cassandra_pem());
     return combo.c_str();
