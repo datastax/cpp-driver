@@ -373,12 +373,7 @@ test::driver::Cluster Integration::default_cluster(bool is_with_default_contact_
   if (is_with_default_contact_points) {
     cluster.with_contact_points(contact_points_);
   }
-  if (Options::is_cassandra() && server_version_ >= "4.0" &&
-      protocol_version_ == CASS_PROTOCOL_VERSION_V4) {
-    cluster.with_beta_protocol(is_beta_protocol_);
-  } else {
-    cluster.with_protocol_version(protocol_version_);
-  }
+  cluster.with_protocol_version(protocol_version_);
 
   // Assign the execution profiles to the cluster object (if available)
   for (ExecutionProfile::Map::iterator it = profiles_.begin(); it != profiles_.end(); ++it) {
