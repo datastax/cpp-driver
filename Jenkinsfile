@@ -200,6 +200,7 @@ def executeIntegrationTests() {
                                           --gtest_filter=${TEST_FILTER} \
                                           --gtest_output=xml:cassandra-integration-tests-${OS_DISTRO}-${OS_DISTRO_RELEASE}-results.xml \
                                           --version=${CCM_VERSION} \
+                                          --disable-beta-protocol \
                                           --verbose || cassandra_error=true
         if [ "${CCM_IS_DSE}" = "true" ]; then
           build/${DRIVER_LIBRARY}-integration-tests --${CCM_SERVER_TYPE} \
@@ -207,6 +208,7 @@ def executeIntegrationTests() {
                                                     --gtest_filter=${TEST_FILTER} \
                                                     --gtest_output=xml:dse-integration-tests-${OS_DISTRO}-${OS_DISTRO_RELEASE}-results.xml \
                                                     --version=${CCM_VERSION} \
+                                                    --disable-beta-protocol \
                                                     --verbose || dse_error=true
         fi
 
