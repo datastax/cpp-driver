@@ -94,6 +94,14 @@
     }                                                                               \
   } while (0)
 
+#define CHECK_PROTOCOL_VERSION(version)                          \
+  do {                                                           \
+    int proto_version = this->protocol_version_;                 \
+    if (proto_version < version) {                   \
+      SKIP_TEST_VERSION(std::to_string(proto_version), #version) \
+    }                                                            \
+  } while (0)
+
 #define CHECK_OPTIONS_VERSION(version)                                 \
   if (Options::server_version() < #version) {                          \
     SKIP_TEST_VERSION(Options::server_version().to_string(), #version) \
