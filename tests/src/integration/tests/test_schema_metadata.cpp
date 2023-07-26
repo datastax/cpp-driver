@@ -154,7 +154,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, VirtualMetadata) {
   EXPECT_TRUE(table_meta.is_virtual());
 
   // Verify virtual table's metadata
-  EXPECT_EQ(cass_table_meta_column_count(table_meta.get()), 7u);
+  EXPECT_EQ(cass_table_meta_column_count(table_meta.get()), 8u);
   EXPECT_EQ(cass_table_meta_index_count(table_meta.get()), 0u);
   EXPECT_EQ(cass_table_meta_materialized_view_count(table_meta.get()), 0u);
 
