@@ -82,9 +82,9 @@ build_driver() {
           -D${driver_prefix}_BUILD_INTEGRATION_TESTS=${BUILD_INTEGRATION_TESTS} \
           ..
 
-    # workaround an issue in jammy's version of clang-format
-    if [[ "${OS_DISTRO}" = "ubuntu" ]] && [[ "${OS_DISTRO_RELEASE}" = "22.04" ]]; then
-      clang-format -i ../src/macros.hpp
+    # workaround an issue in Ubuntu's version of clang-format
+    if [[ "${OS_DISTRO}" = "ubuntu" ]]; then
+      find .. -name '*.?pp' -exec clang-format -i -style=file {} \;
     fi
     [[ -x $(which clang-format) ]] && make format-check
     make -j${PROCS}
