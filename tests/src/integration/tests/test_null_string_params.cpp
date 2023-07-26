@@ -321,7 +321,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, FunctionAndAggregateMe
   CHECK_VERSION(2.2.0);
   // C* 3.x annotate collection columns as frozen.
   const CassFunctionMeta* function_meta =
-      (schema_meta_.version().major_version == 3)
+      (schema_meta_.version().major_version >= 3)
           ? cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final",
                                                 "frozen<tuple<int,bigint>>")
           : cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final",
