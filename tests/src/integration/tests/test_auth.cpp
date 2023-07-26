@@ -111,6 +111,13 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidEmptyCredentials) {
   logger_.add_critera("Key may not be empty");
   logger_.add_critera("Password must not be null");
 
+  // CPP-968
+  //
+  // Ordering actually changes between Cassandra 3.0.x and 3.11.x.  In 3.0.x we check for an empty
+  // username first (and thus return this error) while in 3.11.x we check for an empty password first
+  // (and thus return the "password must not be null" error above).
+  logger_.add_critera("Authentication ID must not be null");
+
   // Iterate over all known/supported protocol versions
   for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION; i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
        ++i) {
