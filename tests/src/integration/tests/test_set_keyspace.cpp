@@ -175,7 +175,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, QueryNotSupported) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, QueryWithNoSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   query_with_keyspace("");
 }
@@ -188,7 +188,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, QueryWithNoSessionKeyspace) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, QueryWithDifferentSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   query_with_keyspace(keyspace_name_other());
 }
@@ -201,7 +201,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, QueryWithDifferentSessionKeyspace
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, QueryWithSameSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   query_with_keyspace(keyspace_name());
 }
@@ -236,7 +236,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, PreparedNotSupported) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, ReprepareWithSameKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   Session session = default_cluster().connect();
 
@@ -265,7 +265,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, ReprepareWithSameKeyspace) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, PreparedWithNoSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   prepared_query_with_keyspace("");
 }
@@ -278,7 +278,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, PreparedWithNoSessionKeyspace) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, PreparedWithDifferentSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   prepared_query_with_keyspace(keyspace_name_other());
 }
@@ -291,7 +291,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, PreparedWithDifferentSessionKeysp
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, PreparedWithSameSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   prepared_query_with_keyspace(keyspace_name());
 }
@@ -306,7 +306,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, PreparedWithSameSessionKeyspace) 
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchWithKeyspaceFromSimple) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   Session session = default_cluster().connect();
 
@@ -333,7 +333,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchWithKeyspaceFromSimple) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchWithKeyspaceFromPrepared) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   Session session = default_cluster().connect();
 
@@ -377,7 +377,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchNotSupported) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchWithNoSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   batch_query_with_keyspace("");
 }
@@ -390,7 +390,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchWithNoSessionKeyspace) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchWithDifferentSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   batch_query_with_keyspace(keyspace_name_other());
 }
@@ -403,7 +403,7 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchWithDifferentSessionKeyspace
  */
 CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchWithSameSessionKeyspace) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   batch_query_with_keyspace(keyspace_name());
 }
