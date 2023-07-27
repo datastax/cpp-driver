@@ -43,6 +43,22 @@ def initializeEnvironment() {
     '''
   }
 
+  if (env.SERVER_VERSION.split('-')[0] == 'dse') {
+      env.DSE_FIXED_VERSION = env.SERVER_VERSION.split('-')[1]
+      sh label: 'Update environment for DataStax Enterprise', script: '''#!/bin/bash -le
+        cat >> ${HOME}/environment.txt << ENVIRONMENT_EOF
+CCM_PATH=${HOME}/ccm
+CCM_CASSANDRA_VERSION=${DSE_FIXED_VERSION} # maintain for backwards compatibility
+CCM_VERSION=${DSE_FIXED_VERSION}
+CCM_SERVER_TYPE=dse
+DSE_VERSION=${DSE_FIXED_VERSION}
+CCM_IS_DSE=true
+CCM_BRANCH=${DSE_FIXED_VERSION}
+DSE_BRANCH=${DSE_FIXED_VERSION}
+ENVIRONMENT_EOF
+      '''
+  }
+
   sh label: 'Display C++ version and environment information', script: '''#!/bin/bash -le
     . ${DRIVER_BUILD_SCRIPT}
 
