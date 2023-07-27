@@ -389,18 +389,12 @@ pipeline {
                       <br/>''')
     choice(
       name: 'ADHOC_BUILD_AND_EXECUTE_TESTS_SERVER_VERSION',
-      choices: ['2.1',      // Legacy Apache Cassandra®
-                '2.2',      // Legacy Apache Cassandra®
+      choices: [
                 '3.0',      // Previous Apache Cassandra®
                 '3.11',     // Current Apache Cassandra®
                 '4.0',      // Development Apache Cassandra®
-                'ddac-5.1', // Current DataStax Distribution of Apache Cassandra®
-                'dse-4.8',  // Previous EOSL DataStax Enterprise
-                'dse-5.0',  // Long Term Support DataStax Enterprise
-                'dse-5.1',  // Legacy DataStax Enterprise
-                'dse-6.0',  // Previous DataStax Enterprise
-                'dse-6.7',  // Current DataStax Enterprise
-                'dse-6.8',  // Development DataStax Enterprise
+                'dse-5.1.35',  // Legacy DataStax Enterprise
+                'dse-6.8.30',  // Development DataStax Enterprise
                 'ALL'],
       description: '''Apache Cassandra&reg; and DataStax Enterprise server version to use for adhoc <b>BUILD-AND-EXECUTE-TESTS</b> builds
                       <table style="width:100%">
@@ -409,14 +403,6 @@ pipeline {
                         <tr>
                           <th align="left">Choice</th>
                           <th align="left">Description</th>
-                        </tr>
-                        <tr>
-                          <td><strong>2.1</strong></td>
-                          <td>Apache Cassandra&reg; v2.1.x</td>
-                        </tr>
-                        <tr>
-                          <td><strong>2.2</strong></td>
-                          <td>Apache Cassandra&reg; v2.2.x</td>
                         </tr>
                         <tr>
                           <td><strong>3.0</strong></td>
@@ -431,28 +417,8 @@ pipeline {
                           <td>Apache Cassandra&reg; v4.x (<b>CURRENTLY UNDER DEVELOPMENT</b>)</td>
                         </tr>
                         <tr>
-                          <td><strong>ddac-5.1</strong></td>
-                          <td>DataStax Distribution of Apache Cassandra&reg; v5.1.x</td>
-                        </tr>
-                        <tr>
-                          <td><strong>dse-4.8</strong></td>
-                          <td>DataStax Enterprise v4.8.x (<b>END OF SERVICE LIFE</b>)</td>
-                        </tr>
-                        <tr>
-                          <td><strong>dse-5.0</strong></td>
-                          <td>DataStax Enterprise v5.0.x (<b>Long Term Support</b>)</td>
-                        </tr>
-                        <tr>
                           <td><strong>dse-5.1</strong></td>
                           <td>DataStax Enterprise v5.1.x</td>
-                        </tr>
-                        <tr>
-                          <td><strong>dse-6.0</strong></td>
-                          <td>DataStax Enterprise v6.0.x</td>
-                        </tr>
-                        <tr>
-                          <td><strong>dse-6.7</strong></td>
-                          <td>DataStax Enterprise v6.7.x</td>
                         </tr>
                         <tr>
                           <td><strong>dse-6.8</strong></td>
@@ -746,18 +712,11 @@ pipeline {
         axes {
           axis {
             name 'SERVER_VERSION'
-            values '2.1',      // Legacy Apache Cassandra®
-                   '2.2',      // Legacy Apache Cassandra®
-                   '3.0',      // Previous Apache Cassandra®
+            values '3.0',      // Previous Apache Cassandra®
                    '3.11',     // Current Apache Cassandra®
                    '4.0',      // Development Apache Cassandra®
-                   'ddac-5.1', // Current DataStax Distribution of Apache Cassandra®
-                   'dse-4.8',  // Previous EOSL DataStax Enterprise
-                   'dse-5.0',  // Long Term Support DataStax Enterprise
-                   'dse-5.1',  // Legacy DataStax Enterprise
-                   'dse-6.0',  // Previous DataStax Enterprise
-                   'dse-6.7',  // Current DataStax Enterprise
-                   'dse-6.8'   // Development DataStax Enterprise
+                   'dse-5.1.35',  // Legacy DataStax Enterprise
+                   'dse-6.8.30'   // Development DataStax Enterprise
           }
         }
         when {
