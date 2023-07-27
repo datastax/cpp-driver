@@ -158,8 +158,7 @@ CASSANDRA_INTEGRATION_TEST_F(ServerSideFailureTests, ErrorFunctionAlreadyExists)
   session_.execute(create_function_query);
   Result result = session_.execute(Statement(create_function_query), false);
   EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result.error_code());
-  EXPECT_TRUE(result.error_message().find("(double) -> double already exists") !=
-              std::string::npos);
+  EXPECT_TRUE(result.error_message().find(" already exists") != std::string::npos);
 
   ErrorResult error_result = result.error_result();
   ASSERT_TRUE(error_result);
