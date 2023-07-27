@@ -79,9 +79,13 @@
     return;                 \
   }
 
-#define SKIP_TEST_VERSION(server_version_string, version_string) \
-  SKIP_TEST("Unsupported for Apache Cassandra Version "          \
-            << server_version_string << ": Server version " << version_string << "+ is required")
+#define SKIP_TEST_MESSAGE(server_version_string, comparison, version_string)                     \
+  "Unsupported for Apache Cassandra Version " << server_version_string << ": Server version is " \
+  << comparison << " the specified version " << version_string
+
+/* Maintain existing behaviour; default message indicates server < specified */
+#define SKIP_TEST_VERSION(server_version_string, version_string)           \
+  SKIP_TEST(SKIP_TEST_MESSAGE(server_version_string, '<', version_string))
 
 #define CHECK_VERSION(version)                                                      \
   do {                                                                              \
@@ -91,6 +95,35 @@
     }                                                                               \
     if (cass_version < #version) {                                                  \
       SKIP_TEST_VERSION(cass_version.to_string(), #version)                         \
+    }                                                                               \
+  } while (0)
+
+/* CPP-967 Skip test iff server version matches major.minor of specified version but
+   patch version is >= the specified patch level of the specified version.  This
+   enables the concise expression of a single constraint based on multiple Cassandra
+   server versions.
+
+   Also note that the sense of the comaprison is inverted from what we get in
+   CHECK_VERSION.  There we want to make sure we have a version greater than what's
+   specified in the constraint.  Here we want to make sure we have something less than
+   what's specified (since the behaviour under test is fixed in later versions of
+   Cassandra) */
+#define CHECK_VERSIONS(version_string)                                              \
+  do {                                                                              \
+    CCM::CassVersion cass_version = this->server_version_;                          \
+    if (!Options::is_cassandra()) {                                                 \
+      cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
+    }                                                                               \
+    std::vector<std::string> versions = Utils::explode(version_string,',');        \
+    for (unsigned int i = 0; i < versions.size(); i++) {                            \
+      CCM::CassVersion version = CCM::CassVersion(versions[i]);                     \
+      if (cass_version.major_version == version.major_version &&                    \
+          cass_version.minor_version == version.minor_version &&                    \
+          cass_version.patch_version >= version.patch_version) {                    \
+        SKIP_TEST(                                                                  \
+          SKIP_TEST_MESSAGE(                                                        \
+            cass_version.to_string(), ">=", version.to_string()))                   \
+      }                                                                             \
     }                                                                               \
   } while (0)
 
