@@ -307,9 +307,6 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, Consistency) {
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
   }
   std::string expected_message = "SERIAL is not supported as conditional update commit consistency";
-  if (cass_version >= "4.0.0") {
-    expected_message = "You must use conditional updates for serializable writes";
-  }
   ASSERT_TRUE(contains(result.error_message(), expected_message));
 
   // Execute a simple query with assigned profile (should fail)
