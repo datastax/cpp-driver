@@ -344,13 +344,6 @@ protected:
    */
   bool is_test_chaotic_;
   /**
-   * Flag to indicate if the beta protocol should be enabled. True if beta
-   * protocol should be enabled (Cassandra must be >= v3.10.0); false
-   * otherwise.
-   * (DEFAULT: true)
-   */
-  bool is_beta_protocol_;
-  /**
    * Workload to apply to the cluster
    */
   std::vector<CCM::DseWorkload> dse_workload_;
