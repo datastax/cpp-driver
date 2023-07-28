@@ -45,6 +45,7 @@ class PreparedTests : public Integration {
  */
 CASSANDRA_INTEGRATION_TEST_F(PreparedTests, FailFastWhenPreparedIDChangesDuringReprepare) {
   CHECK_FAILURE;
+  CHECK_VERSIONS("4.0.2,3.11.12,3.0.26");
 
   // Create the table and initial prepared statement
   session_.execute(format_string(CASSANDRA_KEY_VALUE_QUALIFIED_TABLE_FORMAT, keyspace_name_.c_str(),
