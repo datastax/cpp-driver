@@ -81,19 +81,6 @@ public:
   }
 
   /**
-   * Use the newest beta protocol version
-   *
-   * @param enable True if beta protocol should be enable; false the highest
-   *               non-beta protocol will be used (unless set) (default: false)
-   * @return Cluster object
-   */
-  Cluster& with_beta_protocol(bool enable = false) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_use_beta_protocol_version(
-                           get(), (enable == true ? cass_true : cass_false)));
-    return *this;
-  }
-
-  /**
    * Sets the timeout for connecting to a node
    *
    * @param timeout_ms Connect timeout in milliseconds
