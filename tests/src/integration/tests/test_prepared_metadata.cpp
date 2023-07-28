@@ -87,10 +87,10 @@ CASSANDRA_INTEGRATION_TEST_F(PreparedMetadataTests, AlterDoesntUpdateColumnCount
  */
 CASSANDRA_INTEGRATION_TEST_F(PreparedMetadataTests, AlterProperlyUpdatesColumnCount) {
   CHECK_FAILURE;
-  CHECK_VERSION(4.0.0);
+  CHECK_PROTOCOL_VERSION(CASS_PROTOCOL_VERSION_V5);
 
   // Ensure protocol v5 or greater
-  Session session = default_cluster().with_beta_protocol(true).connect(keyspace_name_);
+  Session session = default_cluster().connect(keyspace_name_);
 
   // The column count will properly update after the alter
   prepared_check_column_count_after_alter(session, 3u);
