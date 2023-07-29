@@ -1491,7 +1491,7 @@ CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
     updateconf_command.push_back("enable_scripted_user_defined_functions:true");
   }
 
-  if (cassandra_version >= "4.0.0") {
+  if (cassandra_version >= "4.0.0" && !is_dse()) {
     updateconf_command.push_back("enable_materialized_views:true");
     updateconf_command.push_back("enable_user_defined_functions:true");
   }

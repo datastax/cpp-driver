@@ -156,7 +156,6 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, QueryNotSupported) {
   CHECK_FAILURE;
 
   Session session = default_cluster()
-                        .with_beta_protocol(false)
                         .with_protocol_version(CASS_PROTOCOL_VERSION_V4)
                         .connect();
 
@@ -216,7 +215,6 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, PreparedNotSupported) {
   CHECK_FAILURE;
 
   Session session = default_cluster()
-                        .with_beta_protocol(false)
                         .with_protocol_version(CASS_PROTOCOL_VERSION_V4)
                         .connect();
 
@@ -362,7 +360,6 @@ CASSANDRA_INTEGRATION_TEST_F(SetKeyspaceTests, BatchNotSupported) {
   CHECK_FAILURE;
 
   Session session = default_cluster()
-                        .with_beta_protocol(false)
                         .with_protocol_version(CASS_PROTOCOL_VERSION_V4)
                         .connect();
 

@@ -79,13 +79,17 @@
     return;                 \
   }
 
-#define SKIP_TEST_MESSAGE(server_version_string, comparison, version_string)                     \
+#define SERVER_VERSION_SKIP_TEST_MESSAGE(server_version_string, comparison, version_string)                     \
   "Unsupported for Apache Cassandra Version " << server_version_string << ": Server version is " \
   << comparison << " the specified version " << version_string
 
+#define PROTOCOL_VERSION_SKIP_TEST_MESSAGE(server_version_string, comparison, version_string)                     \
+  "Unsupported for Apache Cassandra protocol version " << server_version_string << ": Server version is " \
+  << comparison << " the specified protocol version " << version_string
+
 /* Maintain existing behaviour; default message indicates server < specified */
 #define SKIP_TEST_VERSION(server_version_string, version_string)           \
-  SKIP_TEST(SKIP_TEST_MESSAGE(server_version_string, '<', version_string))
+  SKIP_TEST(SERVER_VERSION_SKIP_TEST_MESSAGE(server_version_string, '<', version_string))
 
 #define CHECK_VERSION(version)                                                      \
   do {                                                                              \
@@ -114,25 +118,27 @@
     if (!Options::is_cassandra()) {                                                 \
       cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
     }                                                                               \
-    std::vector<std::string> versions = Utils::explode(version_string,',');        \
+    std::vector<std::string> versions = Utils::explode(version_string,',');         \
     for (unsigned int i = 0; i < versions.size(); i++) {                            \
       CCM::CassVersion version = CCM::CassVersion(versions[i]);                     \
       if (cass_version.major_version == version.major_version &&                    \
           cass_version.minor_version == version.minor_version &&                    \
           cass_version.patch_version >= version.patch_version) {                    \
         SKIP_TEST(                                                                  \
-          SKIP_TEST_MESSAGE(                                                        \
+          SERVER_VERSION_SKIP_TEST_MESSAGE(                                         \
             cass_version.to_string(), ">=", version.to_string()))                   \
       }                                                                             \
     }                                                                               \
   } while (0)
 
-#define CHECK_PROTOCOL_VERSION(version)                          \
-  do {                                                           \
-    int proto_version = this->protocol_version_;                 \
-    if (proto_version < version) {                   \
-      SKIP_TEST_VERSION(std::to_string(proto_version), #version) \
-    }                                                            \
+#define CHECK_PROTOCOL_VERSION(version)            \
+  do {                                             \
+    int proto_version = this->protocol_version_;   \
+    if (proto_version < version) {                 \
+      SKIP_TEST(                                   \
+        PROTOCOL_VERSION_SKIP_TEST_MESSAGE(        \
+          proto_version, '<', version));           \
+    }                                              \
   } while (0)
 
 #define CHECK_OPTIONS_VERSION(version)                                 \
@@ -343,13 +349,6 @@ protected:
    * destroyed
    */
   bool is_test_chaotic_;
-  /**
-   * Flag to indicate if the beta protocol should be enabled. True if beta
-   * protocol should be enabled (Cassandra must be >= v3.10.0); false
-   * otherwise.
-   * (DEFAULT: true)
-   */
-  bool is_beta_protocol_;
   /**
    * Workload to apply to the cluster
    */

@@ -227,13 +227,6 @@ public:
    */
   static bool is_verbose_integration();
   /**
-   * Flag to determine if beta protocol should be enabled or not; should only
-   * pertain to the default setting.
-   *
-   * @return True if beta protocol should be enabled; false otherwise
-   */
-  static bool is_beta_protocol();
-  /**
    * Get a CCM instance based on the options
    *
    * @return CCM instance
@@ -350,13 +343,6 @@ private:
    * Flag to determine if verbose integration output should enabled
    */
   static bool is_verbose_integration_;
-  /**
-   * Flag to determine if beta protocol should be enabled or not; should only
-   * pertain to the default setting.
-   *
-   * NOTE: Individual tests can still override this.
-   */
-  static bool is_beta_protocol_;
 
   /**
    * Hidden default constructor

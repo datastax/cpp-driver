@@ -34,7 +34,7 @@ public:
     // Configure and start the CCM cluster for plain text authentication usage
     ccm_->update_cluster_configuration("authenticator", "PasswordAuthenticator");
     ccm_->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
-    cluster_ = default_cluster().with_beta_protocol(false);
+    cluster_ = default_cluster();
   }
 
 protected:

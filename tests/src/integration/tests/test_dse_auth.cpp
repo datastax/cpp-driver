@@ -177,7 +177,6 @@ protected:
     Cluster cluster = dse::Cluster::build()
                           .with_gssapi_authenticator("dse", principal)
                           .with_contact_points(contact_points_)
-                          .with_hostname_resolution(true)
                           .with_schema_metadata(false);
     Session session = cluster.connect();
 
@@ -203,7 +202,6 @@ protected:
     Cluster cluster = dse::Cluster::build()
                           .with_plaintext_authenticator(username, password)
                           .with_contact_points(contact_points_)
-                          .with_hostname_resolution(true)
                           .with_schema_metadata(false);
     Session session = cluster.connect();
 

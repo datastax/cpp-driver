@@ -65,7 +65,6 @@ Integration::Integration()
     , is_session_requested_(true)
     , is_keyspace_change_requested_(true)
     , is_test_chaotic_(false)
-    , is_beta_protocol_(Options::is_beta_protocol())
     , protocol_version_(CASS_PROTOCOL_VERSION_V4)
     , create_keyspace_query_("")
     , start_time_(0ull) {

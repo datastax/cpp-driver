@@ -81,19 +81,6 @@ public:
   }
 
   /**
-   * Use the newest beta protocol version
-   *
-   * @param enable True if beta protocol should be enable; false the highest
-   *               non-beta protocol will be used (unless set) (default: false)
-   * @return Cluster object
-   */
-  Cluster& with_beta_protocol(bool enable = false) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_use_beta_protocol_version(
-                           get(), (enable == true ? cass_true : cass_false)));
-    return *this;
-  }
-
-  /**
    * Sets the timeout for connecting to a node
    *
    * @param timeout_ms Connect timeout in milliseconds
@@ -203,22 +190,6 @@ public:
    */
   Cluster& with_host_listener_callback(CassHostListenerCallback callback, void* data = NULL) {
     EXPECT_EQ(CASS_OK, cass_cluster_set_host_listener_callback(get(), callback, data));
-    return *this;
-  }
-
-  /**
-   * Enable/Disable the use of hostname resolution
-   *
-   * This is useful for authentication (Kerberos) or encryption (SSL)
-   * services that require a valid hostname for verification.
-   *
-   * @param enable True if hostname resolution should be enabled; false
-   *               otherwise (default: true)
-   * @return Cluster object
-   */
-  Cluster& with_hostname_resolution(bool enable = true) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_use_hostname_resolution(
-                           get(), (enable == true ? cass_true : cass_false)));
     return *this;
   }
 
