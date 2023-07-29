@@ -19,12 +19,11 @@ provided under the `dependencies` directory for each platform (if applicable).
 __Note__: CentOS and Ubuntu use the version of OpenSSL and zlib provided with the
 distribution:
 
-* [CentOS 6][centos-6-dependencies]
 * [CentOS 7][centos-7-dependencies]
-* [CentOS 8][centos-8-dependencies]
-* [Ubuntu 14.04][ubuntu-14-04-dependencies]
-* [Ubuntu 16.04][ubuntu-16-04-dependencies]
-* [Ubuntu 18.04][ubuntu-18-04-dependencies]
+* [Rocky Linux 8][rocky-linux-8-dependencies]
+* [Rocky Linux 9][rocky-linux-9-dependencies]
+* [Ubuntu 20.04][ubuntu-20-04-dependencies]
+* [Ubuntu 22.04][ubuntu-22-04-dependencies]
 * [Windows][windows-dependencies]
 
 ## Upgrading
@@ -87,9 +86,9 @@ dependencies for a specific platform.
 This driver works exclusively with the Cassandra Query Language v3 (CQL3) and
 Cassandra's native protocol. The current version works with:
 
-* Apache Cassandra® versions 2.1, 2.2 and 3.0+
+* Apache Cassandra® versions 3.0.x, 3.11.x and 4.0.x or DSE versions 6.8.x and 5.1.x
 * Architectures: 32-bit (x86) and 64-bit (x64)
-* Compilers: GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013/2015/2017/2019
+* Compilers: GCC 4.1.2+, Clang 3.4+, and MSVC 2013/2015/2017/2019
 
 A complete compatibility matrix for both Apache Cassandra®
 and DataStax Enterprise can be found [here][cpp-driver-compatability-matrix].
@@ -209,17 +208,16 @@ specific language governing permissions and limitations under the License.
 [Examples]: examples/
 [download server]: http://downloads.datastax.com/cpp-driver/
 [GitHub]: https://github.com/datastax/cpp-driver
-[cpp-driver-compatability-matrix]: https://docs.datastax.com/en/developer/driver-matrix/doc/cppDrivers.html#cpp-drivers
+[cpp-driver-compatability-matrix]: https://docs.datastax.com/en/driver-matrix/docs/cpp-drivers.html
 [Home]: http://docs.datastax.com/en/developer/cpp-driver/latest
 [API]: http://docs.datastax.com/en/developer/cpp-driver/latest/api
 [Getting Started]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics
 [Building]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/building
-[centos-6-dependencies]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies
 [centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
-[centos-8-dependencies]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies
-[ubuntu-14-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies
-[ubuntu-16-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies
-[ubuntu-18-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies
+[rocky-linux-8-dependencies]: http://downloads.datastax.com/cpp-driver/rocky/8/dependencies
+[rocky-linux-9-dependencies]: http://downloads.datastax.com/cpp-driver/rocky/9/dependencies
+[ubuntu-20-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/20.04/dependencies
+[ubuntu-22-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/22.04/dependencies
 [windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
 [DataStax Astra]: https://astra.datastax.com
 [Kerberos]: https://web.mit.edu/kerberos
