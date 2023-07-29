@@ -88,7 +88,7 @@ Cassandra's native protocol. The current version works with:
 
 * Apache Cassandra® versions 3.0.x, 3.11.x and 4.0.x or DSE versions 6.8.x and 5.1.x
 * Architectures: 32-bit (x86) and 64-bit (x64)
-* Compilers: GCC 4.1.2+, Clang 3.4+, and MSVC 2013/2015/2017/2019
+* Compilers: GCC 4.8.5+, Clang 3.4+, and MSVC 2013/2015/2017/2019
 
 A complete compatibility matrix for both Apache Cassandra®
 and DataStax Enterprise can be found [here][cpp-driver-compatability-matrix].
