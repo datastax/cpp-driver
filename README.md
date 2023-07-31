@@ -84,11 +84,22 @@ dependencies for a specific platform.
 ## Compatibility
 
 This driver works exclusively with the Cassandra Query Language v3 (CQL3) and
-Cassandra's native protocol. The current version works with:
+Cassandra's native protocol. The current version works with the following
+server versions:
 
-* Apache Cassandra® versions 3.0.x, 3.11.x and 4.0.x or DSE versions 6.8.x and 5.1.x
-* Architectures: 32-bit (x86) and 64-bit (x64)
-* Compilers: GCC 4.8.5+, Clang 3.4+, and MSVC 2013/2015/2017/2019
+* Apache Cassandra® versions 3.0.x, 3.11.x and 4.0.x
+* DSE versions 6.8.x and 5.1.x
+
+Both 32-bit (x86) and 64-bit (x64) architectures are supported
+
+We build and test the driver on the following platforms:
+
+* CentOS 7 w/ gcc 4.8.5
+* Rocky Linux 8.8 w/ gcc 8.5.0
+* Rocky Linux 9.2 w/ gcc 11.3.1
+* Ubuntu 20.04 w/ gcc 9.4.0
+* Ubuntu 22.04 w/ gcc 11.3.0
+* Microsoft Visual Studio 2013, 2015, 2017 and 2019
 
 A complete compatibility matrix for both Apache Cassandra®
 and DataStax Enterprise can be found [here][cpp-driver-compatability-matrix].
