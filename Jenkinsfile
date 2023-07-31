@@ -263,7 +263,7 @@ def testDriverInstallation() {
 }
 
 def deployDriver() {
-  withCredentials([usernameColonPassword(credentialsId: 'drivers-artifactory-upload-username-encrypted-password', variable: 'ARTIFACTORY_CREDENTIALS'),
+  withCredentials([usernameColonPassword(credentialsId: 'cpp-drivers-artifactory-upload-username-encrypted-password', variable: 'ARTIFACTORY_CREDENTIALS'),
                    string(credentialsId: 'artifactory-base-url', variable: 'ARTIFACTORY_BASE_URL')]) {
     sh label: 'Deploy driver to Artifactory', script: '''#!/bin/bash -le
       . ${DRIVER_BUILD_SCRIPT}
