@@ -52,9 +52,9 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 16
-#define CASS_VERSION_PATCH 2
-#define CASS_VERSION_SUFFIX ""
+#define CASS_VERSION_MINOR 17
+#define CASS_VERSION_PATCH 0
+#define CASS_VERSION_SUFFIX "rc1"
 
 #ifdef __cplusplus
 extern "C" {
