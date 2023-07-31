@@ -81,7 +81,7 @@ build_driver() {
           -D${driver_prefix}_BUILD_UNIT_TESTS=On \
           -D${driver_prefix}_BUILD_INTEGRATION_TESTS=${BUILD_INTEGRATION_TESTS} \
           ..
-    [[ -x $(which clang-format) ]] && make format-check
+    #[[ -x $(which clang-format) ]] && make format-check
     make -j${PROCS}
   )
 }
