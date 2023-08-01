@@ -1,6 +1,6 @@
 # DataStax C/C++ Driver for Apache Cassandra® and DataStax Products
 
-A modern, feature-rich and highly tunable C/C++ client library for
+A modern, feature-packed. and highly tunable C/C++ client library for
 [Apache Cassandra®] 2.1+ using exclusively Cassandra's binary protocol and
 Cassandra Query Language v3. This driver can also be used with other DataStax
 products:
@@ -10,8 +10,8 @@ products:
 
 ## Getting the Driver
 
-Binary versions of the driver, available for multiple operating systems and
-multiple architectures, can be obtained from our [download server]. The
+Binary versions of the driver are also available for multiple operating systems and
+multiple architectures and can be obtained from our [download server]. The
 source code is made available via [GitHub].
 
 Packages for the driver's dependencies, libuv (1.x), OpenSSL, and zlib are also
