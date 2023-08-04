@@ -23,30 +23,34 @@ configure_testing_environment() {
 }
 
 install_libuv() {(
-  cd packaging
-  git clone --depth 1 https://github.com/datastax/libuv-packaging.git
+  if [[ "${OS_DISTRO}" = "ubuntu" ]] && [[ "${OS_DISTRO_RELEASE}" > "18.04" ]]; then
+    true
+  else
+    cd packaging
+    git clone --depth 1 https://github.com/datastax/libuv-packaging.git
 
-  (
-    cd libuv-packaging
+    (
+      cd libuv-packaging
 
-    # Ensure build directory is cleaned (static nodes are not cleaned)
-    [[ -d build ]] && rm -rf build
-    mkdir build
+      # Ensure build directory is cleaned (static nodes are not cleaned)
+      [[ -d build ]] && rm -rf build
+      mkdir build
+
+      if [ "${OS_DISTRO}" = "ubuntu" ]; then
+        ./build_deb.sh ${LIBUV_VERSION}
+      else
+        ./build_rpm.sh ${LIBUV_VERSION}
+      fi
+    )
+
+    [[ -d packages ]] || mkdir packages
+    find libuv-packaging/build -type f \( -name "*.deb" -o -name "*.rpm" \) -exec mv {} packages \;
 
     if [ "${OS_DISTRO}" = "ubuntu" ]; then
-      ./build_deb.sh ${LIBUV_VERSION}
+      sudo dpkg -i packages/libuv*.deb
     else
-      ./build_rpm.sh ${LIBUV_VERSION}
+      sudo rpm -U --force packages/libuv*.rpm
     fi
-  )
-
-  [[ -d packages ]] || mkdir packages
-  find libuv-packaging/build -type f \( -name "*.deb" -o -name "*.rpm" \) -exec mv {} packages \;
-
-  if [ "${OS_DISTRO}" = "ubuntu" ]; then
-    sudo dpkg -i packages/libuv*.deb
-  else
-    sudo rpm -U --force packages/libuv*.rpm
   fi
 )}
 
