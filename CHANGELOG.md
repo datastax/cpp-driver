@@ -3,6 +3,7 @@
 * [CPP-942] Add docs on possibility of MITM attacks with cass_cluster_set_use_hostname_resolution()
 * [CPP-955] Unable to use different memory allocators and profilers when using the cassandra driver
 * [CPP-957] Update build/test platforms
+* [CPP-919] CMake 3.16 deprecation warnings
 
 Community
 --------
