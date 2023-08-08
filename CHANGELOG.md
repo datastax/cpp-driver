@@ -1,3 +1,14 @@
+2.17.0
+===========
+* [CPP-942] Add docs on possibility of MITM attacks with cass_cluster_set_use_hostname_resolution()
+* [CPP-955] Unable to use different memory allocators and profilers when using the cassandra driver
+
+Community
+--------
+* [PR #522] Iterate over all certificates in a trusted cert BIO, not just the first (kw217)
+* [PR #528] Add support for newer versions of LibreSSL (gahr)
+* [PR #525] Allow users to request TLS client-side enforcement (FalacerSelene)
+
 2.16.2
 ===========
 
@@ -5,7 +16,10 @@ Bug Fixes
 --------
 * [CPP-946] Core dump on unclean event loop shutdown
 * [PR #513] Fix SNI events
-* [PR #518] Replace deprecated function for OpenSSL >= 3.0
+
+Community
+--------
+* [PR #518] Replace deprecated function for OpenSSL >= 3.0 (pjgeorg)
 
 2.16.1
 ===========
