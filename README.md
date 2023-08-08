@@ -10,21 +10,28 @@ products:
 
 ## Getting the Driver
 
-Binary versions of the driver, available for multiple operating systems and
-multiple architectures, can be obtained from our [Artifactory server]. The
-source code is made available via [GitHub].
+The source code is made available via [GitHub].  Additionally binary versions of
+the driver (for multiple operating systems and multiple architectures) can be
+obtained from our [Artifactory server].  Binaries are available for the following
+operating systems:
 
-Packages for the driver's dependencies, libuv (1.x), OpenSSL, and zlib are also
-provided under the `dependencies` directory for each platform (if applicable).
-__Note__: CentOS and Ubuntu use the version of OpenSSL and zlib provided with the
-distribution:
+* CentOS 7
+* Rocky Linux 8.8
+* Rocky Linux 9.2
+* Ubuntu 20.04
+* Ubuntu 22.04
+* Windows
 
-* [CentOS 7][centos-7-dependencies]
-* [Rocky Linux 8][rocky-linux-8-dependencies]
-* [Rocky Linux 9][rocky-linux-9-dependencies]
-* [Ubuntu 20.04][ubuntu-20-04-dependencies]
-* [Ubuntu 22.04][ubuntu-22-04-dependencies]
-* [Windows][windows-dependencies]
+The driver depends on the following libraries:
+
+* libuv (1.x)
+* OpenSSL
+* zlib
+
+The version of OpenSSL and zlib provided with each Linux distribution above can be used
+to build the driver.  A version of libuv > 1.x is provided for CentOS 7 and Rocky
+Linux; this can be found under the `dependencies` directory for each platform.
+Packages for all three dependencies are provided for Windows distributions.
 
 ## Upgrading
 
@@ -226,12 +233,6 @@ specific language governing permissions and limitations under the License.
 [Building]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/building
 [jira]: https://datastax-oss.atlassian.net/browse/CPP
 [mailing list]: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
-[centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
-[rocky-linux-8-dependencies]: http://downloads.datastax.com/cpp-driver/rocky/8/dependencies
-[rocky-linux-9-dependencies]: http://downloads.datastax.com/cpp-driver/rocky/9/dependencies
-[ubuntu-20-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/20.04/dependencies
-[ubuntu-22-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/22.04/dependencies
-[windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
 [DataStax Astra]: https://astra.datastax.com
 [Kerberos]: https://web.mit.edu/kerberos
 
