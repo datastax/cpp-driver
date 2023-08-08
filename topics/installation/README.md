@@ -2,8 +2,8 @@
 
 ## Packages
 
-Pre-built packages are available for CentOS 7, Ubuntu 20.04/22.04 and
-Rocky Linux 8 and 9.  All packages are available from our
+Pre-built packages are available for CentOS 7, Ubuntu 20.04/22.04,
+Rocky Linux 8 and 9 and Windows.  All packages are available from our
 [Artifactory server].
 
 ### CentOS
