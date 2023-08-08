@@ -4,13 +4,12 @@ The DataStax C/C++ Driver for Apache Cassandra and DataStax Products will build
 on most standard Unix-like and Microsoft Windows platforms. Packages are
 available for the following platforms:
 
-* [CentOS 6][cpp-driver-centos6]
-* [CentOS 7][cpp-driver-centos7]
-* [CentOS 8][cpp-driver-centos8]
-* [Ubuntu 14.04 LTS][cpp-driver-ubuntu14-04]
-* [Ubuntu 16.04 LTS][cpp-driver-ubuntu16-04]
-* [Ubuntu 18.04 LTS][cpp-driver-ubuntu18-04]
-* [Windows][cpp-driver-windows]
+* CentOS 7
+* Rocky Linux 8.8
+* Rocky Linux 9.2
+* Ubuntu 20.04
+* Ubuntu 22.04
+* Windows
 
 __NOTE__: The build procedures only need to be performed for driver development
           or if your system doesn't have packages available for download and
@@ -19,7 +18,7 @@ __NOTE__: The build procedures only need to be performed for driver development
 ## Compatibility
 
 * Architectures: 32-bit (x86) and 64-bit (x64)
-* Compilers: GCC 4.1.2+ Clang 3.4+, and MSVC 2010/2012/2013/2015/2017/2019
+* Compilers: GCC 4.1.2+ Clang 3.4+, and MSVC 2013/2015/2017/2019
 
 ## Dependencies
 
@@ -101,16 +100,12 @@ libuv v1.x should be used in order to ensure all features of the C/C++ driver
 are available. When using a package manager for your operating system make sure
 you install v1.x; if available.
 
-##### CentOS/RHEL and Ubuntu packages
+##### CentOS, Rocky and Ubuntu packages
 
-Packages are available from our [download server]:
-
-* [CentOS 6][libuv-centos6]
-* [CentOS 7][libuv-centos7]
-* [CentOS 8][libuv-centos8]
-* [Ubuntu 14.04 LTS][libuv-ubuntu14-04]
-* [Ubuntu 16.04 LTS][libuv-ubuntu16-04]
-* [Ubuntu 18.04 LTS][libuv-ubuntu18-04]
+Packages are available from our [Artifactory server].  Select the driver version,
+build and platform and then look for the `dependencies` directory.  Note that the
+version of libuv available on Ubuntu can be used when building the driver.  As a
+result we only provide packages for CentOS and Rocky.
 
 ##### Mac OS (Brew)
 
@@ -278,8 +273,6 @@ First you will need to open a "Command Prompt" to execute the CMake commands.
 #### Building the C/C++ driver
 
 Supported generators are:
-* Visual Studio 10 2010
-* Visual Studio 11 2012
 * Visual Studio 12 2013
 * Visual Studio 14 2015
 * Visual Studio 15 2017
@@ -329,20 +322,7 @@ cmake -G "Visual Studio 16 2019" -A x64 -DCASS_BUILD_INTEGRATION_TESTS=On ..
 cmake -G "Visual Studio 16 2019" -A x64 -DCASS_BUILD_UNIT_TESTS=On ..
 ```
 
-[download server]: http://downloads.datastax.com
-[cpp-driver-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/cassandra
-[cpp-driver-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/cassandra
-[cpp-driver-centos8]: http://downloads.datastax.com/cpp-driver/centos/8/cassandra
-[cpp-driver-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/cassandra
-[cpp-driver-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/cassandra
-[cpp-driver-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/cassandra
-[cpp-driver-windows]: http://downloads.datastax.com/cpp-driver/windows/cassandra
-[libuv-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies/libuv
-[libuv-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/libuv
-[libuv-centos8]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies/libuv
-[libuv-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv
-[libuv-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/libuv
-[libuv-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/libuv
+[Artifactory server]: https://datastax.jfrog.io/artifactory/cpp-php-drivers/cpp-driver/builds
 [Homebrew]: https://brew.sh
 [Bison]: http://gnuwin32.sourceforge.net/downlinks/bison.php
 [CMake]: http://www.cmake.org/download
