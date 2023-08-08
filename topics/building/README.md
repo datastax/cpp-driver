@@ -250,7 +250,7 @@ cmake -DCASS_BUILD_UNIT_TESTS=On ..
 
 ## Windows
 
-The driver is known to build with Visual Studio 2010, 2012, 2013, 2015, 2017, and 2019.
+The driver is known to build with Visual Studio 2013, 2015, 2017, and 2019.
 
 ### Obtaining build dependencies
 
