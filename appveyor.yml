@@ -30,11 +30,11 @@ hosts:
   cpp-driver.hostname.: 127.254.254.254
 environment:
   ARTIFACTORY_BASE_URI:
-    secure: ievA+1C0HMte9cMT6J5c9tN/G3DV5AEqt2AYWry1B5gQT2q26wMCnPCfJQ7J28OsKF+2xCPJJ1T9zVQt6SVGsAaCGbphH/FN4rOUenehYxzPBm0YJnidelknA5pmoFea
+    secure: 5bD6WmK8IFF9jHmEJ75NqryMijhEtC6eRKhA+fYbSFTwCwc9qOAdB1Lpt8CCiaNfD65i3M0rqQYLj3DL3hGTMrBMTqZnVWer5IvowlEWps8=
   ARTIFACTORY_USERNAME:
-    secure: 80OpOQmMyMSYM+1yz4eIIA==
+    secure: o2wIBhhU3l2RmYrB+bWAq21iSZahJxHhJKoWKsjadTI=
   ARTIFACTORY_PASSWORD:
-    secure: f5zt45w2cqZaYQxtAih5Gg==
+    secure: npn828fxSYtJ4i/yeONCL7Oc2He42Ti/ohofbykRyBTlQCzIRIUYvh7iO6yqea3uAqjAMc9OtQzjy3CqH8/Vgkdk22lT/ceCfSJIpEtZwrg=
   APPVEYOR_IGNORE_COMMIT_FILTERING_ON_TAG: true
   DRIVER_TYPE: CASS
   LIBSSH2_VERSION: 1.9.0
