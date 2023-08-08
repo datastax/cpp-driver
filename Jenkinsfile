@@ -263,7 +263,7 @@ def testDriverInstallation() {
 }
 
 def deployDriver() {
-  withCredentials([usernameColonPassword(credentialsId: 'drivers-artifactory-upload-username-encrypted-password', variable: 'ARTIFACTORY_CREDENTIALS'),
+  withCredentials([usernameColonPassword(credentialsId: 'cpp-drivers-artifactory-upload-username-encrypted-password', variable: 'ARTIFACTORY_CREDENTIALS'),
                    string(credentialsId: 'artifactory-base-url', variable: 'ARTIFACTORY_BASE_URL')]) {
     sh label: 'Deploy driver to Artifactory', script: '''#!/bin/bash -le
       . ${DRIVER_BUILD_SCRIPT}
@@ -406,9 +406,9 @@ pipeline {
     choice(
       name: 'ADHOC_BUILD_AND_EXECUTE_TESTS_SERVER_VERSION',
       choices: [
-                '3.0',      // Previous Apache Cassandra®
-                '3.11',     // Current Apache Cassandra®
-                '4.0',      // Development Apache Cassandra®
+                '3.0',      // Previous Apache Cassandra
+                '3.11',     // Current Apache Cassandra
+                '4.0',      // Development Apache Cassandra
                 'dse-5.1.35',  // Legacy DataStax Enterprise
                 'dse-6.8.30',  // Development DataStax Enterprise
                 'ALL'],
@@ -728,9 +728,9 @@ pipeline {
         axes {
           axis {
             name 'SERVER_VERSION'
-            values '3.0',      // Previous Apache Cassandra®
-                   '3.11',     // Current Apache Cassandra®
-                   '4.0',      // Development Apache Cassandra®
+            values '3.0',      // Previous Apache Cassandra
+                   '3.11',     // Current Apache Cassandra
+                   '4.0',      // Development Apache Cassandra
                    'dse-5.1.35',  // Legacy DataStax Enterprise
                    'dse-6.8.30'   // Development DataStax Enterprise
           }
