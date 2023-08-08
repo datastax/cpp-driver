@@ -10,22 +10,28 @@ products:
 
 ## Getting the Driver
 
-Binary versions of the driver, available for multiple operating systems and
-multiple architectures, can be obtained from our [download server]. The
-source code is made available via [GitHub].
+The source code is made available via [GitHub].  Additionally binary versions of
+the driver (for multiple operating systems and multiple architectures) can be
+obtained from our [Artifactory server].  Binaries are available for the following
+operating systems:
 
-Packages for the driver's dependencies, libuv (1.x), OpenSSL, and zlib are also
-provided under the `dependencies` directory for each platform (if applicable).
-__Note__: CentOS and Ubuntu use the version of OpenSSL and zlib provided with the
-distribution:
+* CentOS 7
+* Rocky Linux 8.8
+* Rocky Linux 9.2
+* Ubuntu 20.04
+* Ubuntu 22.04
+* Windows
 
-* [CentOS 6][centos-6-dependencies]
-* [CentOS 7][centos-7-dependencies]
-* [CentOS 8][centos-8-dependencies]
-* [Ubuntu 14.04][ubuntu-14-04-dependencies]
-* [Ubuntu 16.04][ubuntu-16-04-dependencies]
-* [Ubuntu 18.04][ubuntu-18-04-dependencies]
-* [Windows][windows-dependencies]
+The driver depends on the following libraries:
+
+* libuv (1.x)
+* OpenSSL
+* zlib
+
+The version of OpenSSL and zlib provided with each Linux distribution above can be used
+to build the driver.  A version of libuv > 1.x is provided for CentOS 7 and Rocky
+Linux; this can be found under the `dependencies` directory for each platform.
+Packages for all three dependencies are provided for Windows distributions.
 
 ## Upgrading
 
@@ -41,7 +47,7 @@ Linking changes will be required when migrating to this driver. Replace `-ldse` 
 
 No changes will be required when upgrading to this driver. There will be new
 driver dependencies when using any of the binary versions obtained from our
-[download server] as [Kerberos] is utilized in the [DSE features] of this
+[Artifactory server] as [Kerberos] is utilized in the [DSE features] of this
 driver. See the [installation] section for more information on obtaining the
 dependencies for a specific platform.
 
@@ -85,11 +91,22 @@ dependencies for a specific platform.
 ## Compatibility
 
 This driver works exclusively with the Cassandra Query Language v3 (CQL3) and
-Cassandra's native protocol. The current version works with:
+Cassandra's native protocol. The current version works with the following
+server versions:
 
-* Apache Cassandra® versions 2.1, 2.2 and 3.0+
-* Architectures: 32-bit (x86) and 64-bit (x64)
-* Compilers: GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013/2015/2017/2019
+* Apache Cassandra® versions 3.0.x, 3.11.x and 4.0.x
+* DSE versions 6.8.x and 5.1.x
+
+Both 32-bit (x86) and 64-bit (x64) architectures are supported
+
+We build and test the driver on the following platforms:
+
+* CentOS 7 w/ gcc 4.8.5
+* Rocky Linux 8.8 w/ gcc 8.5.0
+* Rocky Linux 9.2 w/ gcc 11.3.1
+* Ubuntu 20.04 w/ gcc 9.4.0
+* Ubuntu 22.04 w/ gcc 11.3.0
+* Microsoft Visual Studio 2013, 2015, 2017 and 2019
 
 A complete compatibility matrix for both Apache Cassandra®
 and DataStax Enterprise can be found [here][cpp-driver-compatability-matrix].
@@ -105,8 +122,8 @@ __Disclaimer__: DataStax products do not support big-endian systems.
 
 ## Getting Help
 
-* JIRA: https://datastax-oss.atlassian.net/browse/CPP
-* Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
+* JIRA: [jira]
+* Mailing List: [mailing list]
 
 ## Examples
 
@@ -207,20 +224,15 @@ specific language governing permissions and limitations under the License.
 [Apache Cassandra®]: http://cassandra.apache.org
 [DataStax Enterprise]: http://www.datastax.com/products/datastax-enterprise
 [Examples]: examples/
-[download server]: http://downloads.datastax.com/cpp-driver/
+[Artifactory server]: https://datastax.jfrog.io/artifactory/cpp-php-drivers/cpp-driver/builds
 [GitHub]: https://github.com/datastax/cpp-driver
-[cpp-driver-compatability-matrix]: https://docs.datastax.com/en/developer/driver-matrix/doc/cppDrivers.html#cpp-drivers
+[cpp-driver-compatability-matrix]: https://docs.datastax.com/en/driver-matrix/docs/cpp-drivers.html
 [Home]: http://docs.datastax.com/en/developer/cpp-driver/latest
 [API]: http://docs.datastax.com/en/developer/cpp-driver/latest/api
 [Getting Started]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics
 [Building]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/building
-[centos-6-dependencies]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies
-[centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
-[centos-8-dependencies]: http://downloads.datastax.com/cpp-driver/centos/8/dependencies
-[ubuntu-14-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies
-[ubuntu-16-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies
-[ubuntu-18-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies
-[windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
+[jira]: https://datastax-oss.atlassian.net/browse/CPP
+[mailing list]: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 [DataStax Astra]: https://astra.datastax.com
 [Kerberos]: https://web.mit.edu/kerberos
 

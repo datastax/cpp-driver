@@ -2,66 +2,17 @@
 
 ## Packages
 
-Pre-built packages are available for CentOS 6/7/8, Ubuntu 14.04/16.04/18.04 and
-Windows 7 SP1 and above.
+Pre-built packages are available for CentOS 7, Ubuntu 20.04/22.04,
+Rocky Linux 8 and 9 and Windows.  All packages are available from our
+[Artifactory server].
 
 ### CentOS
 
-<table class="table table-striped table-hover table-condensed">
-  <thead>
-  <tr>
-   <th>Version</th>
-   <th>URL</th>
-  </tr>
-  </thead>
-
-  <tbody>
-  <tr>
-   <td>CentOS 6</td>
-   <td>http://downloads.datastax.com/cpp-driver/centos/6/cassandra</td>
-  </tr>
-  <tr>
-   <td>CentOS 7</td>
-   <td>http://downloads.datastax.com/cpp-driver/centos/7/cassandra</td>
-  </tr>
-  <tr>
-   <td>CentOS 8</td>
-   <td>http://downloads.datastax.com/cpp-driver/centos/8/cassandra</td>
-  </tr>
-  </tbody>
-</table>
-
-#### Dependencies
-
 CentOS doesn't have up-to-date versions of libuv so we provide current packages.
+These packages can be found in the `dependencies` directory under each driver
+version in Artifactory.
 
-<table class="table table-striped table-hover table-condensed">
-  <thead>
-  <tr>
-   <th>Version</th>
-   <th>URL</th>
-  </tr>
-  </thead>
-
-  <tbody>
-  <tr>
-   <td>CentOS 6</td>
-   <td>http://downloads.datastax.com/cpp-driver/centos/6/dependencies</td>
-  </tr>
-  <tr>
-   <td>CentOS 7</td>
-   <td>http://downloads.datastax.com/cpp-driver/centos/7/dependencies</td>
-  </tr>
-  <tr>
-   <td>CentOS 8</td>
-   <td>http://downloads.datastax.com/cpp-driver/centos/8/dependencies</td>
-  </tr>
-  </tbody>
-</table>
-
-#### To Install
-
-Install dependencies:
+First install dependencies:
 
 ```bash
 yum install openssl krb5 zlib
@@ -70,7 +21,7 @@ rpm -Uvh libuv-<version>.rpm
 
 Note: Replace `<version>` with the release version of the package.
 
-Install the runtime library:
+Then install the runtime library:
 
 ```bash
 rpm -Uvh cassandra-cpp-driver-<version>.rpm
@@ -84,70 +35,31 @@ rpm -Uvh cassandra-cpp-driver-devel-<version>.rpm
 rpm -Uvh cassandra-cpp-driver-debuginfo-<version>.rpm
 ```
 
-### Ubuntu
+### Rocky Linux
 
-<table class="table table-striped table-hover table-condensed">
-  <thead>
-  <tr>
-   <th>Version</th>
-   <th>URL</th>
-  </tr>
-  </thead>
+Rocky Linux also doesn't have up-to-date versions of libuv so packages are available
+for this platform as well.
 
-  <tbody>
-  <tr>
-   <td>Ubuntu 14.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/cassandra</td>
-  </tr>
-  <tr>
-   <td>Ubuntu 16.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/cassandra</td>
-  </tr>
-  <tr>
-   <td>Ubuntu 18.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/18.04/cassandra</td>
-  </tr>
-  </tbody>
-</table>
-
-#### Dependencies
-
-Ubuntu doesn't have up-to-date versions of libuv so we provide current packages.
-
-<table class="table table-striped table-hover table-condensed">
-  <thead>
-  <tr>
-   <th>Version</th>
-   <th>URL</th>
-  </tr>
-  </thead>
-
-  <tbody>
-  <tr>
-   <td>Ubuntu 14.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies</td>
-  </tr>
-  <tr>
-   <td>Ubuntu 16.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies</td>
-  </tr>
-  <tr>
-   <td>Ubuntu 18.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies</td>
-  </tr>
-  </tbody>
-</table>
-
-#### To Install
-
-Install dependencies:
+To install dependencies:
 
 ```bash
-apt-get install libssl libkrb5 zlib1g
-dpkg -i libuv_<version>.deb
+yum install openssl krb5 zlib
+rpm -Uvh libuv-<version>.rpm
 ```
 
-Note: Replace `<version>` with the release version of the package.
+Then install the runtime library (and optionally the development package and debug
+symbols) as described above.
+
+### Ubuntu
+
+Newer versions of Ubuntu include workable versions of all dependencies; you do not
+need to download anything from Artifactory.
+
+To install dependencies:
+
+```bash
+apt-get install libssl libkrb5 zlib1g libuv1
+```
 
 Install the runtime library:
 
@@ -165,50 +77,14 @@ dpkg -i cassandra-cpp-driver-dbg_<version>.deb
 
 ### Windows
 
-<table class="table table-striped table-hover table-condensed">
-  <thead>
-  <tr>
-   <th>Version</th>
-    <th>URL</th>
-  </tr>
-  </thead>
-
-  <tbody>
-  <tr>
-   <td>Windows</td>
-   <td>http://downloads.datastax.com/cpp-driver/windows/cassandra</td>
-  </tr>
-  </tbody>
-</table>
-
-#### Dependencies
-
 We provide packages (`.zip` files) for all the dependencies (except for
 Kerberos) on Windows because they can be difficult to install/build.
 
-<table class="table table-striped table-hover table-condensed">
-  <thead>
-  <tr>
-   <th>Version</th>
-   <th>URL</th>
-  </tr>
-  </thead>
-
-  <tbody>
-  <tr>
-   <td>Windows</td>
-   <td>http://downloads.datastax.com/cpp-driver/windows/dependencies</td>
-  </tr>
-  </tbody>
-</table>
-
-#### To Install
-
-First, you will need to download and install [Kerberos] for Windows.
-
-Unzip the packages (from http://downloads.datastax.com) and add the include and
+Unzip the packages obtained from Artifactory and add the include and
 library directories to your project's `Additional Include Directories` and
 `Additional Dependencies` configuration properties.
+
+You will also need to download and install [Kerberos] for Windows.
 
 ## Building
 
@@ -217,4 +93,5 @@ will need to build the driver from source. Directions for building and
 installing the DataStax C/C++ Driver for Apache Cassandra and DataStax Products
 can be found [here](/topics/building/).
 
+[Artifactory server]: https://datastax.jfrog.io/artifactory/cpp-php-drivers/cpp-driver/builds
 [Kerberos]: https://web.mit.edu/kerberos
