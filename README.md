@@ -11,7 +11,7 @@ products:
 ## Getting the Driver
 
 Binary versions of the driver, available for multiple operating systems and
-multiple architectures, can be obtained from our [download server]. The
+multiple architectures, can be obtained from our [Artifactory server]. The
 source code is made available via [GitHub].
 
 Packages for the driver's dependencies, libuv (1.x), OpenSSL, and zlib are also
@@ -40,7 +40,7 @@ Linking changes will be required when migrating to this driver. Replace `-ldse` 
 
 No changes will be required when upgrading to this driver. There will be new
 driver dependencies when using any of the binary versions obtained from our
-[download server] as [Kerberos] is utilized in the [DSE features] of this
+[Artifactory server] as [Kerberos] is utilized in the [DSE features] of this
 driver. See the [installation] section for more information on obtaining the
 dependencies for a specific platform.
 
@@ -115,8 +115,8 @@ __Disclaimer__: DataStax products do not support big-endian systems.
 
 ## Getting Help
 
-* JIRA: https://datastax-oss.atlassian.net/browse/CPP
-* Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
+* JIRA: [jira]
+* Mailing List: [mailing list]
 
 ## Examples
 
@@ -217,13 +217,15 @@ specific language governing permissions and limitations under the License.
 [Apache Cassandra®]: http://cassandra.apache.org
 [DataStax Enterprise]: http://www.datastax.com/products/datastax-enterprise
 [Examples]: examples/
-[download server]: http://downloads.datastax.com/cpp-driver/
+[Artifactory server]: https://datastax.jfrog.io/artifactory/cpp-php-drivers/cpp-driver/builds
 [GitHub]: https://github.com/datastax/cpp-driver
 [cpp-driver-compatability-matrix]: https://docs.datastax.com/en/driver-matrix/docs/cpp-drivers.html
 [Home]: http://docs.datastax.com/en/developer/cpp-driver/latest
 [API]: http://docs.datastax.com/en/developer/cpp-driver/latest/api
 [Getting Started]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics
 [Building]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/building
+[jira]: https://datastax-oss.atlassian.net/browse/CPP
+[mailing list]: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 [centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
 [rocky-linux-8-dependencies]: http://downloads.datastax.com/cpp-driver/rocky/8/dependencies
 [rocky-linux-9-dependencies]: http://downloads.datastax.com/cpp-driver/rocky/9/dependencies
