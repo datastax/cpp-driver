@@ -18,13 +18,13 @@ __NOTE__: The build procedures only need to be performed for driver development
 ## Compatibility
 
 * Architectures: 32-bit (x86) and 64-bit (x64)
-* Compilers: GCC 4.1.2+ Clang 3.4+, and MSVC 2013/2015/2017/2019
+* Compilers: GCC 4.8.5+ Clang 3.4+, and MSVC 2013/2015/2017/2019
 
 ## Dependencies
 
 The C/C++ driver depends on the following software:
 
-* [CMake] v2.6.4+
+* [CMake] v2.8.12+
 * [libuv] 1.x
 * Kerberos v5 ([Heimdal] or [MIT]) \*
 * [OpenSSL] v1.0.x or v1.1.x \*\*
