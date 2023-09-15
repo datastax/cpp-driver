@@ -83,8 +83,8 @@ if (WIN32)
 else ()
   set(_OPENSSL_ROOT_HINTS
     ${OPENSSL_ROOT_DIR}
-    /usr/local/opt/openssl
     ENV OPENSSL_ROOT_DIR
+    /usr/local/opt/openssl
     )
 endif ()
 
