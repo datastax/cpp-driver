@@ -18,6 +18,6 @@
 
 namespace datastax {
 
-const StringRef::size_type StringRef::npos = -1;
+const StringRef::size_type StringRef::npos = std::numeric_limits<StringRef::size_type>::max();
 
 } // namespace datastax

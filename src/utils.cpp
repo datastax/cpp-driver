@@ -179,7 +179,7 @@ void set_thread_name(const String& thread_name) {
   THREADNAME_INFO info;
   info.dwType = 0x1000;
   info.szName = thread_name.c_str();
-  info.dwThreadID = -1;
+  info.dwThreadID = (DWORD)-1;
   info.dwFlags = 0;
 #pragma warning(push)
 #pragma warning(disable : 6320 6322)
