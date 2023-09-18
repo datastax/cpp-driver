@@ -108,7 +108,6 @@ CassError cass_execution_profile_set_latency_aware_routing_settings(
 CassError cass_execution_profile_set_whitelist_filtering(CassExecProfile* profile,
                                                          const char* hosts) {
   return cass_execution_profile_set_whitelist_filtering_n(profile, hosts, SAFE_STRLEN(hosts));
-  return CASS_OK;
 }
 
 CassError cass_execution_profile_set_whitelist_filtering_n(CassExecProfile* profile,
