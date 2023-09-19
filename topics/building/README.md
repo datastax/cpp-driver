@@ -27,7 +27,7 @@ The C/C++ driver depends on the following software:
 * [CMake] v2.8.12+
 * [libuv] 1.x
 * Kerberos v5 ([Heimdal] or [MIT]) \*
-* [OpenSSL] v1.0.x or v1.1.x \*\*
+* [OpenSSL] v1.0.x, v1.1.x or v3.x \*\*
 * [zlib] v1.x \*\*\*
 
 __\*__ Use the `CASS_USE_KERBEROS` CMake option to enable/disable Kerberos
@@ -41,6 +41,16 @@ __\*\*__ Use the `CASS_USE_OPENSSL` CMake option to enable/disable OpenSSL
 __\*\*\*__ Use the `CASS_USE_ZLIB` CMake option to enable/disable zlib support.
            Disabling this option will disable DataStax Astra support
            within the driver; defaults to `On`.
+
+### A Brief Note on OpenSSL 3.x
+
+Migrating from OpenSSL 1.1.x to 3.x largely involves avoiding the use of many functions which are now deprecated (consult
+the [migration guide] for much more detail on this point).  The driver does not use any of these functions so we expect
+the transition to OpenSSL 3.x to be relatively painless.  We will also note that two officially supported platforms
+(Ubuntu 22.04 and Rocky Linux 9.2) come with OpenSSL 3.x by default and the unit and integration tests all pass on these
+platforms.
+
+Given these results we expect the driver to behave well with OpenSSL 3.x.
 
 ## Linux/Mac OS
 
@@ -335,3 +345,4 @@ cmake -G "Visual Studio 16 2019" -A x64 -DCASS_BUILD_UNIT_TESTS=On ..
 [MIT]: https://web.mit.edu/kerberos
 [OpenSSL]: https://www.openssl.org
 [zlib]: https://www.zlib.net
+[migration guide]: https://www.openssl.org/docs/man3.0/man7/migration_guide.html
