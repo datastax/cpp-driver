@@ -22,12 +22,12 @@
 namespace datastax { namespace internal {
 
 enum MemoryOrder {
-  MEMORY_ORDER_RELAXED = std::memory_order_relaxed,
-  MEMORY_ORDER_CONSUME = std::memory_order_consume,
-  MEMORY_ORDER_ACQUIRE = std::memory_order_acquire,
-  MEMORY_ORDER_RELEASE = std::memory_order_release,
-  MEMORY_ORDER_ACQ_REL = std::memory_order_acq_rel,
-  MEMORY_ORDER_SEQ_CST = std::memory_order_seq_cst
+  MEMORY_ORDER_RELAXED = static_cast<std::underlying_type<std::memory_order>::type>(std::memory_order_relaxed),
+  MEMORY_ORDER_CONSUME = static_cast<std::underlying_type<std::memory_order>::type>(std::memory_order_consume),
+  MEMORY_ORDER_ACQUIRE = static_cast<std::underlying_type<std::memory_order>::type>(std::memory_order_acquire),
+  MEMORY_ORDER_RELEASE = static_cast<std::underlying_type<std::memory_order>::type>(std::memory_order_release),
+  MEMORY_ORDER_ACQ_REL = static_cast<std::underlying_type<std::memory_order>::type>(std::memory_order_acq_rel),
+  MEMORY_ORDER_SEQ_CST = static_cast<std::underlying_type<std::memory_order>::type>(std::memory_order_seq_cst)
 };
 
 template <class T>
