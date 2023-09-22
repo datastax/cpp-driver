@@ -70,6 +70,8 @@ rewrites:
     replace: 'https://cassandra.apache.org/_/community.html'
   - search: 'https://academy.datastax.com/slack'
     replace: 'https://dtsx.io/discord'
+  - search: 'http://sourceforge.net/projects/boost/files/boost-binaries/1.[0-9]+.0/boost_1_[0-9]+_0-msvc-[0-9]+.[0-9]+-(64|32).exe/download'
+    replace: 'https://www.boost.org/users/download/'
 rules:
   use_path_nav_files_only: true
 
