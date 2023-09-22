@@ -69,7 +69,7 @@ rewrites:
   - http://docs.datastax.com/en/developer/cpp-driver/latest/: / # Get current version documentation
   - https://github.com/datastax/cpp-driver/blob/master/vc_build.bat: https://github.com/datastax/cpp-driver/blob/2.14.0/vc_build.bat
   - search: 'https://community.datastax.com/index.html'
-    replace: 'https://www.datastax.com/workshops'
+    replace: 'https://cassandra.apache.org/_/community.html'
 rules:
   use_path_nav_files_only: true
 
