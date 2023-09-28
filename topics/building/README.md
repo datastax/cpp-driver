@@ -46,7 +46,7 @@ __\*\*\*__ Use the `CASS_USE_ZLIB` CMake option to enable/disable zlib support.
 
 Migrating from OpenSSL 1.1.x to 3.x largely involves avoiding the use of many functions which are now deprecated (consult
 the [migration guide] for details).  The driver does not use any of these functions so we expect
-the transition to OpenSSL 3.x to be relatively painless.  We will also note that two officially supported platforms
+the transition to OpenSSL 3.x to be relatively painless.  Note that two officially supported platforms
 (Ubuntu 22.04 and Rocky Linux 9.2) come with OpenSSL 3.x by default and the unit and integration tests all pass on these
 platforms.
 
