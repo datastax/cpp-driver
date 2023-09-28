@@ -262,15 +262,9 @@ uint64_t UuidGen::monotonic_timestamp() {
   while (true) {
     uint64_t now = from_unix_timestamp(get_time_since_epoch_ms());
     uint64_t last = last_timestamp_.load();
-    if (now > last) {
-      if (last_timestamp_.compare_exchange_strong(last, now)) {
-        return now;
-      }
-    } else {
-      uint64_t candidate = last + 1;
-      if (last_timestamp_.compare_exchange_strong(last, candidate)) {
-        return candidate;
-      }
+    uint64_t candidate = (now > last) ? now : last + 1;
+    if (last_timestamp_.compare_exchange_strong(last, candidate)) {
+      return candidate;
     }
   }
 }
