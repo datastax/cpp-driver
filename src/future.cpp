@@ -197,8 +197,8 @@ void Future::internal_set(ScopedMutex& lock) {
     lock.lock();
   }
 
-  // CPP-987 Set this after the callbacks run to avoid unexpected exits from wait ops in the callbacks
-  // due to spurious wakeups
+  // CPP-987 Set this after the callbacks run to avoid unexpected exits
+  // from wait ops due to spurious wakeups
   is_set_ = true;
 
   // Broadcast after we've run the callback so that threads waiting
