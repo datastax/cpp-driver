@@ -18,6 +18,7 @@
 #define DATASTAX_INTERNAL_ATOMIC_STD_HPP
 
 #include <atomic>
+#include <type_traits>
 
 namespace datastax { namespace internal {
 
