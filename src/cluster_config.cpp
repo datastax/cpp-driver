@@ -577,6 +577,14 @@ void cass_cluster_set_monitor_reporting_interval(CassCluster* cluster, unsigned 
   cluster->config().set_monitor_reporting_interval_secs(interval_secs);
 }
 
+CassError cass_cluster_set_histogram_refresh_interval(CassCluster* cluster, unsigned refresh_interval) {
+  if (refresh_interval <= 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_cluster_histogram_refresh_interval(refresh_interval);
+  return CASS_OK;
+}
+
 void cass_cluster_free(CassCluster* cluster) { delete cluster->from(); }
 
 } // extern "C"

@@ -2934,6 +2934,10 @@ CASS_EXPORT void
 cass_cluster_set_monitor_reporting_interval(CassCluster* cluster,
                                             unsigned interval_secs);
 
+CASS_EXPORT CassError
+cass_cluster_set_histogram_refresh_interval(CassCluster* cluster,
+                                            unsigned refresh_interval);
+
 /***********************************************************************************
  *
  * Session
