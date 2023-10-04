@@ -268,9 +268,10 @@ public:
       int64_t percentile_999th;
     };
 
-    Histogram(ThreadState* thread_state)
+    Histogram(ThreadState* thread_state, unsigned refresh_interval = CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_CACHING)
         : thread_state_(thread_state)
         , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
+      refresh_interval_ = refresh_interval;
       hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
       uv_mutex_init(&mutex_);
     }
@@ -318,6 +319,9 @@ public:
     }
 
   private:
+
+    unsigned refresh_interval_;
+
     class WriterReaderPhaser {
     public:
       WriterReaderPhaser()
@@ -413,10 +417,10 @@ public:
     DISALLOW_COPY_AND_ASSIGN(Histogram);
   };
 
-  Metrics(size_t max_threads)
+  Metrics(size_t max_threads, unsigned histogram_refresh_interval)
       : thread_state_(max_threads)
-      , request_latencies(&thread_state_)
-      , speculative_request_latencies(&thread_state_)
+      , request_latencies(&thread_state_, histogram_refresh_interval)
+      , speculative_request_latencies(&thread_state_, histogram_refresh_interval)
       , request_rates(&thread_state_)
       , total_connections(&thread_state_)
       , connection_timeouts(&thread_state_)
@@ -446,6 +450,8 @@ public:
 
   Counter connection_timeouts;
   Counter request_timeouts;
+
+  unsigned histogram_refresh_interval;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Metrics);

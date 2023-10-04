@@ -97,7 +97,7 @@ Future::Ptr SessionBase::connect(const Config& config, const String& keyspace) {
     random_.reset();
   }
 
-  metrics_.reset(new Metrics(config.thread_count_io() + 1));
+  metrics_.reset(new Metrics(config.thread_count_io() + 1, config.cluster_histogram_refresh_interval()));
 
   cluster_.reset();
   ClusterConnector::Ptr connector(
