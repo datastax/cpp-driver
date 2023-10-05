@@ -23,6 +23,7 @@
 #include "allocated.hpp"
 #include "atomic.hpp"
 #include "constants.hpp"
+#include "get_time.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "utils.hpp"
@@ -271,7 +272,11 @@ public:
     Histogram(ThreadState* thread_state, unsigned refresh_interval = CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_CACHING)
         : thread_state_(thread_state)
         , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
+
       refresh_interval_ = refresh_interval;
+      refresh_timestamp_ = get_time_since_epoch_ms();
+      cached_snapshot_ = Snapshot {};
+
       hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
       uv_mutex_init(&mutex_);
     }
@@ -287,40 +292,62 @@ public:
 
     void get_snapshot(Snapshot* snapshot) const {
       ScopedMutex l(&mutex_);
-      hdr_histogram* h = histogram_;
-      for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
-        histograms_[i].add(h);
+
+      uint64_t now = get_time_since_epoch_ms();
+      if (now - refresh_timestamp_ >= refresh_interval_) {
+
+        // Reset the combined histogram back to a zero state
+        hdr_reset(histogram_);
+
+        // Add individual per-thread histograms to the combined histogram
+        for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
+          histograms_[i].add(histogram_);
+
+          // TODO: Reset per-thread histograms as well
+        }
+
+        cached_snapshot_ = build_new_snapshot(histogram_);
+        refresh_timestamp_ = now;
       }
 
-      if (h->total_count == 0) {
+      // Processing continues from here whether we updated the cached snapshot or not
+      if (histogram_->total_count == 0) {
         // There is no data; default to 0 for the stats.
-        snapshot->max = 0;
-        snapshot->min = 0;
-        snapshot->mean = 0;
-        snapshot->stddev = 0;
-        snapshot->median = 0;
-        snapshot->percentile_75th = 0;
-        snapshot->percentile_95th = 0;
-        snapshot->percentile_98th = 0;
-        snapshot->percentile_99th = 0;
-        snapshot->percentile_999th = 0;
+        copy_snapshot(Snapshot {}, snapshot);
       } else {
-        snapshot->max = hdr_max(h);
-        snapshot->min = hdr_min(h);
-        snapshot->mean = static_cast<int64_t>(hdr_mean(h));
-        snapshot->stddev = static_cast<int64_t>(hdr_stddev(h));
-        snapshot->median = hdr_value_at_percentile(h, 50.0);
-        snapshot->percentile_75th = hdr_value_at_percentile(h, 75.0);
-        snapshot->percentile_95th = hdr_value_at_percentile(h, 95.0);
-        snapshot->percentile_98th = hdr_value_at_percentile(h, 98.0);
-        snapshot->percentile_99th = hdr_value_at_percentile(h, 99.0);
-        snapshot->percentile_999th = hdr_value_at_percentile(h, 99.9);
+        copy_snapshot(cached_snapshot_, snapshot);
       }
     }
 
   private:
 
-    unsigned refresh_interval_;
+    void copy_snapshot(Snapshot from, Snapshot* to) const {
+        to->max = from.max;
+        to->min = from.min;
+        to->mean = from.mean;
+        to->stddev = from.stddev;
+        to->median = from.median;
+        to->percentile_75th = from.percentile_75th;
+        to->percentile_95th = from.percentile_95th;
+        to->percentile_98th = from.percentile_98th;
+        to->percentile_99th = from.percentile_99th;
+        to->percentile_999th = from.percentile_999th;
+    }
+
+    Snapshot build_new_snapshot(hdr_histogram* h) const {
+      return Snapshot {
+        hdr_min(h),
+        hdr_max(h),
+        static_cast<int64_t>(hdr_mean(h)),
+        static_cast<int64_t>(hdr_stddev(h)),
+        hdr_value_at_percentile(h, 50.0),
+        hdr_value_at_percentile(h, 75.0),
+        hdr_value_at_percentile(h, 95.0),
+        hdr_value_at_percentile(h, 98.0),
+        hdr_value_at_percentile(h, 99.0),
+        hdr_value_at_percentile(h, 99.9)
+      };
+    }
 
     class WriterReaderPhaser {
     public:
@@ -412,6 +439,10 @@ public:
     ScopedArray<PerThreadHistogram> histograms_;
     hdr_histogram* histogram_;
     mutable uv_mutex_t mutex_;
+
+    unsigned refresh_interval_;
+    mutable uint64_t refresh_timestamp_;
+    mutable Snapshot cached_snapshot_;
 
   private:
     DISALLOW_COPY_AND_ASSIGN(Histogram);
