@@ -269,7 +269,7 @@ public:
       int64_t percentile_999th;
     };
 
-    Histogram(ThreadState* thread_state, unsigned refresh_interval = CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_CACHING)
+    Histogram(ThreadState* thread_state, unsigned refresh_interval = CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_REFRESH)
         : thread_state_(thread_state)
         , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
 
@@ -293,38 +293,47 @@ public:
     void get_snapshot(Snapshot* snapshot) const {
       ScopedMutex l(&mutex_);
 
+      // In the "no refresh" case (the default) fall back to the old behaviour; add per-thread
+      // timestamps to histogram_ (without any clearing of data) and return what's there.
+      if (refresh_interval_ == CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_REFRESH) {
+
+        for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
+          histograms_[i].add(histogram_);
+        }
+
+        if (histogram_->total_count == 0) {
+          // There is no data; default to 0 for the stats.
+          copy_snapshot(Snapshot {}, snapshot);
+        } else {
+          copy_snapshot(build_new_snapshot(histogram_), snapshot);
+        }
+        return;
+      }
+
+      // Refresh interval is in use.  If we've exceeded the interval clear histogram_,
+      // compute a new aggregate histogram and build (and cache) a new snapshot.  Otherwise
+      // just return the cached version.
       uint64_t now = get_time_since_epoch_ms();
       if (now - refresh_timestamp_ >= refresh_interval_) {
 
-        // Reset the combined histogram back to a zero state
         hdr_reset(histogram_);
 
-        // Add individual per-thread histograms to the combined histogram
         for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
           histograms_[i].add(histogram_);
-
-          // TODO: Reset per-thread histograms as well
-          //histograms_[i].clear();
         }
 
         cached_snapshot_ = build_new_snapshot(histogram_);
         refresh_timestamp_ = now;
       }
 
-      // Processing continues from here whether we updated the cached snapshot or not
-      if (histogram_->total_count == 0) {
-        // There is no data; default to 0 for the stats.
-        copy_snapshot(Snapshot {}, snapshot);
-      } else {
-        copy_snapshot(cached_snapshot_, snapshot);
-      }
+      copy_snapshot(cached_snapshot_, snapshot);
     }
 
   private:
 
     void copy_snapshot(Snapshot from, Snapshot* to) const {
-        to->max = from.max;
         to->min = from.min;
+        to->max = from.max;
         to->mean = from.mean;
         to->stddev = from.stddev;
         to->median = from.median;

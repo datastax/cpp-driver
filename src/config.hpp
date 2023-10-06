@@ -75,7 +75,7 @@ public:
       , host_listener_(new DefaultHostListener())
       , monitor_reporting_interval_secs_(CASS_DEFAULT_CLIENT_MONITOR_EVENTS_INTERVAL_SECS)
       , cluster_metadata_resolver_factory_(new DefaultClusterMetadataResolverFactory())
-      , histogram_refresh_interval_(CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_CACHING) {
+      , histogram_refresh_interval_(CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_REFRESH) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
