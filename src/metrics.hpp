@@ -286,7 +286,7 @@ public:
       uv_mutex_destroy(&mutex_);
     }
 
-    void record_value(int64_t value) {
+    void record_value(int64_t value) const {
       histograms_[thread_state_->current_thread_id()].record_value(value);
     }
 
@@ -304,6 +304,7 @@ public:
           histograms_[i].add(histogram_);
 
           // TODO: Reset per-thread histograms as well
+          //histograms_[i].clear();
         }
 
         cached_snapshot_ = build_new_snapshot(histogram_);
@@ -426,6 +427,19 @@ public:
         hdr_histogram* from = histograms_[inactive_index];
         phaser_.flip_phase();
         hdr_add(to, from);
+        hdr_reset(from);
+      }
+
+      // Same as add() above but without the actual addition.  The contract here (and
+      // in the other methods of this class) is that whenever the phase is flipped the
+      // now-unused histogram has to be cleared.  That provides the guarantee that whatever
+      // histogram we move to here will be starting out as empty.  Without such a guarantee
+      // we'd have to explicitly clear the histogram that will be pointed to by active_index_
+      // which we can't really do (in an atomic way) given the current concurrency regime.
+      void clear() {
+        int inactive_index = active_index_.exchange(!active_index_.load());
+        hdr_histogram* from = histograms_[inactive_index];
+        phaser_.flip_phase();
         hdr_reset(from);
       }
 

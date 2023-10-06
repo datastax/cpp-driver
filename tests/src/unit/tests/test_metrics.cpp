@@ -144,6 +144,68 @@ TEST(MetricsUnitTest, HistogramEmpty) {
   EXPECT_EQ(snapshot.percentile_999th, 0);
 }
 
+TEST(MetricsUnitTest, HistogramGetSnapshotResetsTheWorld) {
+  Metrics::ThreadState thread_state(1);
+  Metrics::Histogram histogram(&thread_state);
+
+  for (uint64_t i = 1; i <= 100; ++i) {
+    histogram.record_value(i);
+  }
+
+  // First get_snapshot() operation should reset all internal
+  // counters
+  Metrics::Histogram::Snapshot snapshot;
+  histogram.get_snapshot(&snapshot);
+
+  histogram.record_value(200);
+
+  histogram.get_snapshot(&snapshot);
+
+  EXPECT_EQ(snapshot.min, 200);
+  EXPECT_EQ(snapshot.max, 200);
+  EXPECT_EQ(snapshot.median, 200);
+  EXPECT_EQ(snapshot.percentile_75th, 200);
+  EXPECT_EQ(snapshot.percentile_95th, 200);
+  EXPECT_EQ(snapshot.percentile_98th, 200);
+  EXPECT_EQ(snapshot.percentile_99th, 200);
+  EXPECT_EQ(snapshot.percentile_999th, 200);
+  EXPECT_EQ(snapshot.mean, 200);
+  EXPECT_EQ(snapshot.stddev, 0);
+}
+
+TEST(MetricsUnitTest, HistogramWithRefreshInterval) {
+  unsigned refresh_interval = 1000;
+  Metrics::ThreadState thread_state(1);
+  Metrics::Histogram histogram(&thread_state, refresh_interval);
+
+  for (uint64_t i = 1; i <= 100; ++i) {
+    histogram.record_value(i);
+  }
+
+  //Metrics::Histogram::Snapshot snapshot1;
+  //histogram.get_snapshot(&snapshot1);
+
+  test::Utils::msleep(1.2 * refresh_interval);
+
+  for (uint64_t i = 101; i <= 200; ++i) {
+    histogram.record_value(i);
+  }
+
+  Metrics::Histogram::Snapshot snapshot;
+  histogram.get_snapshot(&snapshot);
+
+  EXPECT_EQ(snapshot.min, 101);
+  EXPECT_EQ(snapshot.max, 200);
+  EXPECT_EQ(snapshot.median, 150);
+  EXPECT_EQ(snapshot.percentile_75th, 175);
+  EXPECT_EQ(snapshot.percentile_95th, 195);
+  EXPECT_EQ(snapshot.percentile_98th, 198);
+  EXPECT_EQ(snapshot.percentile_99th, 199);
+  EXPECT_EQ(snapshot.percentile_999th, 200);
+  EXPECT_EQ(snapshot.mean, 150);
+  EXPECT_EQ(snapshot.stddev, 28);
+}
+
 TEST(MetricsUnitTest, HistogramWithThreads) {
   HistogramThreadArgs args[NUM_THREADS];
 
