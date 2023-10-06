@@ -2934,6 +2934,24 @@ CASS_EXPORT void
 cass_cluster_set_monitor_reporting_interval(CassCluster* cluster,
                                             unsigned interval_secs);
 
+/**
+ * Sets the amount of time after which metric histograms should be refreshed.
+ * Upon refresh histograms are reset to zero, effectively dropping any history to
+ * that point.  Refresh occurs when a snapshot is requested so ths value should
+ * be thought of as a minimum time to refresh.
+ *
+ * If refresh is not enabled the driver will continue to accumulate histogram
+ * data over the life of a session; this is the default behaviour and replicates
+ * the behaviour of previous versions.
+ *
+ * Note that the specified interval must be > 0 otherwise CASS_ERROR_LIB_BAD_PARAMS
+ * will be returned.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param cluster
+ * @param refresh_interval Minimum interval (in milliseconds) for refresh interval
+ */
 CASS_EXPORT CassError
 cass_cluster_set_histogram_refresh_interval(CassCluster* cluster,
                                             unsigned refresh_interval);
