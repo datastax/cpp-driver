@@ -271,11 +271,12 @@ public:
 
     Histogram(ThreadState* thread_state, unsigned refresh_interval = CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_REFRESH)
         : thread_state_(thread_state)
-        , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
+        , histograms_(new PerThreadHistogram[thread_state->max_threads()])
+        , zero_snapshot_(Snapshot {0,0,0,0,0,0,0,0,0,0}) {
 
       refresh_interval_ = refresh_interval;
       refresh_timestamp_ = get_time_since_epoch_ms();
-      cached_snapshot_ = Snapshot {};
+      cached_snapshot_ = zero_snapshot_;
 
       hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
       uv_mutex_init(&mutex_);
@@ -286,7 +287,7 @@ public:
       uv_mutex_destroy(&mutex_);
     }
 
-    void record_value(int64_t value) const {
+    void record_value(int64_t value) {
       histograms_[thread_state_->current_thread_id()].record_value(value);
     }
 
@@ -303,7 +304,7 @@ public:
 
         if (histogram_->total_count == 0) {
           // There is no data; default to 0 for the stats.
-          copy_snapshot(Snapshot {}, snapshot);
+          copy_snapshot(zero_snapshot_, snapshot);
         } else {
           copy_snapshot(build_new_snapshot(histogram_), snapshot);
         }
@@ -439,19 +440,6 @@ public:
         hdr_reset(from);
       }
 
-      // Same as add() above but without the actual addition.  The contract here (and
-      // in the other methods of this class) is that whenever the phase is flipped the
-      // now-unused histogram has to be cleared.  That provides the guarantee that whatever
-      // histogram we move to here will be starting out as empty.  Without such a guarantee
-      // we'd have to explicitly clear the histogram that will be pointed to by active_index_
-      // which we can't really do (in an atomic way) given the current concurrency regime.
-      void clear() {
-        int inactive_index = active_index_.exchange(!active_index_.load());
-        hdr_histogram* from = histograms_[inactive_index];
-        phaser_.flip_phase();
-        hdr_reset(from);
-      }
-
     private:
       hdr_histogram* histograms_[2];
       mutable Atomic<int> active_index_;
@@ -466,6 +454,7 @@ public:
     unsigned refresh_interval_;
     mutable uint64_t refresh_timestamp_;
     mutable Snapshot cached_snapshot_;
+    const Snapshot zero_snapshot_;
 
   private:
     DISALLOW_COPY_AND_ASSIGN(Histogram);
