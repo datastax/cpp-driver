@@ -24,6 +24,10 @@ set(_LIBUV_ROOT_HINTS ${LIBUV_ROOT_DIR}
 if(NOT WIN32)
   set(_LIBUV_ROOT_PATHS "/usr/"
                         "/usr/local/")
+  if (APPLE)
+    set(_LIBUV_ROOT_PATHS ${_LIBUV_ROOT_PATHS}
+                          "/opt/homebrew/")
+  endif()
   if(_LIBUV_FOUND)
     set(_LIBUV_ROOT_PATHS ${_LIBUV_ROOT_PATHS}
                           ${_LIBUV_LIBDIR})
