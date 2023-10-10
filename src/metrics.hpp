@@ -306,7 +306,7 @@ public:
           // There is no data; default to 0 for the stats.
           copy_snapshot(zero_snapshot_, snapshot);
         } else {
-          copy_snapshot(build_new_snapshot(histogram_), snapshot);
+          build_and_copy_snapshot(histogram_, snapshot);
         }
         return;
       }
@@ -333,16 +333,16 @@ public:
   private:
 
     void copy_snapshot(Snapshot from, Snapshot* to) const {
-        to->min = from.min;
-        to->max = from.max;
-        to->mean = from.mean;
-        to->stddev = from.stddev;
-        to->median = from.median;
-        to->percentile_75th = from.percentile_75th;
-        to->percentile_95th = from.percentile_95th;
-        to->percentile_98th = from.percentile_98th;
-        to->percentile_99th = from.percentile_99th;
-        to->percentile_999th = from.percentile_999th;
+      to->min = from.min;
+      to->max = from.max;
+      to->mean = from.mean;
+      to->stddev = from.stddev;
+      to->median = from.median;
+      to->percentile_75th = from.percentile_75th;
+      to->percentile_95th = from.percentile_95th;
+      to->percentile_98th = from.percentile_98th;
+      to->percentile_99th = from.percentile_99th;
+      to->percentile_999th = from.percentile_999th;
     }
 
     Snapshot build_new_snapshot(hdr_histogram* h) const {
@@ -359,6 +359,22 @@ public:
         hdr_value_at_percentile(h, 99.9)
       };
     }
+
+    // Optimized version of chained build_new_snapshot -> copy_snapshot calls
+    // to avoid creation of an unnecessary intermediate struct
+    void build_and_copy_snapshot(hdr_histogram* h, Snapshot* to) const {
+      to->min = hdr_min(h);
+      to->max = hdr_max(h);
+      to->mean = static_cast<int64_t>(hdr_mean(h));
+      to->stddev = static_cast<int64_t>(hdr_stddev(h));
+      to->median = hdr_value_at_percentile(h, 50.0);
+      to->percentile_75th = hdr_value_at_percentile(h, 75.0);
+      to->percentile_95th = hdr_value_at_percentile(h, 95.0);
+      to->percentile_98th = hdr_value_at_percentile(h, 98.0);
+      to->percentile_99th = hdr_value_at_percentile(h, 99.0);
+      to->percentile_999th = hdr_value_at_percentile(h, 99.9);
+    }
+
 
     class WriterReaderPhaser {
     public:
