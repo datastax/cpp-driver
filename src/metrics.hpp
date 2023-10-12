@@ -306,7 +306,7 @@ public:
           // There is no data; default to 0 for the stats.
           copy_snapshot(zero_snapshot_, snapshot);
         } else {
-          build_and_copy_snapshot(histogram_, snapshot);
+          histogram_to_snapshot(histogram_, snapshot);
         }
         return;
       }
@@ -362,7 +362,7 @@ public:
 
     // Optimized version of chained build_new_snapshot -> copy_snapshot calls
     // to avoid creation of an unnecessary intermediate struct
-    void build_and_copy_snapshot(hdr_histogram* h, Snapshot* to) const {
+    void histogram_to_snapshot(hdr_histogram* h, Snapshot* to) const {
       to->min = hdr_min(h);
       to->max = hdr_max(h);
       to->mean = static_cast<int64_t>(hdr_mean(h));
