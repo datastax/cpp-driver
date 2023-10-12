@@ -204,6 +204,32 @@ TEST(MetricsUnitTest, HistogramWithRefreshInterval) {
   EXPECT_EQ(snapshot.stddev, 28);
 }
 
+// Variant of the case above.  If we have no requests for the entirety
+// of the refresh interval make sure the stats return zero
+TEST(MetricsUnitTest, HistogramWithRefreshIntervalNoActivity) {
+  unsigned refresh_interval = 1000;
+  Metrics::ThreadState thread_state(1);
+  Metrics::Histogram histogram(&thread_state, refresh_interval);
+
+  Metrics::Histogram::Snapshot snapshot;
+
+  // Initial refresh interval (where we always return zero) + another interval of
+  // no activity
+  test::Utils::msleep(2.2 * refresh_interval);
+
+  histogram.get_snapshot(&snapshot);
+  EXPECT_EQ(snapshot.min, 0);
+  EXPECT_EQ(snapshot.max, 0);
+  EXPECT_EQ(snapshot.median, 0);
+  EXPECT_EQ(snapshot.percentile_75th, 0);
+  EXPECT_EQ(snapshot.percentile_95th, 0);
+  EXPECT_EQ(snapshot.percentile_98th, 0);
+  EXPECT_EQ(snapshot.percentile_99th, 0);
+  EXPECT_EQ(snapshot.percentile_999th, 0);
+  EXPECT_EQ(snapshot.mean, 0);
+  EXPECT_EQ(snapshot.stddev, 0);
+}
+
 TEST(MetricsUnitTest, HistogramWithThreads) {
   HistogramThreadArgs args[NUM_THREADS];
 

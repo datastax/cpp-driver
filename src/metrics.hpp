@@ -323,7 +323,11 @@ public:
           histograms_[i].add(histogram_);
         }
 
-        cached_snapshot_ = build_new_snapshot(histogram_);
+        if (histogram_->total_count == 0) {
+          copy_snapshot(zero_snapshot_, &cached_snapshot_);
+        } else {
+          cached_snapshot_ = build_new_snapshot(histogram_);
+        }
         refresh_timestamp_ = now;
       }
 
