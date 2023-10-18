@@ -326,7 +326,7 @@ public:
         if (histogram_->total_count == 0) {
           copy_snapshot(zero_snapshot_, &cached_snapshot_);
         } else {
-          cached_snapshot_ = build_new_snapshot(histogram_);
+          histogram_to_snapshot(histogram_, &cached_snapshot_);
         }
         refresh_timestamp_ = now;
       }
@@ -349,23 +349,6 @@ public:
       to->percentile_999th = from.percentile_999th;
     }
 
-    Snapshot build_new_snapshot(hdr_histogram* h) const {
-      return Snapshot {
-        hdr_min(h),
-        hdr_max(h),
-        static_cast<int64_t>(hdr_mean(h)),
-        static_cast<int64_t>(hdr_stddev(h)),
-        hdr_value_at_percentile(h, 50.0),
-        hdr_value_at_percentile(h, 75.0),
-        hdr_value_at_percentile(h, 95.0),
-        hdr_value_at_percentile(h, 98.0),
-        hdr_value_at_percentile(h, 99.0),
-        hdr_value_at_percentile(h, 99.9)
-      };
-    }
-
-    // Optimized version of chained build_new_snapshot -> copy_snapshot calls
-    // to avoid creation of an unnecessary intermediate struct
     void histogram_to_snapshot(hdr_histogram* h, Snapshot* to) const {
       to->min = hdr_min(h);
       to->max = hdr_max(h);
