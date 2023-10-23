@@ -23,6 +23,7 @@
 #include "allocated.hpp"
 #include "atomic.hpp"
 #include "constants.hpp"
+#include "get_time.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "utils.hpp"
@@ -268,9 +269,15 @@ public:
       int64_t percentile_999th;
     };
 
-    Histogram(ThreadState* thread_state)
+    Histogram(ThreadState* thread_state, unsigned refresh_interval = CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_REFRESH)
         : thread_state_(thread_state)
-        , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
+        , histograms_(new PerThreadHistogram[thread_state->max_threads()])
+        , zero_snapshot_(Snapshot {0,0,0,0,0,0,0,0,0,0}) {
+
+      refresh_interval_ = refresh_interval;
+      refresh_timestamp_ = get_time_since_epoch_ms();
+      cached_snapshot_ = zero_snapshot_;
+
       hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
       uv_mutex_init(&mutex_);
     }
@@ -286,38 +293,76 @@ public:
 
     void get_snapshot(Snapshot* snapshot) const {
       ScopedMutex l(&mutex_);
-      hdr_histogram* h = histogram_;
-      for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
-        histograms_[i].add(h);
+
+      // In the "no refresh" case (the default) fall back to the old behaviour; add per-thread
+      // timestamps to histogram_ (without any clearing of data) and return what's there.
+      if (refresh_interval_ == CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_REFRESH) {
+
+        for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
+          histograms_[i].add(histogram_);
+        }
+
+        if (histogram_->total_count == 0) {
+          // There is no data; default to 0 for the stats.
+          copy_snapshot(zero_snapshot_, snapshot);
+        } else {
+          histogram_to_snapshot(histogram_, snapshot);
+        }
+        return;
       }
 
-      if (h->total_count == 0) {
-        // There is no data; default to 0 for the stats.
-        snapshot->max = 0;
-        snapshot->min = 0;
-        snapshot->mean = 0;
-        snapshot->stddev = 0;
-        snapshot->median = 0;
-        snapshot->percentile_75th = 0;
-        snapshot->percentile_95th = 0;
-        snapshot->percentile_98th = 0;
-        snapshot->percentile_99th = 0;
-        snapshot->percentile_999th = 0;
-      } else {
-        snapshot->max = hdr_max(h);
-        snapshot->min = hdr_min(h);
-        snapshot->mean = static_cast<int64_t>(hdr_mean(h));
-        snapshot->stddev = static_cast<int64_t>(hdr_stddev(h));
-        snapshot->median = hdr_value_at_percentile(h, 50.0);
-        snapshot->percentile_75th = hdr_value_at_percentile(h, 75.0);
-        snapshot->percentile_95th = hdr_value_at_percentile(h, 95.0);
-        snapshot->percentile_98th = hdr_value_at_percentile(h, 98.0);
-        snapshot->percentile_99th = hdr_value_at_percentile(h, 99.0);
-        snapshot->percentile_999th = hdr_value_at_percentile(h, 99.9);
+      // Refresh interval is in use.  If we've exceeded the interval clear histogram_,
+      // compute a new aggregate histogram and build (and cache) a new snapshot.  Otherwise
+      // just return the cached version.
+      uint64_t now = get_time_since_epoch_ms();
+      if (now - refresh_timestamp_ >= refresh_interval_) {
+
+        hdr_reset(histogram_);
+
+        for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
+          histograms_[i].add(histogram_);
+        }
+
+        if (histogram_->total_count == 0) {
+          copy_snapshot(zero_snapshot_, &cached_snapshot_);
+        } else {
+          histogram_to_snapshot(histogram_, &cached_snapshot_);
+        }
+        refresh_timestamp_ = now;
       }
+
+      copy_snapshot(cached_snapshot_, snapshot);
     }
 
   private:
+
+    void copy_snapshot(Snapshot from, Snapshot* to) const {
+      to->min = from.min;
+      to->max = from.max;
+      to->mean = from.mean;
+      to->stddev = from.stddev;
+      to->median = from.median;
+      to->percentile_75th = from.percentile_75th;
+      to->percentile_95th = from.percentile_95th;
+      to->percentile_98th = from.percentile_98th;
+      to->percentile_99th = from.percentile_99th;
+      to->percentile_999th = from.percentile_999th;
+    }
+
+    void histogram_to_snapshot(hdr_histogram* h, Snapshot* to) const {
+      to->min = hdr_min(h);
+      to->max = hdr_max(h);
+      to->mean = static_cast<int64_t>(hdr_mean(h));
+      to->stddev = static_cast<int64_t>(hdr_stddev(h));
+      to->median = hdr_value_at_percentile(h, 50.0);
+      to->percentile_75th = hdr_value_at_percentile(h, 75.0);
+      to->percentile_95th = hdr_value_at_percentile(h, 95.0);
+      to->percentile_98th = hdr_value_at_percentile(h, 98.0);
+      to->percentile_99th = hdr_value_at_percentile(h, 99.0);
+      to->percentile_999th = hdr_value_at_percentile(h, 99.9);
+    }
+
+
     class WriterReaderPhaser {
     public:
       WriterReaderPhaser()
@@ -409,14 +454,19 @@ public:
     hdr_histogram* histogram_;
     mutable uv_mutex_t mutex_;
 
+    unsigned refresh_interval_;
+    mutable uint64_t refresh_timestamp_;
+    mutable Snapshot cached_snapshot_;
+    const Snapshot zero_snapshot_;
+
   private:
     DISALLOW_COPY_AND_ASSIGN(Histogram);
   };
 
-  Metrics(size_t max_threads)
+  Metrics(size_t max_threads, unsigned histogram_refresh_interval)
       : thread_state_(max_threads)
-      , request_latencies(&thread_state_)
-      , speculative_request_latencies(&thread_state_)
+      , request_latencies(&thread_state_, histogram_refresh_interval)
+      , speculative_request_latencies(&thread_state_, histogram_refresh_interval)
       , request_rates(&thread_state_)
       , total_connections(&thread_state_)
       , connection_timeouts(&thread_state_)
@@ -446,6 +496,8 @@ public:
 
   Counter connection_timeouts;
   Counter request_timeouts;
+
+  unsigned histogram_refresh_interval;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Metrics);

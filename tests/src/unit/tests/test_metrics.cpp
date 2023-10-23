@@ -144,6 +144,92 @@ TEST(MetricsUnitTest, HistogramEmpty) {
   EXPECT_EQ(snapshot.percentile_999th, 0);
 }
 
+TEST(MetricsUnitTest, HistogramWithRefreshInterval) {
+  unsigned refresh_interval = 1000;
+  Metrics::ThreadState thread_state(1);
+  Metrics::Histogram histogram(&thread_state, refresh_interval);
+
+  Metrics::Histogram::Snapshot snapshot;
+
+  // Retrieval before the first interval runs will simply return zeros
+  histogram.get_snapshot(&snapshot);
+  EXPECT_EQ(snapshot.min, 0);
+  EXPECT_EQ(snapshot.max, 0);
+  EXPECT_EQ(snapshot.median, 0);
+  EXPECT_EQ(snapshot.percentile_75th, 0);
+  EXPECT_EQ(snapshot.percentile_95th, 0);
+  EXPECT_EQ(snapshot.percentile_98th, 0);
+  EXPECT_EQ(snapshot.percentile_99th, 0);
+  EXPECT_EQ(snapshot.percentile_999th, 0);
+  EXPECT_EQ(snapshot.mean, 0);
+  EXPECT_EQ(snapshot.stddev, 0);
+
+  // Values added during the first interval (or for that matter any
+  // interval) will be buffered in per-thread counters and will be
+  // included in the next generated snapshot
+  for (uint64_t i = 1; i <= 100; ++i) {
+    histogram.record_value(i);
+  }
+  test::Utils::msleep(1.2 * refresh_interval);
+
+  histogram.get_snapshot(&snapshot);
+  EXPECT_EQ(snapshot.min, 1);
+  EXPECT_EQ(snapshot.max, 100);
+  EXPECT_EQ(snapshot.median, 50);
+  EXPECT_EQ(snapshot.percentile_75th, 75);
+  EXPECT_EQ(snapshot.percentile_95th, 95);
+  EXPECT_EQ(snapshot.percentile_98th, 98);
+  EXPECT_EQ(snapshot.percentile_99th, 99);
+  EXPECT_EQ(snapshot.percentile_999th, 100);
+  EXPECT_EQ(snapshot.mean, 50);
+  EXPECT_EQ(snapshot.stddev, 28);
+
+  // Generated snapshot should only include values added within
+  // the current interval
+  test::Utils::msleep(1.2 * refresh_interval);
+  for (uint64_t i = 101; i <= 200; ++i) {
+    histogram.record_value(i);
+  }
+
+  histogram.get_snapshot(&snapshot);
+  EXPECT_EQ(snapshot.min, 101);
+  EXPECT_EQ(snapshot.max, 200);
+  EXPECT_EQ(snapshot.median, 150);
+  EXPECT_EQ(snapshot.percentile_75th, 175);
+  EXPECT_EQ(snapshot.percentile_95th, 195);
+  EXPECT_EQ(snapshot.percentile_98th, 198);
+  EXPECT_EQ(snapshot.percentile_99th, 199);
+  EXPECT_EQ(snapshot.percentile_999th, 200);
+  EXPECT_EQ(snapshot.mean, 150);
+  EXPECT_EQ(snapshot.stddev, 28);
+}
+
+// Variant of the case above.  If we have no requests for the entirety
+// of the refresh interval make sure the stats return zero
+TEST(MetricsUnitTest, HistogramWithRefreshIntervalNoActivity) {
+  unsigned refresh_interval = 1000;
+  Metrics::ThreadState thread_state(1);
+  Metrics::Histogram histogram(&thread_state, refresh_interval);
+
+  Metrics::Histogram::Snapshot snapshot;
+
+  // Initial refresh interval (where we always return zero) + another interval of
+  // no activity
+  test::Utils::msleep(2.2 * refresh_interval);
+
+  histogram.get_snapshot(&snapshot);
+  EXPECT_EQ(snapshot.min, 0);
+  EXPECT_EQ(snapshot.max, 0);
+  EXPECT_EQ(snapshot.median, 0);
+  EXPECT_EQ(snapshot.percentile_75th, 0);
+  EXPECT_EQ(snapshot.percentile_95th, 0);
+  EXPECT_EQ(snapshot.percentile_98th, 0);
+  EXPECT_EQ(snapshot.percentile_99th, 0);
+  EXPECT_EQ(snapshot.percentile_999th, 0);
+  EXPECT_EQ(snapshot.mean, 0);
+  EXPECT_EQ(snapshot.stddev, 0);
+}
+
 TEST(MetricsUnitTest, HistogramWithThreads) {
   HistogramThreadArgs args[NUM_THREADS];
 
