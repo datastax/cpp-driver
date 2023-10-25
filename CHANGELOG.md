@@ -1,3 +1,21 @@
+2.17.1
+===========
+
+Bug Fixes
+--------
+* [CPP-991] Add support for extracting version info from OpenSSL 3.x in build output
+* [CPP-987] cass_future_wait does not respect registered callback
+* [CPP-990] Be clearer about installed dependencies, specifically around OpenSSL 3.0
+* [CPP-988] cass_uuid_gen_time race condition generates duplicate uuidv1 keys
+* [CPP-964] Add refresh-interval support for histogram metrics
+
+Community
+--------
+* [PR #538] Prioritize ${OPENSSL_ROOT_DIR} over system paths (diku89)
+* [PR #535] Remove unreachable code (SeverinLeonhardt)
+* [PR #534] Fix signed/unsigned mismatch (SeverinLeonhardt)
+* [PR #533] Adapt MemoryOrder definition for C++ 20 (SeverinLeonhardt)
+
 2.17.0
 ===========
 

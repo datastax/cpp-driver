@@ -76,7 +76,7 @@ rules:
 
 versions:
   - name: "2.17"
-    ref: 2.17.0
+    ref: 2.17.1
   - name: "2.16"
     ref: 698a1b01801ddf150d9f8793faa8548877f5f7f5
   - name: "2.15"
