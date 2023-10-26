@@ -23,7 +23,7 @@ using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 void ListPolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                      const String& local_dc) {
+                      const String& local_dc, const String& local_rack) {
   HostMap valid_hosts;
   for (HostMap::const_iterator i = hosts.begin(), end = hosts.end(); i != end; ++i) {
     const Host::Ptr& host = i->second;
@@ -36,7 +36,7 @@ void ListPolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Ran
     LOG_ERROR("No valid hosts available for list policy");
   }
 
-  ChainedLoadBalancingPolicy::init(connected_host, valid_hosts, random, local_dc);
+  ChainedLoadBalancingPolicy::init(connected_host, valid_hosts, random, local_dc, local_rack);
 }
 
 CassHostDistance ListPolicy::distance(const Host::Ptr& host) const {

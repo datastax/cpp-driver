@@ -169,6 +169,7 @@ private:
   Random* random_;
   Metrics* metrics_;
   String local_dc_;
+  String local_rack_;
   ClusterSettings settings_;
 
   Callback callback_;
