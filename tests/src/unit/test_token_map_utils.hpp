@@ -79,6 +79,8 @@ private:
 
   static size_t size_of(const String& value) { return value.size(); }
 
+  static size_t size_of(const Address& value) { char buf[16]; return value.to_inet(buf); }
+
   static void encode(char* buf, uint16_t value) { datastax::internal::encode_uint16(buf, value); }
 
   static void encode(char* buf, int32_t value) { datastax::internal::encode_int32(buf, value); }
@@ -86,6 +88,8 @@ private:
   static void encode(char* buf, int64_t value) { datastax::internal::encode_int64(buf, value); }
 
   static void encode(char* buf, const String& value) { memcpy(buf, value.data(), value.size()); }
+
+  static void encode(char* buf, const Address& value) { value.to_inet(buf); }
 
 private:
   String buffer_;
@@ -154,9 +158,11 @@ public:
     ++row_count_;
   }
 
-  void append_local_peers_row_v3(const TokenVec& tokens, const String& partitioner,
+  void append_local_peers_row_v3(const Address& rpc_address,
+                                 const TokenVec& tokens, const String& partitioner,
                                  const String& dc, const String& rack,
                                  const String& release_version) {
+    append_value<Address>(rpc_address);
     append_value<String>(rack);
     append_value<String>(dc);
     append_value<String>(release_version);
@@ -306,8 +312,10 @@ inline Host::Ptr create_host(const Address& address, const TokenVec& tokens,
   Host::Ptr host(new Host(address));
 
   DataType::ConstPtr varchar_data_type(new DataType(CASS_VALUE_TYPE_VARCHAR));
+  DataType::ConstPtr inet_data_type(new DataType(CASS_VALUE_TYPE_INET));
 
   ColumnMetadataVec column_metadata;
+  column_metadata.push_back(ColumnMetadata("rpc_address", inet_data_type));
   column_metadata.push_back(ColumnMetadata("data_center", varchar_data_type));
   column_metadata.push_back(ColumnMetadata("rack", varchar_data_type));
   column_metadata.push_back(ColumnMetadata("release_version", varchar_data_type));
@@ -318,7 +326,7 @@ inline Host::Ptr create_host(const Address& address, const TokenVec& tokens,
       ColumnMetadata("tokens", CollectionType::list(varchar_data_type, true)));
 
   RowResultResponseBuilder builder(column_metadata);
-  builder.append_local_peers_row_v3(tokens, partitioner, dc, rack, release_version);
+  builder.append_local_peers_row_v3(address, tokens, partitioner, dc, rack, release_version);
 
   host->set(&builder.finish()->first_row(), true);
 
