@@ -489,7 +489,7 @@ pipeline {
                       Run only the tests whose name matches one of the positive patterns but none of the negative patterns. <b>\'?\'</b> matches any single character; <b>\'*\'</b> matches any substring; <b>\':\'</b> separates two patterns.''')
     string(
       name: 'LIBUV_VERSION',
-      defaultValue: '1.34.0',
+      defaultValue: '1.38.0',
       description: '''<p>libuv version to build and use</p>
                       <b>Note:</b> Rarely does this need to change.''')
     choice(
