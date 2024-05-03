@@ -40,7 +40,7 @@ private:
 
 RequestProcessorInitializer::RequestProcessorInitializer(
     const Host::Ptr& connected_host, ProtocolVersion protocol_version, const HostMap& hosts,
-    const TokenMap::Ptr& token_map, const String& local_dc, const Callback& callback)
+    const TokenMap::Ptr& token_map, const String& local_dc, const String& local_rack, const Callback& callback)
     : event_loop_(NULL)
     , listener_(NULL)
     , metrics_(NULL)
@@ -50,6 +50,7 @@ RequestProcessorInitializer::RequestProcessorInitializer(
     , hosts_(hosts)
     , token_map_(token_map)
     , local_dc_(local_dc)
+    , local_rack_(local_rack)
     , error_code_(REQUEST_PROCESSOR_OK)
     , callback_(callback) {
   uv_mutex_init(&mutex_);
@@ -158,7 +159,7 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
   } else {
     processor_.reset(new RequestProcessor(listener_, event_loop_, initializer->release_manager(),
                                           connected_host_, hosts_, token_map_, settings_, random_,
-                                          local_dc_));
+                                          local_dc_, local_rack_));
 
     int rc = processor_->init(RequestProcessor::Protected());
     if (rc != 0) {

@@ -60,12 +60,13 @@ public:
    * @param hosts A mapping of available hosts in the cluster.
    * @param token_map A token map.
    * @param local_dc The local datacenter for initializing the load balancing policies.
+   * @param local_rack The local datacenter for initializing the load balancing policies.
    * @param callback A callback that is called when the processor is initialized
    * or if an error occurred.
    */
   RequestProcessorInitializer(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
                               const HostMap& hosts, const TokenMap::Ptr& token_map,
-                              const String& local_dc, const Callback& callback);
+                              const String& local_dc, const String& local_rack, const Callback& callback);
   ~RequestProcessorInitializer();
 
   /**
@@ -167,6 +168,7 @@ private:
   HostMap hosts_;
   const TokenMap::Ptr token_map_;
   String local_dc_;
+  String local_rack_;
 
   RequestProcessorError error_code_;
   String error_message_;
