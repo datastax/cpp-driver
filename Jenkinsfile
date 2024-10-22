@@ -443,8 +443,7 @@ pipeline {
                       </table>''')
     choice(
       name: 'OS_VERSION',
-      choices: ['centos/7-64/cpp',
-                'rocky/8-64/cpp',
+      choices: ['rocky/8-64/cpp',
                 'rocky/9-64/cpp',
                 'ubuntu/bionic64/cpp',
                 'ubuntu/focal64/cpp',
@@ -456,10 +455,6 @@ pipeline {
                         <tr>
                           <th align="left">Choice</th>
                           <th align="left">Description</th>
-                        </tr>
-                        <tr>
-                          <td><strong>centos/7-64/cpp</strong></td>
-                          <td>CentOS 7 x86_64</td>
                         </tr>
                         <tr>
                           <td><strong>rocky/8-64/cpp</strong></td>
@@ -525,8 +520,7 @@ pipeline {
         axes {
           axis {
             name 'OS_VERSION'
-            values 'centos/7-64/cpp',
-                   'rocky/8-64/cpp',
+            values 'rocky/8-64/cpp',
                    'rocky/9-64/cpp',
                    'ubuntu/bionic64/cpp',
                    'ubuntu/focal64/cpp',
@@ -650,8 +644,7 @@ pipeline {
         axes {
           axis {
             name 'OS_VERSION'
-            values 'centos/7-64/cpp',
-                   'rocky/8-64/cpp',
+            values 'rocky/8-64/cpp',
                    'rocky/9-64/cpp',
                    'ubuntu/bionic64/cpp',
                    'ubuntu/focal64/cpp',
