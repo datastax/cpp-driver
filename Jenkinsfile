@@ -197,8 +197,9 @@ def executeIntegrationTests() {
         if [ -z "${TEST_FILTER}" ]; then
           TEST_FILTER=*
         fi
-        # Limit DBAAS tests to Ubuntu 18.04
-        if [ "${OS_VERSION}" != "ubuntu/bionic64/cpp" ]; then
+        # Limit DBAAS tests to Ubuntu only.  We used to limit this to just Ubuntu 18.04 but any current
+        # Ubuntu runner should have the necessary deps.
+        if [ "${OS_VERSION}" != "ubuntu"* ]; then
           # Handle filters with negative filtering already applied
           if [[ "${TEST_FILTER}" == *":-"* ]]; then
             TEST_FILTER=${TEST_FILTER}:DbaasTests.*
@@ -445,7 +446,6 @@ pipeline {
       name: 'OS_VERSION',
       choices: ['rocky/8-64/cpp',
                 'rocky/9-64/cpp',
-                'ubuntu/bionic64/cpp',
                 'ubuntu/focal64/cpp',
                 'ubuntu/jammy64/cpp'],
       description: '''Operating system to use for scheduled or adhoc builds
@@ -463,10 +463,6 @@ pipeline {
                         <tr>
                           <td><strong>rocky/9-64/cpp</strong></td>
                           <td>Rocky Linux 9 x86_64</td>
-                        </tr>
-                        <tr>
-                          <td><strong>ubuntu/bionic64/cpp</strong></td>
-                          <td>Ubuntu 18.04 LTS x86_64</td>
                         </tr>
                         <tr>
                           <td><strong>ubuntu/focal64/cpp</strong></td>
@@ -522,7 +518,6 @@ pipeline {
             name 'OS_VERSION'
             values 'rocky/8-64/cpp',
                    'rocky/9-64/cpp',
-                   'ubuntu/bionic64/cpp',
                    'ubuntu/focal64/cpp',
                    'ubuntu/jammy64/cpp'
           }
@@ -646,7 +641,6 @@ pipeline {
             name 'OS_VERSION'
             values 'rocky/8-64/cpp',
                    'rocky/9-64/cpp',
-                   'ubuntu/bionic64/cpp',
                    'ubuntu/focal64/cpp',
                    'ubuntu/jammy64/cpp'
           }
@@ -818,10 +812,10 @@ pipeline {
       }
 
       environment {
-        OS_VERSION = 'ubuntu/bionic64/cpp'
+        OS_VERSION = 'ubuntu/jammy64/cpp'
       }
       agent {
-        label 'ubuntu/bionic64/cpp'
+        label 'ubuntu/jammy64/cpp'
       }
 
       stages {
