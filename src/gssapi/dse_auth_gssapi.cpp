@@ -22,7 +22,6 @@
 #include <string.h>
 
 #include <gssapi/gssapi.h>
-#include <gssapi/gssapi_generic.h>
 #include <gssapi/gssapi_krb5.h>
 
 #define DSE_AUTHENTICATOR "com.datastax.bdp.cassandra.auth.DseAuthenticator"
