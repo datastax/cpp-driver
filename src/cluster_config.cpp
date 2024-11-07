@@ -301,6 +301,27 @@ CassError cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster, const c
   return CASS_OK;
 }
 
+CassError cass_cluster_set_load_balance_rack_aware(CassCluster* cluster, const char* local_dc,
+                                                 const char* local_rack) {
+  if (local_dc == NULL || local_rack == NULL) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  return cass_cluster_set_load_balance_rack_aware_n(cluster, local_dc, SAFE_STRLEN(local_dc),
+                                                  local_rack, SAFE_STRLEN(local_rack));
+}
+
+CassError cass_cluster_set_load_balance_rack_aware_n(CassCluster* cluster, const char* local_dc,
+                                                   size_t local_dc_length,
+                                                   const char* local_rack,
+                                                   size_t local_rack_length) {
+  if (local_dc == NULL || local_dc_length == 0 || local_rack == NULL || local_rack_length == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_load_balancing_policy(new RackAwarePolicy(
+      String(local_dc, local_dc_length), String(local_rack, local_rack_length)));
+  return CASS_OK;
+}
+
 void cass_cluster_set_token_aware_routing(CassCluster* cluster, cass_bool_t enabled) {
   cluster->config().set_token_aware_routing(enabled == cass_true);
 }

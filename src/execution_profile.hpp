@@ -23,6 +23,7 @@
 #include "cassandra.h"
 #include "constants.hpp"
 #include "dc_aware_policy.hpp"
+#include "rack_aware_policy.hpp"
 #include "dense_hash_map.hpp"
 #include "latency_aware_policy.hpp"
 #include "speculative_execution.hpp"
