@@ -2,8 +2,10 @@ on: [push]
 name: Test
 jobs:
   test:
-    name: Build and test driver on windows-2022
-    runs-on: windows-2019
+    strategy:
+      matrix:
+        os: [windows-2019, windows-2022]
+    name: Build and test driver on ${{ matrix.os }}
     env:
       CASS_DRIVER_LIBEV_INCLUDES: C:/vcpkg/packages/libev_x64-windows/include/libev
       CASS_DRIVER_LIBEV_LIBS: C:/vcpkg/packages/libev_x64-windows/lib
