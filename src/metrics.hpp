@@ -267,12 +267,24 @@ public:
       int64_t percentile_98th;
       int64_t percentile_99th;
       int64_t percentile_999th;
+
+      Snapshot() {
+        min = 0;
+        max = 0;
+        mean = 0;
+        stddev = 0;
+        median = 0;
+        percentile_75th = 0;
+        percentile_95th = 0;
+        percentile_98th = 0;
+        percentile_99th = 0;
+        percentile_999th = 0;
+      }
     };
 
     Histogram(ThreadState* thread_state, unsigned refresh_interval = CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_REFRESH)
         : thread_state_(thread_state)
-        , histograms_(new PerThreadHistogram[thread_state->max_threads()])
-        , zero_snapshot_(Snapshot {0,0,0,0,0,0,0,0,0,0}) {
+        , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
 
       refresh_interval_ = refresh_interval;
       refresh_timestamp_ = get_time_since_epoch_ms();
