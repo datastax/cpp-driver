@@ -435,6 +435,9 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(
     CopyOnWriteHostVec replicas(new HostVec());
     replicas->reserve(num_replicas);
 
+    AddressSet replicas_set;
+    replicas_set.resize(num_replicas);
+
     // Clear datacenter and rack information for the next token
     for (typename DatacenterRackInfoMap::iterator j = dc_racks.begin(), end = dc_racks.end();
          j != end; ++j) {
@@ -444,7 +447,7 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(
     }
 
     for (typename TokenHostVec::const_iterator j = tokens.begin(), end = tokens.end();
-         j != end && replicas->size() < num_replicas; ++j) {
+         j != end && replicas_set.size() < num_replicas; ++j) {
       typename TokenHostVec::const_iterator curr_token_it = token_it;
       Host* host = curr_token_it->second;
       uint32_t dc = host->dc_id();
@@ -476,7 +479,8 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(
       // datacenter only then consider hosts in the same rack
 
       if (rack == 0 || racks_observed_this_dc.size() == rack_count_this_dc) {
-        if (add_replica(replicas, Host::Ptr(host))) {
+        if (replicas_set.insert(host->address()).second) {
+          replicas->push_back(Host::Ptr(host));
           ++replica_count_this_dc;
         }
       } else {
@@ -484,7 +488,8 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(
         if (racks_observed_this_dc.count(rack) > 0) {
           skipped_endpoints_this_dc.push_back(curr_token_it);
         } else {
-          if (add_replica(replicas, Host::Ptr(host))) {
+          if (replicas_set.insert(host->address()).second) {
+            replicas->push_back(Host::Ptr(host));
             ++replica_count_this_dc;
             racks_observed_this_dc.insert(rack);
           }
@@ -494,7 +499,8 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(
           if (racks_observed_this_dc.size() == rack_count_this_dc) {
             while (!skipped_endpoints_this_dc.empty() &&
                    replica_count_this_dc < replication_factor) {
-              if (add_replica(replicas, Host::Ptr(skipped_endpoints_this_dc.front()->second))) {
+              if (replicas_set.insert(skipped_endpoints_this_dc.front()->second->address()).second) {
+                replicas->push_back(Host::Ptr(skipped_endpoints_this_dc.front()->second));
                 ++replica_count_this_dc;
               }
               skipped_endpoints_this_dc.pop_front();
