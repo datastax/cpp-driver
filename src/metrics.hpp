@@ -271,12 +271,11 @@ public:
 
     Histogram(ThreadState* thread_state, unsigned refresh_interval = CASS_DEFAULT_HISTOGRAM_REFRESH_INTERVAL_NO_REFRESH)
         : thread_state_(thread_state)
-        , histograms_(new PerThreadHistogram[thread_state->max_threads()])
-        , zero_snapshot_(Snapshot {0,0,0,0,0,0,0,0,0,0}) {
+        , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
 
       refresh_interval_ = refresh_interval;
       refresh_timestamp_ = get_time_since_epoch_ms();
-      cached_snapshot_ = zero_snapshot_;
+      zero_snapshot(&cached_snapshot_);
 
       hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
       uv_mutex_init(&mutex_);
@@ -304,7 +303,7 @@ public:
 
         if (histogram_->total_count == 0) {
           // There is no data; default to 0 for the stats.
-          copy_snapshot(zero_snapshot_, snapshot);
+          zero_snapshot(snapshot);
         } else {
           histogram_to_snapshot(histogram_, snapshot);
         }
@@ -324,7 +323,7 @@ public:
         }
 
         if (histogram_->total_count == 0) {
-          copy_snapshot(zero_snapshot_, &cached_snapshot_);
+          zero_snapshot(&cached_snapshot_);
         } else {
           histogram_to_snapshot(histogram_, &cached_snapshot_);
         }
@@ -347,6 +346,19 @@ public:
       to->percentile_98th = from.percentile_98th;
       to->percentile_99th = from.percentile_99th;
       to->percentile_999th = from.percentile_999th;
+    }
+
+    void zero_snapshot(Snapshot* to) const {
+      to->min = 0;
+      to->max = 0;
+      to->mean = 0;
+      to->stddev = 0;
+      to->median = 0;
+      to->percentile_75th = 0;
+      to->percentile_95th = 0;
+      to->percentile_98th = 0;
+      to->percentile_99th = 0;
+      to->percentile_999th = 0;
     }
 
     void histogram_to_snapshot(hdr_histogram* h, Snapshot* to) const {
@@ -457,7 +469,6 @@ public:
     unsigned refresh_interval_;
     mutable uint64_t refresh_timestamp_;
     mutable Snapshot cached_snapshot_;
-    const Snapshot zero_snapshot_;
 
   private:
     DISALLOW_COPY_AND_ASSIGN(Histogram);
