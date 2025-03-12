@@ -16,6 +16,7 @@
 
 #include "cluster_connector.hpp"
 #include "dc_aware_policy.hpp"
+#include "rack_aware_policy.hpp"
 #include "protocol.hpp"
 #include "random.hpp"
 #include "round_robin_policy.hpp"
@@ -177,6 +178,7 @@ void ClusterConnector::on_resolve(ClusterMetadataResolver* resolver) {
   }
 
   local_dc_ = resolver->local_dc();
+  local_rack_ = resolver->local_rack();
   remaining_connector_count_ = resolved_contact_points.size();
   for (AddressVec::const_iterator it = resolved_contact_points.begin(),
                                   end = resolved_contact_points.end();
@@ -231,7 +233,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
     for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(), end = policies.end();
          it != end; ++it) {
       LoadBalancingPolicy::Ptr policy(*it);
-      policy->init(connected_host, hosts, random_, local_dc_);
+      policy->init(connected_host, hosts, random_, local_dc_, local_rack_);
       policy->register_handles(event_loop_->loop());
     }
 
@@ -248,6 +250,11 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
         message = "No hosts available for the control connection using the "
                   "DC-aware load balancing policy. "
                   "Check to see if the configured local datacenter is valid";
+      } else if (dynamic_cast<RackAwarePolicy::RackAwareQueryPlan*>(query_plan.get()) !=
+          NULL) { // Check if Rack-aware
+        message = "No hosts available for the control connection using the "
+                  "Rack-aware load balancing policy. "
+                  "Check to see if the configured local datacenter and rack is valid";
       } else {
         message = "No hosts available for the control connection using the "
                   "configured load balancing policy";
@@ -258,7 +265,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
 
     cluster_.reset(new Cluster(connector->release_connection(), listener_, event_loop_,
                                connected_host, hosts, connector->schema(), default_policy, policies,
-                               local_dc_, connector->supported_options(), settings_));
+                               local_dc_, local_rack_, connector->supported_options(), settings_));
 
     // Clear any connection errors and set the final negotiated protocol version.
     error_code_ = CLUSTER_OK;
