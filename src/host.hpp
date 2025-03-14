@@ -304,4 +304,5 @@ bool remove_host(CopyOnWriteHostVec& hosts, const Address& address);
 
 }}} // namespace datastax::internal::core
 
+
 #endif
