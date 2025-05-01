@@ -1,0 +1,85 @@
+/*
+  Copyright (c) DataStax, Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#include <gtest/gtest.h>
+
+#include "cluster_config.hpp"
+#include "cassandra.h"
+#include "dc_aware_policy.hpp"
+#include "string.hpp"
+
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
+class ClusterConfigUnitTest : public testing::Test {
+public:
+  ClusterConfigUnitTest() {}
+
+  virtual void SetUp() {
+    cluster_ = cass_cluster_new();
+  }
+
+  virtual void TearDown() {
+    cass_cluster_free(cluster_);
+  }
+
+protected:
+  CassCluster* cluster_;
+};
+
+TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareN) {
+  // Test valid parameters
+  const char* valid_dc = "my_datacenter";
+  EXPECT_EQ(CASS_OK, cass_cluster_set_load_balance_dc_aware_n(
+                         cluster_, valid_dc, strlen(valid_dc), 
+                         2, cass_true));
+
+  // Test with NULL pointer (should return error)
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+            cass_cluster_set_load_balance_dc_aware_n(
+                cluster_, NULL, 10, 2, cass_true));
+
+  // Test with zero length (should return error)
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+            cass_cluster_set_load_balance_dc_aware_n(
+                cluster_, valid_dc, 0, 2, cass_true));
+
+  // Test with empty string
+  const char* empty_string = "";
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+            cass_cluster_set_load_balance_dc_aware_n(
+                cluster_, empty_string, strlen(empty_string), 2, cass_true));
+
+  // Test with partial string length
+  const char* long_dc_name = "my_datacenter_with_a_long_name";
+  size_t partial_length = 5; // Should just use "my_da" as the datacenter name
+  EXPECT_EQ(CASS_OK, cass_cluster_set_load_balance_dc_aware_n(
+                         cluster_, long_dc_name, partial_length, 
+                         2, cass_true));
+
+  // Verify the policy was set correctly with the right datacenter name
+  const LoadBalancingPolicy* policy = 
+      cluster_->config().load_balancing_policy().get();
+  const DCAwarePolicy* dc_policy = 
+      static_cast<const DCAwarePolicy*>(policy);
+  
+  // Should be using the partial string as local DC
+  EXPECT_EQ(dc_policy->local_dc(), String(long_dc_name, partial_length));
+  EXPECT_EQ(dc_policy->local_dc(), String("my_da"));
+  EXPECT_EQ(dc_policy->used_hosts_per_remote_dc(), 2u);
+  EXPECT_FALSE(dc_policy->skip_remote_dcs_for_local_cl());
+}
