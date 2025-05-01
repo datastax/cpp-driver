@@ -48,19 +48,19 @@ TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareN) {
                          cluster_, valid_dc, strlen(valid_dc), 
                          2, cass_true));
 
-  // Test with NULL pointer (should return error)
-  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+  // Test with NULL pointer (should now succeed and use empty string for DC)
+  EXPECT_EQ(CASS_OK,
             cass_cluster_set_load_balance_dc_aware_n(
                 cluster_, NULL, 10, 2, cass_true));
 
-  // Test with zero length (should return error)
-  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+  // Test with zero length (should now succeed and use empty string for DC)
+  EXPECT_EQ(CASS_OK,
             cass_cluster_set_load_balance_dc_aware_n(
                 cluster_, valid_dc, 0, 2, cass_true));
 
-  // Test with empty string
+  // Test with empty string (should now succeed)
   const char* empty_string = "";
-  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+  EXPECT_EQ(CASS_OK,
             cass_cluster_set_load_balance_dc_aware_n(
                 cluster_, empty_string, strlen(empty_string), 2, cass_true));
 
@@ -82,4 +82,21 @@ TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareN) {
   EXPECT_EQ(dc_policy->local_dc(), String("my_da"));
   EXPECT_EQ(dc_policy->used_hosts_per_remote_dc(), 2u);
   EXPECT_FALSE(dc_policy->skip_remote_dcs_for_local_cl());
+}
+
+TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareWithNullLocalDc) {
+  // Test with NULL to use local DC from connected node
+  EXPECT_EQ(CASS_OK, cass_cluster_set_load_balance_dc_aware(
+                         cluster_, NULL, 3, cass_false));
+
+  // Verify the policy was set correctly with empty local DC
+  const LoadBalancingPolicy* policy = 
+      cluster_->config().load_balancing_policy().get();
+  const DCAwarePolicy* dc_policy = 
+      static_cast<const DCAwarePolicy*>(policy);
+  
+  // Should be using empty string as local DC (will be determined at runtime)
+  EXPECT_EQ(dc_policy->local_dc(), String());
+  EXPECT_EQ(dc_policy->used_hosts_per_remote_dc(), 3u);
+  EXPECT_TRUE(dc_policy->skip_remote_dcs_for_local_cl());
 }
