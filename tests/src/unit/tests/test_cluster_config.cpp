@@ -84,7 +84,7 @@ TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareN) {
   EXPECT_FALSE(dc_policy->skip_remote_dcs_for_local_cl());
 }
 
-TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareWithNullLocalDc) {
+TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareWithNullOrEmptyLocalDc) {
   // Test with NULL to use local DC from connected node
   EXPECT_EQ(CASS_OK, cass_cluster_set_load_balance_dc_aware(
                          cluster_, NULL, 3, cass_false));
@@ -99,4 +99,21 @@ TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareWithNullLocalDc) {
   EXPECT_EQ(dc_policy->local_dc(), String());
   EXPECT_EQ(dc_policy->used_hosts_per_remote_dc(), 3u);
   EXPECT_TRUE(dc_policy->skip_remote_dcs_for_local_cl());
+  
+  // Reset cluster
+  cass_cluster_free(cluster_);
+  cluster_ = cass_cluster_new();
+  
+  // Test with empty string to use local DC from connected node
+  EXPECT_EQ(CASS_OK, cass_cluster_set_load_balance_dc_aware(
+                         cluster_, "", 2, cass_true));
+                         
+  // Verify the policy was set correctly with empty local DC
+  policy = cluster_->config().load_balancing_policy().get();
+  dc_policy = static_cast<const DCAwarePolicy*>(policy);
+  
+  // Should be using empty string as local DC (will be determined at runtime)
+  EXPECT_EQ(dc_policy->local_dc(), String());
+  EXPECT_EQ(dc_policy->used_hosts_per_remote_dc(), 2u);
+  EXPECT_FALSE(dc_policy->skip_remote_dcs_for_local_cl());
 }
