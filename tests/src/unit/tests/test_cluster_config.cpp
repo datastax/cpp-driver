@@ -71,6 +71,11 @@ TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareN) {
                          cluster_, long_dc_name, partial_length, 
                          2, cass_true));
 
+  // Disable token-aware routing in this case in order to avoid illegal instructions
+  // when creating a TokenAwarePolicy in build_load_balancing_policy()
+  cluster_->config().set_token_aware_routing(false);
+  cluster_->config().default_profile().build_load_balancing_policy();
+
   // Verify the policy was set correctly with the right datacenter name
   const LoadBalancingPolicy* policy = 
       cluster_->config().load_balancing_policy().get();
@@ -88,6 +93,9 @@ TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareWithNullOrEmptyLocalDc) {
   // Test with NULL to use local DC from connected node
   EXPECT_EQ(CASS_OK, cass_cluster_set_load_balance_dc_aware(
                          cluster_, NULL, 3, cass_false));
+
+  cluster_->config().set_token_aware_routing(false);
+  cluster_->config().default_profile().build_load_balancing_policy();
 
   // Verify the policy was set correctly with empty local DC
   const LoadBalancingPolicy* policy = 
@@ -108,6 +116,9 @@ TEST_F(ClusterConfigUnitTest, SetLoadBalanceDcAwareWithNullOrEmptyLocalDc) {
   EXPECT_EQ(CASS_OK, cass_cluster_set_load_balance_dc_aware(
                          cluster_, "", 2, cass_true));
                          
+  cluster_->config().set_token_aware_routing(false);
+  cluster_->config().default_profile().build_load_balancing_policy();
+
   // Verify the policy was set correctly with empty local DC
   policy = cluster_->config().load_balancing_policy().get();
   dc_policy = static_cast<const DCAwarePolicy*>(policy);
