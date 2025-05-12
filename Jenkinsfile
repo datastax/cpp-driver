@@ -520,6 +520,7 @@ pipeline {
                    'rocky/9-64/cpp',
                    'ubuntu/focal64/cpp',
                    'ubuntu/jammy64/cpp'
+                   'ubuntu/noble64/cpp'
           }
         }
 
