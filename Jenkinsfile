@@ -472,6 +472,10 @@ pipeline {
                           <td><strong>ubuntu/jammy64/cpp</strong></td>
                           <td>Ubuntu 22.04 LTS x86_64</td>
                         </tr>
+                        <tr>
+                          <td><strong>ubuntu/noble64/cpp</strong></td>
+                          <td>Ubuntu 24.04 LTS x86_64</td>
+                        </tr>
                       </table>''')
     string(
       name: 'INTEGRATION_TESTS_FILTER',
@@ -643,7 +647,8 @@ pipeline {
             values 'rocky/8-64/cpp',
                    'rocky/9-64/cpp',
                    'ubuntu/focal64/cpp',
-                   'ubuntu/jammy64/cpp'
+                   'ubuntu/jammy64/cpp',
+                   'ubuntu/noble64/cpp'
           }
         }
 
