@@ -447,7 +447,8 @@ pipeline {
       choices: ['rocky/8-64/cpp',
                 'rocky/9-64/cpp',
                 'ubuntu/focal64/cpp',
-                'ubuntu/jammy64/cpp'],
+                'ubuntu/jammy64/cpp',
+                'ubuntu/noble64/cpp'],
       description: '''Operating system to use for scheduled or adhoc builds
                       <table style="width:100%">
                         <col width="20%">
