@@ -1,4 +1,4 @@
-# DataStax C/C++ Driver for Apache Cassandra® and DataStax Products
+# Apache Cassandra C/C++ Driver
 
 A modern, feature-rich and highly tunable C/C++ client library for
 [Apache Cassandra®] 2.1+ using exclusively Cassandra's binary protocol and
@@ -33,9 +33,9 @@ to build the driver.  A version of libuv > 1.x is provided for CentOS 7 and Rock
 Linux; this can be found under the `dependencies` directory for each platform.
 Packages for all three dependencies are provided for Windows distributions.
 
-## Upgrading
+## Upgrading for DSE
 
-Starting with DataStax C/C++ driver for Apache Cassandra® v2.15.0, DataStax
+Starting with Apache Cassandra C/C++ Driver v2.15.0, DataStax
 Enterprise (DSE) support is now available; using the DSE driver exclusively is no
 longer required for DSE customers.
 
@@ -206,20 +206,7 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-## License
-
-&copy; DataStax, Inc.
-
-Licensed under the Apache License, Version 2.0 (the “License”); you may not use
-this file except in compliance with the License. You may obtain a copy of the
-License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed
-under the License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
-CONDITIONS OF ANY KIND, either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+## Links
 
 [Apache Cassandra®]: http://cassandra.apache.org
 [DataStax Enterprise]: http://www.datastax.com/products/datastax-enterprise
