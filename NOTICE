@@ -1,0 +1,65 @@
+Apache Cassandra C/C++ Driver
+Copyright 2013 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+This product originates, before git sha
+d9ae6b96a8938c75b38ae218f056661eef681c5d, from software from DataStax
+and other individual contributors.
+
+Non-DataStax contributors are listed below. Those marked with
+asterisk have agreed to donate (copyright assign) their contributions to the
+Apache Software Foundation, signing CLAs when appropriate.
+
+abliss	Adam Bliss	abliss@gmail.com    
+AlexisWilke	Alexis Wilke	alexis@m2osw.com                        *
+angelcaban	Angel Caban                                             *
+ArunTejCh	Arun Tej
+Azreal42	Az42
+bossmc	Andy Caldwell	andy.m.caldwell@googlemail.com              *
+cangeli-orange	Christophe Angeli	christophe.angeli@orange.com
+Castaglia	TJ Saunders	tj@castaglia.org                            *
+cormoran	cormoran	cormoran707@gmail.com                       *
+cybergarage	Satoshi Konno	skonno@cybergarage.org
+debashish-ghosh	Debashish Ghosh	debashish47@gmail.com               *
+devnexen	David CARLIER	devnexen@gmail.com                      *
+diku89                                                              *
+dimbleby	David Hotham
+eevans	Eric Evans	eevans@sym-link.com                             *
+FalacerSelene	Malachi Jones                                       *
+gahr	Pietro Cerutti	gahr@gahr.ch                                *
+ghalliday	Gavin Halliday                                          *
+gwik	Antonin Amand	antonin.amand@gmail.com                     *
+haegele-tv                                                          *
+jduo	James Duong	duong.james@gmail.com                           *
+jeremyschlatter	Jeremy Schlatter                                    *
+joeyhub	Joey
+jsirpoma
+jstasiewicz	Juliusz Stasiewicz	j.stasiewicz@cognitum.eu
+jul-stas	Juliusz Stasiewicz
+kcieslinski	Krzysztof Ciesliński                                    *
+kirhist	Kirill Khistyaev                                            *
+kmaragon	Keef Aragon                                             *
+kw217	Keith Wansbrough	keithw@lochan.org                       *
+L1quid	Daniel Green	dan@cosmicshovel.com                        *
+lehenbauer	Karl Lehenbauer	karl-gh@lehenbauer.com                  *
+NeelamAggarwal
+planetbeing
+ray2501	Danilo Chang
+remicollet	Remi Collet                                             *
+richardkchapman	Richard Chapman
+robmccoll	Rob McColl	rob@robmccoll.com                           *
+sandvige	COLE Edouard	ed@rgsystem.com
+SeverinLeonhardt	Severin Leonhardt                               *
+sonofsatoshi
+tavplubix	Alexander Tokmakov                                      *
+tcberner	Tobias C. Berner	tcberner@FreeBSD.org
+trygvis	Trygve Laugstøl	trygvis@inamo.no                            *
+vhavel	Vojtěch Havel	vojtahavel@gmail.com                        *
+waitamer                                                            *
+waitamer-orange                                                     *
+wash-amzn	William Ashley
+zakalibit	Alex Revetchi                                           *
+zatsepin	Vladimir Zatsepin
