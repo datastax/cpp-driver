@@ -131,6 +131,6 @@ submit them in a new commit. These commits will be squashed before inclusion
 into the stable or unstable branches.
 
 [JIRA]: https://datastax-oss.atlassian.net/browse/CPP/?selectedTab=com.atlassian.jira.jira-projects-plugin:summary-panel
-[Google C++ Style Guide]: http://google-styleguide.googlecode.com/svn/trunk/cppguide.html
+[Google C++ Style Guide]: https://google.github.io/styleguide/cppguide.html
 [early exits]: http://llvm.org/docs/CodingStandards.html#use-early-exits-and-continue-to-simplify-code
 [testing guide]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/testing
