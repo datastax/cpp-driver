@@ -403,7 +403,7 @@ to wait for one or more nodes to respond back to the coordinator node before a
 request can complete. In multi-datacenter configurations, consistency levels such as
 `EACH_QUORUM` can cause a request to wait for replication across a slower cross
 datacenter network link.  More information about setting the consistency level
-can be found [here](http://datastax.github.io/cpp-driver/topics/basics/consistency/).
+can be found [here](https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/consistency/).
 
 ### Driver Tuning
 
@@ -451,8 +451,8 @@ recommended that your application decrease this value if computationally
 expensive or long-running future callbacks are used (via
 `cass_future_set_callback()`), otherwise this can be left unchanged.
 
-[`allow_remote_dcs_for_local_cl`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
+[`allow_remote_dcs_for_local_cl`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
 [`OPTIONS`]: https://github.com/apache/cassandra/blob/cassandra-3.0/doc/native_protocol_v3.spec
-[token-aware]: http://datastax.github.io/cpp-driver/topics/configuration/#latency-aware-routing
-[latency-aware]: http://datastax.github.io/cpp-driver/topics/configuration/#token-aware-routing
-[paging]: http://datastax.github.io/cpp-driver/topics/basics/handling_results/#paging
+[token-aware]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#latency-aware-routing
+[latency-aware]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#token-aware-routing
+[paging]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/handling_results/#paging

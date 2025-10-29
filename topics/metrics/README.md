@@ -40,8 +40,8 @@ host. This can occur when too many requests are in-flight for a single host.
 Connection timeouts occur when the process of establishing new connections is
 unresponsive (default: 5 seconds).
 
-[`cass_session_get_metrics()`]: http://datastax.github.io/cpp-driver/api/struct.CassSession/#1ab3773670c98c00290bad48a6df0f9eae
-[`CassMetrics`]: http://datastax.github.io/cpp-driver/api/struct.CassMetrics/
-[`requests`]: http://datastax.github.io/cpp-driver/api/struct.CassMetrics/#attribute-requests
-[`stats`]: http://datastax.github.io/cpp-driver/api/struct.CassMetrics/#attribute-stats
-[`errors`]: http://datastax.github.io/cpp-driver/api/struct.CassMetrics/#attribute-errors
+[`cass_session_get_metrics()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassSession/#1ab3773670c98c00290bad48a6df0f9eae
+[`CassMetrics`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassMetrics/
+[`requests`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassMetrics/#attribute-requests
+[`stats`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassMetrics/#attribute-stats
+[`errors`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassMetrics/#attribute-errors

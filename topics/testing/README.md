@@ -116,4 +116,4 @@ Here are some of the items being scheduled for future enhancements.
 - Updates to CCM Bridge
  - Allow files to be copied over SSH established connection
 
-[build procedures]: http://datastax.github.io/cpp-driver/topics/building/#test-dependencies-and-building-tests-not-required
+[build procedures]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/building/#test-dependencies-and-building-tests-not-required

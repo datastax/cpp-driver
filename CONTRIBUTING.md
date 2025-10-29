@@ -133,4 +133,4 @@ into the stable or unstable branches.
 [JIRA]: https://datastax-oss.atlassian.net/browse/CPP/?selectedTab=com.atlassian.jira.jira-projects-plugin:summary-panel
 [Google C++ Style Guide]: http://google-styleguide.googlecode.com/svn/trunk/cppguide.html
 [early exits]: http://llvm.org/docs/CodingStandards.html#use-early-exits-and-continue-to-simplify-code
-[testing guide]: http://datastax.github.io/cpp-driver/topics/testing
+[testing guide]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/testing

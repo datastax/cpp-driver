@@ -58,4 +58,4 @@ cass_cluster_set_use_schema(cluster, cass_false);
 
 cass_cluster_free(cluster);
 ```
-[`cass_session_get_schema_meta()`]: http://datastax.github.io/cpp-driver/api/struct.CassSession/#cass-session-get-schema-meta
+[`cass_session_get_schema_meta()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassSession/#cass-session-get-schema-meta

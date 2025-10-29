@@ -1,7 +1,7 @@
 require "formula"
 
 class CassandraCppDriver < Formula
-  homepage "http://datastax.github.io/cpp-driver/"
+  homepage "https://docs.datastax.com/en/developer/cpp-driver/latest/"
   url "https://github.com/datastax/cpp-driver/archive/2.7.0.tar.gz"
   sha256 "44a97679e719b2b046ef90323beab4fe3a491ae79396e7f28e6a9677b618a0e4"
   version "2.7.0"

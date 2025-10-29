@@ -236,30 +236,30 @@ specific language governing permissions and limitations under the License.
 [DataStax Astra]: https://astra.datastax.com
 [Kerberos]: https://web.mit.edu/kerberos
 
-[Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
-[Simple]: http://datastax.github.io/cpp-driver/topics/#executing-queries
-[Prepared]: http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/
-[Batch]: http://datastax.github.io/cpp-driver/topics/basics/batches/
-[Asynchronous I/O]: http://datastax.github.io/cpp-driver/topics/#asynchronous-i-o
-[parallel execution]: http://datastax.github.io/cpp-driver/topics/#thread-safety
-[load balancing]: http://datastax.github.io/cpp-driver/topics/configuration/#load-balancing
-[Authentication]: http://datastax.github.io/cpp-driver/topics/security/#authentication
-[SSL]: http://datastax.github.io/cpp-driver/topics/security/ssl/
-[Latency-aware routing]: http://datastax.github.io/cpp-driver/topics/configuration/#latency-aware-routing
-[Performance metrics]: http://datastax.github.io/cpp-driver/topics/metrics/
-[Tuples]: http://datastax.github.io/cpp-driver/topics/basics/tuples/
-[UDTs]: http://datastax.github.io/cpp-driver/topics/basics/user_defined_types/
-[Nested collections]: http://datastax.github.io/cpp-driver/topics/basics/binding_parameters/#nested-collections
-[Data types]: http://datastax.github.io/cpp-driver/topics/basics/data_types/
-[Retry policies]: http://datastax.github.io/cpp-driver/topics/configuration/retry_policies/
-[Client-side timestamps]: http://datastax.github.io/cpp-driver/topics/basics/client_side_timestamps/
-[Idle connection heartbeats]: http://datastax.github.io/cpp-driver/topics/configuration/#connection-heartbeats
-[Blacklist]: http://datastax.github.io/cpp-driver/topics/configuration/#blacklist
-[whitelist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
-[blacklist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
-[Custom]: http://datastax.github.io/cpp-driver/topics/security/#custom
-[Reverse DNS]: http://datastax.github.io/cpp-driver/topics/security/ssl/#enabling-cassandra-identity-verification
-[Speculative execution]: http://datastax.github.io/cpp-driver/topics/configuration/#speculative-execution
+[Asynchronous API]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/#futures
+[Simple]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/#executing-queries
+[Prepared]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/prepared_statements/
+[Batch]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/batches/
+[Asynchronous I/O]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/#asynchronous-i-o
+[parallel execution]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/#thread-safety
+[load balancing]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#load-balancing
+[Authentication]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/security/#authentication
+[SSL]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/security/ssl/
+[Latency-aware routing]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#latency-aware-routing
+[Performance metrics]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/metrics/
+[Tuples]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/tuples/
+[UDTs]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/user_defined_types/
+[Nested collections]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/binding_parameters/#nested-collections
+[Data types]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/data_types/
+[Retry policies]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/retry_policies/
+[Client-side timestamps]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/client_side_timestamps/
+[Idle connection heartbeats]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#connection-heartbeats
+[Blacklist]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#blacklist
+[whitelist DC]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#datacenter
+[blacklist DC]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#datacenter
+[Custom]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/security/#custom
+[Reverse DNS]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/security/ssl/#enabling-cassandra-identity-verification
+[Speculative execution]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#speculative-execution
 [DSE authentication]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication
 [DSE geospatial types]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/geotypes
 [DSE Proxy Authentication]: http://docs.datastax.com/en/developer/cpp-driver/latest/dse_features/authentication/#proxy-authentication
