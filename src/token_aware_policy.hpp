@@ -35,7 +35,7 @@ public:
   virtual ~TokenAwarePolicy() {}
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                    const String& local_dc);
+                    const String& local_dc, const String& local_rack);
 
   virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                     const TokenMap* token_map);
@@ -53,7 +53,9 @@ private:
         , child_plan_(child_plan)
         , replicas_(replicas)
         , index_(start_index)
-        , remaining_(replicas->size()) {}
+        , remaining_local_(replicas->size())
+        , remaining_remote_(replicas->size())
+        , remaining_remote2_(replicas->size()) {}
 
     Host::Ptr compute_next();
 
@@ -62,7 +64,9 @@ private:
     ScopedPtr<QueryPlan> child_plan_;
     CopyOnWriteHostVec replicas_;
     size_t index_;
-    size_t remaining_;
+    size_t remaining_local_;
+    size_t remaining_remote_;
+    size_t remaining_remote2_;
   };
 
   Random* random_;

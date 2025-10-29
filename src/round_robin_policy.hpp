@@ -31,7 +31,7 @@ public:
   ~RoundRobinPolicy();
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                    const String& local_dc);
+                    const String& local_dc, const String& local_rack);
 
   virtual CassHostDistance distance(const Host::Ptr& host) const;
 

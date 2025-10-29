@@ -27,13 +27,13 @@ using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 void LatencyAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                              const String& local_dc) {
+                              const String& local_dc, const String& local_rack) {
   hosts_->reserve(hosts.size());
   std::transform(hosts.begin(), hosts.end(), std::back_inserter(*hosts_), GetHost());
   for (HostMap::const_iterator i = hosts.begin(), end = hosts.end(); i != end; ++i) {
     i->second->enable_latency_tracking(settings_.scale_ns, settings_.min_measured);
   }
-  ChainedLoadBalancingPolicy::init(connected_host, hosts, random, local_dc);
+  ChainedLoadBalancingPolicy::init(connected_host, hosts, random, local_dc, local_rack);
 }
 
 void LatencyAwarePolicy::register_handles(uv_loop_t* loop) { start_timer(loop); }

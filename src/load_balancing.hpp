@@ -40,9 +40,21 @@ typedef enum CassBalancingState_ {
   CASS_BALANCING_NEW_QUERY_PLAN
 } CassBalancingState;
 
+// CassHostDistance specifies how far a host is from the client.
+// The meaning of the distance depends on the load balancing policy.
+// The policies should assign the distance starting from the lowest
+// without skipping values, i.e. they should start with LOCAL.
+// For example:
+//  - DCAwarePolicy uses LOCAL for same DC, REMOTE for different DC.
+//  - RackAwarePolicy uses LOCAL for same rack,
+//    REMOTE for different rack and same DC, and
+//    REMOTE2 for different DC.
+//  - RoundRobinPolicy has distinguishes only one distance level and
+//    always uses LOCAL for all nodes.
 typedef enum CassHostDistance_ {
   CASS_HOST_DISTANCE_LOCAL,
   CASS_HOST_DISTANCE_REMOTE,
+  CASS_HOST_DISTANCE_REMOTE2,
   CASS_HOST_DISTANCE_IGNORE
 } CassHostDistance;
 
@@ -87,7 +99,7 @@ public:
   virtual ~LoadBalancingPolicy() {}
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                    const String& local_dc) = 0;
+                    const String& local_dc, const String &local_rack) = 0;
 
   virtual void register_handles(uv_loop_t* loop) {}
   virtual void close_handles() {}
@@ -124,8 +136,8 @@ public:
   virtual ~ChainedLoadBalancingPolicy() {}
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                    const String& local_dc) {
-    return child_policy_->init(connected_host, hosts, random, local_dc);
+                    const String& local_dc, const String& local_rack) {
+    return child_policy_->init(connected_host, hosts, random, local_dc, local_rack);
   }
 
   virtual const LoadBalancingPolicy::Ptr& child_policy() const { return child_policy_; }

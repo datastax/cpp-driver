@@ -195,13 +195,14 @@ public:
   SessionInitializer() { uv_mutex_destroy(&mutex_); }
 
   void initialize(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
-                  const HostMap& hosts, const TokenMap::Ptr& token_map, const String& local_dc) {
+                  const HostMap& hosts, const TokenMap::Ptr& token_map, const String& local_dc,
+		  const String& local_rack) {
     inc_ref();
 
     const size_t thread_count_io = remaining_ = session_->config().thread_count_io();
     for (size_t i = 0; i < thread_count_io; ++i) {
       RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
-          connected_host, protocol_version, hosts, token_map, local_dc,
+          connected_host, protocol_version, hosts, token_map, local_dc, local_rack,
           bind_callback(&SessionInitializer::on_initialize, this)));
 
       RequestProcessorSettings settings(session_->config());
@@ -359,7 +360,7 @@ void Session::join() {
 
 void Session::on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
                          const HostMap& hosts, const TokenMap::Ptr& token_map,
-                         const String& local_dc) {
+                         const String& local_dc, const String& local_rack) {
   int rc = 0;
 
   if (hosts.empty()) {
@@ -393,7 +394,7 @@ void Session::on_connect(const Host::Ptr& connected_host, ProtocolVersion protoc
   request_processor_count_ = 0;
   is_closing_ = false;
   SessionInitializer::Ptr initializer(new SessionInitializer(this));
-  initializer->initialize(connected_host, protocol_version, hosts, token_map, local_dc);
+  initializer->initialize(connected_host, protocol_version, hosts, token_map, local_dc, local_rack);
 }
 
 void Session::on_close() {
