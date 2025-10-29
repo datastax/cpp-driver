@@ -253,15 +253,15 @@ with other drivers. The schedule for these features can be found on [JIRA].
 - Callback interfaces for load balancing, authentication, reconnection and retry
 
 [Artifactory server]: https://datastax.jfrog.io/artifactory/cpp-php-drivers/cpp-driver/builds
-[built from source]: http://datastax.github.io/cpp-driver/topics/building/
-[prepared statements]: http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/
-[`cass_int32_t`]: http://datastax.github.io/cpp-driver/api/cassandra.h/#cass-int32-t
-[`cass_result_first_row()`]: http://datastax.github.io/cpp-driver/api/struct.CassResult/#cass-result-first-row
-[`cass_cluster_set_num_threads_io()`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/#function-cass_cluster_set_num_threads_io
-[`CassCluster`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/
-[`CassFuture`]: http://datastax.github.io/cpp-driver/api/struct.CassFuture/
-[`CassStatement`]: http://datastax.github.io/cpp-driver/api/struct.CassStatement/
-[`CassIterator`]: http://datastax.github.io/cpp-driver/api/struct.CassIterator/
-[`CassSession`]: http://datastax.github.io/cpp-driver/api/struct.CassSession/
+[built from source]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/building/
+[prepared statements]: https://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/prepared_statements/
+[`cass_int32_t`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/cassandra.h/#cass-int32-t
+[`cass_result_first_row()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassResult/#cass-result-first-row
+[`cass_cluster_set_num_threads_io()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassCluster/#function-cass_cluster_set_num_threads_io
+[`CassCluster`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassCluster/
+[`CassFuture`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassFuture/
+[`CassStatement`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassStatement/
+[`CassIterator`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassIterator/
+[`CassSession`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassSession/
 [post]: http://www.datastax.com/dev/blog/4-simple-rules-when-using-the-datastax-drivers-for-cassandra
 [JIRA]: https://datastax-oss.atlassian.net/browse/CPP

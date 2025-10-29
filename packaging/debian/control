@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 9.0.0), dh-exec, cmake, make,
         libssl-dev
 Standards-Version: 3.9.2
 Section: libs
-Homepage: http://datastax.github.io/cpp-driver/
+Homepage: https://docs.datastax.com/en/developer/cpp-driver/latest/
 Vcs-Git: git://github.com/datastax/cpp-driver.git
 Vcs-Browser: https://github.com/datastax/cpp-driver
 

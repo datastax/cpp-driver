@@ -1,6 +1,6 @@
 # Handling Results
 
-The [`CassResult`](http://datastax.github.io/cpp-driver/api/struct.CassResult/) object
+The [`CassResult`](https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassResult/) object
 is typically returned for `SELECT` statements. For mutations (`INSERT`, `UPDATE`,
 and `DELETE`) only a status code will be present and can be accessed using
 `cass_future_error_code()`. However, when using lightweight transactions a
@@ -28,7 +28,7 @@ void process_result(CassFuture* future) {
 
 The result object represents a collection of rows. The first row, if present,
 can be obtained using `cass_result_first_row()`. Multiple rows are accessed
-using a [`CassIterator`](http://datastax.github.io/cpp-driver/api/struct.CassIterator/)
+using a [`CassIterator`](https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassIterator/)
 object. After a row has been retrieved, the column value(s) can be accessed from
 a row by either index or by name. The iterator object can also be used with
 enumerated column values.
@@ -51,7 +51,7 @@ void process_first_row_by_name(const CassResult* result) {
 }
 ```
 
-Once the [`CassValue`](http://datastax.github.io/cpp-driver/api/struct.CassValue/)
+Once the [`CassValue`](https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassValue/)
 has been obtained from the column, the actual value can be retrieved and
 assigned into the proper datatype.
 
@@ -131,7 +131,7 @@ void iterator_over_map_value(CassFuture* future) {
 
 When communicating with Cassandra 2.0 or later, large result sets can be divided
 into multiple pages automatically. The
-[`CassResult`](http://datastax.github.io/cpp-driver/api/struct.CassResult/) object
+[`CassResult`](https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassResult/) object
 keeps track of the pagination state for the sequence of paging queries. When
 paging through the result set, the result object is checked to see if more pages
 exist where it is then attached to the statement before re-executing the query
@@ -187,6 +187,6 @@ accessed using [`cass_result_paging_state()`] and added to a statement using
 untrusted environments. That paging state could be spoofed and potentially used
 to gain access to other data.
 
-[`cass_statement_set_paging_state()`]: http://datastax.github.io/cpp-driver/api/struct.CassStatement/#cass-statement-set-paging-state
-[`cass_result_paging_state()`]: http://datastax.github.io/cpp-driver/api/struct.CassResult/#cass-result-paging-state
-[`cass_statement_set_paging_state_token()`]: http://datastax.github.io/cpp-driver/api/struct.CassStatement/#cass-statement-set-paging-state-token
+[`cass_statement_set_paging_state()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassStatement/#cass-statement-set-paging-state
+[`cass_result_paging_state()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassResult/#cass-result-paging-state
+[`cass_statement_set_paging_state_token()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassStatement/#cass-statement-set-paging-state-token

@@ -92,7 +92,7 @@ void iterate_udt(const CassRow* row) {
   cass_iterator_free(udt_iterator);
 }
 ```
-[`CassSchemaMeta`]: http://datastax.github.io/cpp-driver/api/struct.CassSchemaMeta/
-[`CassUserType`]: http://datastax.github.io/cpp-driver/api/struct.CassUserType/
-[`CassDataType`]: http://datastax.github.io/cpp-driver/api/struct.CassDataType/
-[`cass_session_get_schema()`]: http://datastax.github.io/cpp-driver/api/struct.CassSession/#cass-session-get-schema
+[`CassSchemaMeta`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassSchemaMeta/
+[`CassUserType`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassUserType/
+[`CassDataType`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassDataType/
+[`cass_session_get_schema()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassSession/#cass-session-get-schema

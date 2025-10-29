@@ -92,6 +92,6 @@ void iterate_tuple(const CassRow* row) {
 }
 ```
 
-[`CassTuple`]: http://datastax.github.io/cpp-driver/api/struct.CassTuple/
-[`CassUserType`]: http://datastax.github.io/cpp-driver/api/struct.CassUserType/
-[`cass_tuple_set_*()`]: http://datastax.github.io/cpp-driver/api/struct.CassTuple/#cass-tuple-set-null
+[`CassTuple`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassTuple/
+[`CassUserType`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassUserType/
+[`cass_tuple_set_*()`]: https://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassTuple/#cass-tuple-set-null

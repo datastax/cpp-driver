@@ -39,7 +39,7 @@ nanoc_config:
         - '^https?://ci.appveyor.com/*'
         - 'https://twitter.com/datastax'
 rewrites:
-  - http://datastax.github.io/cpp-driver/: /
+  - https://docs.datastax.com/en/developer/cpp-driver/latest/: /
   - https://datastax.github.io/cpp-driver/: /
   # Compatability changes for older versions
   - /api/Cass(.*): /api/struct.Cass\1
