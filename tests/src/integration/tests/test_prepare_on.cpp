@@ -371,7 +371,7 @@ CASSANDRA_INTEGRATION_TEST_F(PrepareOnUpAndAddTests, NotPreparedOnUpWhenDisabled
 
   // Wait for the node to become available and verify no statements have been
   // prepared
-  wait_for_node_on_session(session, 1);
+  wait_for_node_on_session(session_for_node(1), 1);
   prepared_statements_are_not_present(1);
 }
 
@@ -406,7 +406,7 @@ CASSANDRA_INTEGRATION_TEST_F(PrepareOnUpAndAddTests, PreparedOnUpWhenEnabled) {
 
   // Wait for the node to become available and verify that the statements
   // in the prepared metadata cache have been prepared
-  wait_for_node_on_session(session, 1);
+  wait_for_node_on_session(session_for_node(1), 1);
   prepared_statements_are_present(1);
 }
 
@@ -437,7 +437,7 @@ CASSANDRA_INTEGRATION_TEST_F(PrepareOnUpAndAddTests, NotPreparedOnAddWhenDisable
 
   // Wait for the new node to become available and verify no statements have
   // been prepared
-  wait_for_node_on_session(session, node);
+  wait_for_node_on_session(session_for_node(node), node);
   prepared_statements_are_not_present(node);
 }
 
@@ -468,6 +468,6 @@ CASSANDRA_INTEGRATION_TEST_F(PrepareOnUpAndAddTests, PreparedOnAddWhenEnabled) {
 
   // Wait for the new node to become available and verify that the statements
   // in the prepared metadata cache have been prepared
-  wait_for_node_on_session(session, node);
+  wait_for_node_on_session(session_for_node(node), node);
   prepared_statements_are_present(node);
 }
