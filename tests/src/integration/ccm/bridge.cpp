@@ -1441,6 +1441,7 @@ CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
   // Create the update configuration command (common updates)
   std::vector<std::string> updateconf_command;
   updateconf_command.push_back("updateconf");
+
   // Disable optimizations (limits) when using DSE/DDAC
   if (is_cassandra()) {
     updateconf_command.push_back("read_request_timeout_in_ms:10000");
@@ -1458,42 +1459,17 @@ CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
     updateconf_command.push_back("key_cache_save_period:0");
     updateconf_command.push_back("memtable_flush_writers:1");
     updateconf_command.push_back("max_hints_delivery_threads:1");
-
-    // Create Cassandra version specific updates (C* v1.2.x)
-    if (cassandra_version < "2.0.0") {
-      updateconf_command.push_back("reduce_cache_sizes_at:0");
-      updateconf_command.push_back("reduce_cache_capacity_to:0");
-      updateconf_command.push_back("flush_largest_memtables_at:0");
-      updateconf_command.push_back("index_interval:512");
-    } else {
-      updateconf_command.push_back("cas_contention_timeout_in_ms:10000");
-      updateconf_command.push_back("file_cache_size_in_mb:0");
-    }
-
-    // Create Cassandra version specific updates (C* < v2.1)
-    if (cassandra_version < "2.1.0") {
-      updateconf_command.push_back("in_memory_compaction_limit_in_mb:1");
-    }
-
-    // Create Cassandra version specific updates (C* < v4.0)
-    if (cassandra_version < "4.0.0") {
-      updateconf_command.push_back("rpc_min_threads:1");
-      updateconf_command.push_back("rpc_max_threads:1");
-    }
+    updateconf_command.push_back("cas_contention_timeout_in_ms:10000");
+    updateconf_command.push_back("file_cache_size_in_mb:0");
   }
 
-  // Create Cassandra version specific updated (C* 2.2+)
-  if (cassandra_version >= "2.2.0") {
-    updateconf_command.push_back("enable_user_defined_functions:true");
-  }
-
-  if (cassandra_version >= "4.0.0" && !is_dse()) {
+  if (is_cassandra()) {
     updateconf_command.push_back("enable_materialized_views:true");
     updateconf_command.push_back("enable_user_defined_functions:true");
   }
 
-  for (size_t i = 0; i < updateconf_command.size(); ++i) {
-    updateconf_command[i] = translate_config_for_version(updateconf_command[i], cassandra_version);
+  for (auto & i : updateconf_command) {
+    i = translate_config_for_version(i, cassandra_version);
   }
 
   return updateconf_command;
