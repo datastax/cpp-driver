@@ -108,11 +108,15 @@ public:
 protected:
   bool is_set() const { return is_set_; }
 
-  void internal_wait(ScopedMutex& lock) {
+  bool is_set_caller() {
     /* CASSCPP-6 If we're being called by the thread setting the future just return immediately */
     uv_thread_t me = uv_thread_self();
     const uv_thread_t caller = set_caller_;
-    if (set_caller_ && uv_thread_equal(&caller, &me)) {
+    return set_caller_ && uv_thread_equal(&caller, &me);
+  }
+
+  void internal_wait(ScopedMutex& lock) {
+    if (is_set_caller()) {
       return;
     }
     while (!is_set_) {
@@ -121,11 +125,8 @@ protected:
   }
 
   bool internal_wait_for(ScopedMutex& lock, uint64_t timeout_us) {
-    /* CASSCPP-6 If we're being called by the thread setting the future just return immediately */
-    uv_thread_t me = uv_thread_self();
-    const uv_thread_t caller = set_caller_;
-    if (set_caller_ && uv_thread_equal(&caller, &me)) {
-      return true;
+    if (is_set_caller()) {
+      return false;
     }
     if (!is_set_) {
       if (uv_cond_timedwait(&cond_, lock.get(), timeout_us * 1000) != 0) { // Expects nanos
