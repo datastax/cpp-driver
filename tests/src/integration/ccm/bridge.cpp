@@ -1461,12 +1461,10 @@ CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
     updateconf_command.push_back("max_hints_delivery_threads:1");
     updateconf_command.push_back("cas_contention_timeout_in_ms:10000");
     updateconf_command.push_back("file_cache_size_in_mb:0");
+    updateconf_command.push_back("enable_materialized_views:true");
   }
 
-  if (is_cassandra()) {
-    updateconf_command.push_back("enable_materialized_views:true");
-    updateconf_command.push_back("enable_user_defined_functions:true");
-  }
+  updateconf_command.push_back("enable_user_defined_functions:true");
 
   for (auto & i : updateconf_command) {
     i = translate_config_for_version(i, cassandra_version);
@@ -1477,7 +1475,7 @@ CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
 
 std::string CCM::Bridge::translate_config_for_version(const std::string& key_value,
                                                        CassVersion cassandra_version) {
-  if (cassandra_version < "4.1.0") {
+  if (!is_cassandra() || cassandra_version < "4.1.0") {
     return key_value;
   }
 
