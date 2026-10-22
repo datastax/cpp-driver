@@ -1334,9 +1334,8 @@ std::string CCM::Bridge::read_libssh2_terminal() {
 
 std::string CCM::Bridge::execute_ccm_command(const std::vector<std::string>& command) {
   // Create the CCM command
-  std::vector<std::string> ccm_command;
-  ccm_command.push_back("ccm");
-  ccm_command.insert(ccm_command.end(), command.begin(), command.end());
+  std::vector<std::string> ccm_command = translate_config_for_version(command);
+  ccm_command.insert(ccm_command.begin(), "ccm");
   LOG(implode(ccm_command));
 
   // Determine how to execute the command
@@ -1435,8 +1434,7 @@ std::string CCM::Bridge::generate_cluster_nodes(std::vector<unsigned short> data
   return cluster_nodes.str();
 }
 
-std::vector<std::string>
-CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
+std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
   // TODO: Add SSL setup and client authentication
   // Create the update configuration command (common updates)
   std::vector<std::string> updateconf_command;
@@ -1466,24 +1464,30 @@ CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
 
   updateconf_command.push_back("enable_user_defined_functions:true");
 
-  for (auto & i : updateconf_command) {
-    i = translate_config_for_version(i, cassandra_version);
-  }
-
   return updateconf_command;
 }
 
-std::string CCM::Bridge::translate_config_for_version(const std::string& key_value,
-                                                       CassVersion cassandra_version) {
-  if (!is_cassandra() || cassandra_version < "4.1.0") {
-    return key_value;
+std::vector<std::string> CCM::Bridge::translate_config_for_version(std::vector<std::string> command) {
+  if (!is_cassandra() || cassandra_version_ < "4.1.0") {
+    return command;
   }
 
+  bool is_updateconf = false;
+  for (auto & argument : command) {
+    if (!is_updateconf) {
+      is_updateconf = (argument == "updateconf");
+    } else if (!argument.empty() && argument[0] == '-') {
+      is_updateconf = false;
+    } else if (argument.find(':') != std::string::npos) {
+      argument = translate_config_pair(argument);
+    }
+  }
+
+  return command;
+}
+
+std::string CCM::Bridge::translate_config_pair(const std::string& key_value) {
   std::size_t separator = key_value.find(':');
-  if (separator == std::string::npos) {
-    return key_value;
-  }
-
   std::string key = key_value.substr(0, separator);
   std::string value = key_value.substr(separator + 1);
 
