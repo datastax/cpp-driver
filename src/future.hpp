@@ -55,7 +55,8 @@ public:
   Future(Type type)
       : is_set_(false)
       , type_(type)
-      , callback_(NULL) {
+      , callback_(NULL)
+      , set_caller_(0) {
     uv_mutex_init(&mutex_);
     uv_cond_init(&cond_);
   }
@@ -107,13 +108,26 @@ public:
 protected:
   bool is_set() const { return is_set_; }
 
+  bool is_set_caller() {
+    /* CASSCPP-6 If we're being called by the thread setting the future just return immediately */
+    uv_thread_t me = uv_thread_self();
+    const uv_thread_t caller = set_caller_;
+    return set_caller_ && uv_thread_equal(&caller, &me);
+  }
+
   void internal_wait(ScopedMutex& lock) {
+    if (is_set_caller()) {
+      return;
+    }
     while (!is_set_) {
       uv_cond_wait(&cond_, lock.get());
     }
   }
 
   bool internal_wait_for(ScopedMutex& lock, uint64_t timeout_us) {
+    if (is_set_caller()) {
+      return false;
+    }
     if (!is_set_) {
       if (uv_cond_timedwait(&cond_, lock.get(), timeout_us * 1000) != 0) { // Expects nanos
         return false;
@@ -138,6 +152,7 @@ private:
   ScopedPtr<Error> error_;
   Callback callback_;
   void* data_;
+  uv_thread_t set_caller_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Future);
